@@ -118,9 +118,51 @@ textarea{resize:vertical;min-height:60px;}
 .list-item .meta{font-size:12px;color:var(--text-dim);margin-top:2px;}
 .list-item .cost{font-size:14px;font-weight:600;color:var(--accent-2);white-space:nowrap;}
 hr.sep{border:none;border-top:1px solid var(--border);margin:10px 0;}
+
+#login-screen{
+  position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:24px;
+  padding-top:calc(24px + env(safe-area-inset-top,0px));padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
+}
+#login-screen.hidden{display:none;}
+.login-box{width:100%;max-width:340px;}
+.login-logo{text-align:center;margin-bottom:26px;}
+.login-logo .mark{font-size:38px;line-height:1;}
+.login-logo h1{font-size:22px;margin:8px 0 2px;}
+.login-logo p{color:var(--text-dim);font-size:13px;margin:0;}
+.login-box .btn{margin-top:10px;}
+.login-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--text-faint);font-size:12px;}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.icon-btn{background:var(--panel-2);border:1px solid var(--border);border-radius:9px;width:38px;height:38px;
+  display:flex;align-items:center;justify-content:center;color:var(--text-dim);cursor:pointer;}
+.icon-btn svg{width:18px;height:18px;}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.settings-row:last-child{border-bottom:none;}
+.settings-row .lbl{font-size:13px;color:var(--text-dim);}
+.settings-row .v{font-size:14px;font-weight:600;}
 </style>
 </head>
 <body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="mark">🚗</div>
+      <h1>Rodagem</h1>
+      <p>gestão de manutenção do seu veículo</p>
+    </div>
+    <label>Nome</label>
+    <input id="login-nome" placeholder="como podemos te chamar?">
+    <label>E-mail (opcional)</label>
+    <input id="login-email" type="email" placeholder="seu@email.com">
+    <button class="btn primary block" id="btn-login">entrar</button>
+    <div class="login-divider">ou</div>
+    <button class="btn ghost block" id="btn-login-skip">continuar sem login</button>
+    <div class="faint" style="text-align:center;margin-top:14px">os dados ficam salvos neste dispositivo. login com sincronização em nuvem ainda não está disponível nesta versão.</div>
+  </div>
+</div>
+
 <div id="app">
 
   <header class="topbar">
@@ -129,6 +171,9 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:10px 0;}
         <h1>Rodagem</h1>
         <small id="vehicle-subtitle">nenhum veículo cadastrado</small>
       </div>
+      <button class="icon-btn" id="btn-open-settings" aria-label="configurações">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.14.36.4.66.74.85.34.2.73.27 1.11.2H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg>
+      </button>
     </div>
     <div class="km-hero">
       <div>
@@ -282,6 +327,18 @@ hr.sep{border:none;border-top:1px solid var(--border);margin:10px 0;}
     </div>
   </div>
 
+  <div class="modal-overlay" id="overlay-settings">
+    <div class="modal">
+      <div class="modal-head"><h3>Configurações</h3><button data-close>&times;</button></div>
+      <div class="card" style="margin-top:4px">
+        <div class="settings-row"><span class="lbl">usuário</span><span class="v" id="settings-user">—</span></div>
+        <div class="settings-row"><span class="lbl">versão do app</span><span class="v" id="settings-version">—</span></div>
+      </div>
+      <button class="btn primary block" style="margin-top:16px" id="btn-reload-app">recarregar app (buscar atualização)</button>
+      <button class="btn ghost block" style="margin-top:10px" id="btn-logout">sair</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -290,10 +347,44 @@ const store = {
   async set(key,val){ try{ await window.storage.set(key, JSON.stringify(val), false); }catch(e){ console.error('storage error',e); } }
 };
 
+const APP_VERSION = '1.0.0';
 let vehicle = null;
 let manutencoes = [];
 let abastecimentos = [];
+let usuario = null;
 let pendingPhoto = { manutencao:null, abastecimento:null };
+
+function showApp(){
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('settings-user').textContent = usuario && usuario.nome ? usuario.nome : 'visitante';
+  document.getElementById('settings-version').textContent = APP_VERSION;
+}
+
+document.getElementById('btn-login').addEventListener('click', async ()=>{
+  const nome = document.getElementById('login-nome').value.trim();
+  if(!nome){ document.getElementById('login-nome').focus(); return; }
+  usuario = { nome, email: document.getElementById('login-email').value.trim() };
+  await store.set('usuario', usuario);
+  showApp();
+});
+document.getElementById('btn-login-skip').addEventListener('click', async ()=>{
+  usuario = { nome:'Visitante', email:'' };
+  await store.set('usuario', usuario);
+  showApp();
+});
+
+document.getElementById('btn-open-settings').addEventListener('click', ()=> openModal('overlay-settings'));
+document.getElementById('btn-reload-app').addEventListener('click', ()=>{
+  location.reload(true);
+});
+document.getElementById('btn-logout').addEventListener('click', async ()=>{
+  usuario = null;
+  await store.set('usuario', null);
+  closeModal('overlay-settings');
+  document.getElementById('login-nome').value = '';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-screen').classList.remove('hidden');
+});
 
 function fmtMoney(n){ if(n===null||n===undefined||isNaN(n)) return '—'; return 'R$ ' + Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fmtKm(n){ if(n===null||n===undefined||isNaN(n)) return '—'; return Number(n).toLocaleString('pt-BR') + ' km'; }
@@ -643,10 +734,12 @@ document.getElementById('btn-save-abastecimento').addEventListener('click', asyn
 });
 
 (async function init(){
+  usuario = await store.get('usuario');
   vehicle = await store.get('veiculo');
   manutencoes = (await store.get('manutencoes')) || [];
   abastecimentos = (await store.get('abastecimentos')) || [];
   renderAll();
+  if(usuario){ showApp(); } else { document.getElementById('settings-version').textContent = APP_VERSION; }
   if(!vehicle){
     document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
