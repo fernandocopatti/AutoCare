@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AutoCare – Protótipo</title>
+  <title>AutoCare – Protótipo Funcional</title>
   <style>
     :root {
       --primary: #2563eb;
@@ -17,9 +17,7 @@
       --muted: #64748b;
       --border: #e2e8f0;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: var(--bg);
@@ -27,8 +25,6 @@
       line-height: 1.5;
       min-height: 100vh;
     }
-
-    /* ===== LOGIN ===== */
     .login-screen {
       min-height: 100vh;
       display: flex;
@@ -37,7 +33,6 @@
       padding: 20px;
       background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
     }
-
     .login-box {
       background: white;
       border-radius: 16px;
@@ -46,327 +41,148 @@
       max-width: 420px;
       box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
     }
-
-    .login-box h1 {
-      font-size: 28px;
-      margin-bottom: 8px;
-      text-align: center;
-    }
-
-    .login-box p {
-      text-align: center;
-      color: var(--muted);
-      margin-bottom: 32px;
-    }
-
-    .profile-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
+    .login-box h1 { font-size: 28px; margin-bottom: 8px; text-align: center; }
+    .login-box p { text-align: center; color: var(--muted); margin-bottom: 32px; }
+    .profile-buttons { display: flex; flex-direction: column; gap: 12px; }
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-      transition: all 0.15s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 20px; border-radius: 10px; font-size: 15px; font-weight: 600;
+      border: none; cursor: pointer; transition: all 0.15s;
     }
-
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
+    .btn-primary { background: var(--primary); color: white; }
     .btn-primary:hover { background: var(--primary-dark); }
-
-    .btn-outline {
-      background: white;
-      border: 2px solid var(--border);
-      color: var(--text);
-    }
+    .btn-outline { background: white; border: 2px solid var(--border); color: var(--text); }
     .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
-
     .btn-success { background: var(--success); color: white; }
-    .btn-warning { background: var(--warning); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
     .btn-sm { padding: 8px 14px; font-size: 13px; }
-
-    /* ===== APP LAYOUT ===== */
+    .btn-block { width: 100%; }
     .app { display: none; min-height: 100vh; }
     .app.active { display: flex; flex-direction: column; }
-
     header {
-      background: white;
-      border-bottom: 1px solid var(--border);
-      padding: 12px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 50;
+      background: white; border-bottom: 1px solid var(--border);
+      padding: 12px 20px; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
     }
-
-    header .logo {
-      font-weight: 700;
-      font-size: 18px;
-      color: var(--primary);
-    }
-
-    header .user-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 14px;
-    }
-
+    header .logo { font-weight: 700; font-size: 18px; color: var(--primary); }
+    header .user-info { display: flex; align-items: center; gap: 12px; font-size: 14px; }
     .badge {
-      background: #dbeafe;
-      color: #1e40af;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
+      background: #dbeafe; color: #1e40af; padding: 4px 10px;
+      border-radius: 20px; font-size: 12px; font-weight: 600;
     }
-
     nav {
-      background: white;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      overflow-x: auto;
-      padding: 0 12px;
+      background: white; border-bottom: 1px solid var(--border);
+      display: flex; overflow-x: auto; padding: 0 12px;
     }
-
     nav button {
-      padding: 14px 18px;
-      background: none;
-      border: none;
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--muted);
-      cursor: pointer;
-      white-space: nowrap;
+      padding: 14px 18px; background: none; border: none; font-size: 14px;
+      font-weight: 500; color: var(--muted); cursor: pointer; white-space: nowrap;
       border-bottom: 3px solid transparent;
     }
-
-    nav button.active {
-      color: var(--primary);
-      border-bottom-color: var(--primary);
-    }
-
-    main {
-      flex: 1;
-      padding: 20px;
-      max-width: 900px;
-      margin: 0 auto;
-      width: 100%;
-    }
-
+    nav button.active { color: var(--primary); border-bottom-color: var(--primary); }
+    main { flex: 1; padding: 20px; max-width: 900px; margin: 0 auto; width: 100%; }
     .screen { display: none; }
     .screen.active { display: block; }
-
-    /* ===== CARDS ===== */
     .card {
-      background: var(--card);
-      border-radius: 12px;
-      border: 1px solid var(--border);
-      padding: 20px;
-      margin-bottom: 16px;
+      background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+      padding: 20px; margin-bottom: 16px;
     }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-    }
-
-    .card h3 {
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .card .meta {
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    @media (max-width: 600px) {
-      .grid-2 { grid-template-columns: 1fr; }
-    }
-
-    /* ===== FORM ===== */
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    label {
-      display: block;
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 6px;
-      color: var(--muted);
-    }
-
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .card h3 { font-size: 16px; font-weight: 600; }
+    .card .meta { font-size: 13px; color: var(--muted); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--muted); }
     input, select, textarea {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 15px;
-      background: white;
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 15px; background: white;
     }
-
     input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px #dbeafe;
+      outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px #dbeafe;
     }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    /* ===== LIST ===== */
+    input[readonly] { background: #f1f5f9; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .list-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 14px 0;
-      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 0; border-bottom: 1px solid var(--border);
     }
-
     .list-item:last-child { border-bottom: none; }
-
     .status {
-      font-size: 12px;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 20px;
+      font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
     }
-
     .status.ok { background: #dcfce7; color: #166534; }
     .status.warn { background: #fef3c7; color: #92400e; }
     .status.late { background: #fee2e2; color: #991b1b; }
-
-    /* ===== PHOTO UPLOAD ===== */
+    .status.info { background: #e0f2fe; color: #075985; }
     .photo-area {
-      border: 2px dashed var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      text-align: center;
-      background: #f8fafc;
-      cursor: pointer;
-      transition: all 0.15s;
+      border: 2px dashed var(--border); border-radius: 12px; padding: 24px;
+      text-align: center; background: #f8fafc; cursor: pointer; transition: all 0.15s;
     }
-
-    .photo-area:hover {
-      border-color: var(--primary);
-      background: #eff6ff;
-    }
-
-    .photo-area img {
-      max-width: 100%;
-      max-height: 180px;
-      border-radius: 8px;
-      margin-top: 12px;
-    }
-
-    /* ===== AGENDA ===== */
-    .agenda-day {
-      margin-bottom: 20px;
-    }
-
+    .photo-area:hover { border-color: var(--primary); background: #eff6ff; }
+    .photo-area img { max-width: 100%; max-height: 160px; border-radius: 8px; margin-top: 12px; }
+    .photo-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .photo-thumbs img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; }
+    .agenda-day { margin-bottom: 20px; }
     .agenda-day h4 {
-      font-size: 14px;
-      color: var(--muted);
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      font-size: 14px; color: var(--muted); margin-bottom: 8px;
+      text-transform: uppercase; letter-spacing: 0.5px;
     }
-
     .slot {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      background: white; border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 16px; margin-bottom: 8px;
+      display: flex; justify-content: space-between; align-items: center;
     }
-
-    .slot.occupied {
-      background: #eff6ff;
-      border-color: #bfdbfe;
-    }
-
-    .slot.free {
-      background: #f0fdf4;
-      border-color: #bbf7d0;
-    }
-
-    /* ===== EMPTY ===== */
-    .empty {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--muted);
-    }
-
+    .slot.occupied { background: #eff6ff; border-color: #bfdbfe; }
+    .slot.free { background: #f0fdf4; border-color: #bbf7d0; }
     .section-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      font-size: 18px; font-weight: 600; margin-bottom: 16px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
     }
-
     .km-badge {
-      background: #1e293b;
-      color: white;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
+      background: #1e293b; color: white; padding: 4px 10px;
+      border-radius: 6px; font-size: 13px; font-weight: 600;
     }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: white; padding: 12px 24px; border-radius: 10px;
+      font-size: 14px; z-index: 100; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+    .check-list label {
+      display: flex; align-items: center; gap: 8px; font-size: 14px;
+      color: var(--text); margin-bottom: 8px; cursor: pointer;
+    }
+    .modal-bg {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px;
+    }
+    .modal-bg.show { display: flex; }
+    .modal {
+      background: white; border-radius: 16px; padding: 24px; width: 100%; max-width: 480px;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal h2 { margin-bottom: 16px; font-size: 18px; }
   </style>
 </head>
 <body>
 
-  <!-- ========== TELA DE LOGIN ========== -->
+  <!-- LOGIN -->
   <div id="login" class="login-screen">
     <div class="login-box">
       <h1>Autocare</h1>
       <p>Gestão de manutenção e abastecimento</p>
       <div class="profile-buttons">
-        <button class="btn btn-primary" onclick="entrar('dono')">
-          Entrar como Proprietário
-        </button>
-        <button class="btn btn-outline" onclick="entrar('mecanica')">
-          Entrar como Mecânica
-        </button>
-        <button class="btn btn-outline" style="margin-top: 8px; border-style: dashed; color: var(--muted);" onclick="location.reload()">
-          🔄 Recarregar App
-        </button>
+        <button class="btn btn-primary" onclick="entrar('dono')">Entrar como Proprietário</button>
+        <button class="btn btn-outline" onclick="entrar('mecanica')">Entrar como Mecânica</button>
+        <button class="btn btn-outline" style="margin-top:8px;border-style:dashed;color:var(--muted)" onclick="location.reload()">🔄 Recarregar App</button>
+        <button class="btn btn-outline" style="border-style:dashed;color:var(--danger)" onclick="resetData()">🗑️ Limpar dados de teste</button>
       </div>
     </div>
   </div>
 
-  <!-- ========== APP DONO ========== -->
+  <!-- APP DONO -->
   <div id="app-dono" class="app">
     <header>
       <div class="logo">Autocare</div>
@@ -375,226 +191,21 @@
         <button class="btn btn-sm btn-outline" onclick="sair()">Sair</button>
       </div>
     </header>
-
-    <nav>
-      <button class="active" onclick="mostrarTela('dono', 'veiculos')">Meus Veículos</button>
-      <button onclick="mostrarTela('dono', 'abastecimento')">Abastecimentos</button>
-      <button onclick="mostrarTela('dono', 'manutencao')">Manutenções</button>
-      <button onclick="mostrarTela('dono', 'agendar')">Agendar</button>
+    <nav id="nav-dono">
+      <button class="active" data-tela="veiculos" onclick="mostrarTela('dono','veiculos')">Meus Veículos</button>
+      <button data-tela="abastecimento" onclick="mostrarTela('dono','abastecimento')">Abastecimentos</button>
+      <button data-tela="manutencao" onclick="mostrarTela('dono','manutencao')">Manutenções</button>
+      <button data-tela="agendar" onclick="mostrarTela('dono','agendar')">Agendar</button>
     </nav>
-
     <main>
-      <!-- VEÍCULOS -->
-      <div id="dono-veiculos" class="screen active">
-        <div class="section-title">
-          Meus Veículos
-          <button class="btn btn-sm btn-primary" onclick="alert('Em breve: cadastrar novo veículo')">+ Adicionar</button>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <h3>Volkswagen Golf 1.4 TSI</h3>
-              <div class="meta">2018 • Placa ABC-1D23</div>
-            </div>
-            <span class="km-badge">87.450 km</span>
-          </div>
-          <div class="grid-2" style="margin-top: 12px;">
-            <div>
-              <div class="meta">Próxima revisão</div>
-              <strong style="color: var(--warning)">Em 1.550 km</strong>
-            </div>
-            <div>
-              <div class="meta">Último abastecimento</div>
-              <strong>12/09/2026</strong>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <div>
-              <h3>Fiat Argo 1.0</h3>
-              <div class="meta">2021 • Placa XYZ-9K87</div>
-            </div>
-            <span class="km-badge">34.210 km</span>
-          </div>
-          <div class="grid-2" style="margin-top: 12px;">
-            <div>
-              <div class="meta">Próxima revisão</div>
-              <strong style="color: var(--success)">Em 4.790 km</strong>
-            </div>
-            <div>
-              <div class="meta">Último abastecimento</div>
-              <strong>18/09/2026</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ABASTECIMENTOS -->
-      <div id="dono-abastecimento" class="screen">
-        <div class="section-title">
-          Novo Abastecimento
-        </div>
-
-        <div class="card">
-          <div class="form-group">
-            <label>Veículo</label>
-            <select id="veiculo-abast">
-              <option>Volkswagen Golf 1.4 TSI (87.450 km)</option>
-              <option>Fiat Argo 1.0 (34.210 km)</option>
-            </select>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Km anterior (automático)</label>
-              <input type="number" value="87450" readonly style="background:#f1f5f9" />
-            </div>
-            <div class="form-group">
-              <label>Km atual</label>
-              <input type="number" id="km-atual" placeholder="Ex: 87620" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Foto do Odômetro (OCR futuro)</label>
-            <div class="photo-area" onclick="document.getElementById('foto-odo').click()">
-              <div id="preview-odo"> Clique para tirar/enviar foto do odômetro</div>
-              <input type="file" id="foto-odo" accept="image/*" capture="environment" style="display:none" onchange="mostrarPreview(this, 'preview-odo')" />
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Litros</label>
-              <input type="number" step="0.01" placeholder="Ex: 42.5" />
-            </div>
-            <div class="form-group">
-              <label>Valor total (R$)</label>
-              <input type="number" step="0.01" placeholder="Ex: 268.00" />
-            </div>
-          </div>
-
-          <button class="btn btn-primary" style="width:100%" onclick="alert('Abastecimento registrado! (simulação)')">
-            Salvar Abastecimento
-          </button>
-        </div>
-
-        <div class="section-title" style="margin-top: 28px;">Histórico recente</div>
-        <div class="card">
-          <div class="list-item">
-            <div>
-              <strong>12/09/2026</strong>
-              <div class="meta">42,3 L • R$ 265,40 • 11,8 km/L</div>
-            </div>
-            <span class="km-badge">87.450 km</span>
-          </div>
-          <div class="list-item">
-            <div>
-              <strong>28/08/2026</strong>
-              <div class="meta">38,7 L • R$ 241,10 • 12,1 km/L</div>
-            </div>
-            <span class="km-badge">86.890 km</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- MANUTENÇÕES -->
-      <div id="dono-manutencao" class="screen">
-        <div class="section-title">
-          Manutenções
-          <button class="btn btn-sm btn-primary" onclick="alert('Registrar manutenção manual')">+ Registrar</button>
-        </div>
-
-        <div class="card">
-          <h3 style="margin-bottom: 12px;">Preventivas (baseado no manual)</h3>
-          <div class="list-item">
-            <div>
-              <strong>Troca de óleo e filtro</strong>
-              <div class="meta">A cada 10.000 km ou 12 meses</div>
-            </div>
-            <span class="status warn">Em 1.550 km</span>
-          </div>
-          <div class="list-item">
-            <div>
-              <strong>Filtro de ar</strong>
-              <div class="meta">A cada 20.000 km</div>
-            </div>
-            <span class="status ok">Em 8.550 km</span>
-          </div>
-          <div class="list-item">
-            <div>
-              <strong>Correia dentada</strong>
-              <div class="meta">A cada 60.000 km</div>
-            </div>
-            <span class="status ok">Em 32.550 km</span>
-          </div>
-          <div class="list-item">
-            <div>
-              <strong>Pastilhas de freio</strong>
-              <div class="meta">Verificar a cada 20.000 km</div>
-            </div>
-            <span class="status late">Verificar agora</span>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3 style="margin-bottom: 12px;">Histórico de serviços</h3>
-          <div class="list-item">
-            <div>
-              <strong>15/07/2026 – Oficina Central</strong>
-              <div class="meta">Troca de óleo + filtro • 85.900 km</div>
-            </div>
-            <button class="btn btn-sm btn-outline">Ver fotos</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- AGENDAR -->
-      <div id="dono-agendar" class="screen">
-        <div class="section-title">Agendar Serviço</div>
-
-        <div class="card">
-          <div class="form-group">
-            <label>Veículo</label>
-            <select>
-              <option>Volkswagen Golf 1.4 TSI</option>
-              <option>Fiat Argo 1.0</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Tipo de serviço</label>
-            <select>
-              <option>Revisão preventiva</option>
-              <option>Troca de óleo</option>
-              <option>Freios</option>
-              <option>Suspensão</option>
-              <option>Outro / Corretiva</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Oficina</label>
-            <select>
-              <option>Oficina Central – 4,8 (2,1 km)</option>
-              <option>Auto Center Silva – 4,6 (3,4 km)</option>
-              <option>Mecânica do João – 4,9 (5,0 km)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Observações</label>
-            <textarea rows="3" placeholder="Descreva o problema ou o que precisa ser feito..."></textarea>
-          </div>
-          <button class="btn btn-primary" style="width:100%" onclick="alert('Solicitação enviada para a oficina! (simulação)')">
-            Solicitar Agendamento
-          </button>
-        </div>
-      </div>
+      <div id="dono-veiculos" class="screen active"></div>
+      <div id="dono-abastecimento" class="screen"></div>
+      <div id="dono-manutencao" class="screen"></div>
+      <div id="dono-agendar" class="screen"></div>
     </main>
   </div>
 
-  <!-- ========== APP MECÂNICA ========== -->
+  <!-- APP MECÂNICA -->
   <div id="app-mecanica" class="app">
     <header>
       <div class="logo">Autocare</div>
@@ -603,150 +214,137 @@
         <button class="btn btn-sm btn-outline" onclick="sair()">Sair</button>
       </div>
     </header>
-
-    <nav>
-      <button class="active" onclick="mostrarTela('mecanica', 'agenda')">Agenda</button>
-      <button onclick="mostrarTela('mecanica', 'servicos')">Serviços</button>
-      <button onclick="mostrarTela('mecanica', 'novo-servico')">Registrar Serviço</button>
+    <nav id="nav-mecanica">
+      <button class="active" data-tela="agenda" onclick="mostrarTela('mecanica','agenda')">Agenda</button>
+      <button data-tela="servicos" onclick="mostrarTela('mecanica','servicos')">Serviços</button>
+      <button data-tela="novo-servico" onclick="mostrarTela('mecanica','novo-servico')">Registrar Serviço</button>
     </nav>
-
     <main>
-      <!-- AGENDA -->
-      <div id="mecanica-agenda" class="screen active">
-        <div class="section-title">
-          Agenda da Oficina
-          <button class="btn btn-sm btn-outline">Gerenciar horários</button>
-        </div>
-
-        <div class="agenda-day">
-          <h4>Hoje – 21/09/2026</h4>
-          <div class="slot occupied">
-            <div>
-              <strong>09:00 – Golf 1.4 TSI</strong>
-              <div class="meta">Carlos Mendes • Troca de óleo</div>
-            </div>
-            <span class="status warn">Em andamento</span>
-          </div>
-          <div class="slot free">
-            <div>
-              <strong>11:00 – Disponível</strong>
-            </div>
-            <button class="btn btn-sm btn-success">Abrir</button>
-          </div>
-          <div class="slot occupied">
-            <div>
-              <strong>14:30 – Argo 1.0</strong>
-              <div class="meta">Ana Souza • Freios</div>
-            </div>
-            <span class="status ok">Confirmado</span>
-          </div>
-        </div>
-
-        <div class="agenda-day">
-          <h4>Amanhã – 22/09/2026</h4>
-          <div class="slot free">
-            <div><strong>08:30 – Disponível</strong></div>
-            <button class="btn btn-sm btn-success">Abrir</button>
-          </div>
-          <div class="slot free">
-            <div><strong>10:00 – Disponível</strong></div>
-            <button class="btn btn-sm btn-success">Abrir</button>
-          </div>
-          <div class="slot occupied">
-            <div>
-              <strong>15:00 – Civic 2019</strong>
-              <div class="meta">Roberto Lima • Revisão</div>
-            </div>
-            <span class="status ok">Confirmado</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- SERVIÇOS -->
-      <div id="mecanica-servicos" class="screen">
-        <div class="section-title">Últimos Serviços</div>
-        <div class="card">
-          <div class="list-item">
-            <div>
-              <strong>Golf 1.4 TSI – Carlos Mendes</strong>
-              <div class="meta">15/09/2026 • Troca de óleo + filtro • 85.900 km</div>
-            </div>
-            <button class="btn btn-sm btn-outline">Ver detalhes</button>
-          </div>
-          <div class="list-item">
-            <div>
-              <strong>Onix 1.0 – Maria Oliveira</strong>
-              <div class="meta">12/09/2026 • Pastilhas de freio • 62.300 km</div>
-            </div>
-            <button class="btn btn-sm btn-outline">Ver detalhes</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- REGISTRAR SERVIÇO -->
-      <div id="mecanica-novo-servico" class="screen">
-        <div class="section-title">Registrar Serviço Realizado</div>
-
-        <div class="card">
-          <div class="form-group">
-            <label>Cliente / Veículo</label>
-            <select>
-              <option>Carlos Mendes – Golf 1.4 TSI</option>
-              <option>Ana Souza – Argo 1.0</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Km no momento do serviço</label>
-            <input type="number" placeholder="Ex: 87620" />
-          </div>
-
-          <div class="form-group">
-            <label>Itens realizados</label>
-            <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
-              <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text);">
-                <input type="checkbox" checked /> Troca de óleo
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text);">
-                <input type="checkbox" checked /> Filtro de óleo
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text);">
-                <input type="checkbox" /> Filtro de ar
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text);">
-                <input type="checkbox" /> Pastilhas de freio
-              </label>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Fotos dos itens trocados / serviço</label>
-            <div class="photo-area" onclick="document.getElementById('foto-servico').click()">
-              <div id="preview-servico"> Clique para adicionar fotos</div>
-              <input type="file" id="foto-servico" accept="image/*" multiple capture="environment" style="display:none" onchange="mostrarPreview(this, 'preview-servico')" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Observações</label>
-            <textarea rows="3" placeholder="Observações técnicas, recomendações..."></textarea>
-          </div>
-
-          <button class="btn btn-success" style="width:100%" onclick="alert('Serviço registrado com sucesso! (simulação)')">
-            Finalizar e Registrar Serviço
-          </button>
-        </div>
-      </div>
+      <div id="mecanica-agenda" class="screen active"></div>
+      <div id="mecanica-servicos" class="screen"></div>
+      <div id="mecanica-novo-servico" class="screen"></div>
     </main>
   </div>
 
+  <!-- MODAL CADASTRO VEÍCULO -->
+  <div id="modal-veiculo" class="modal-bg">
+    <div class="modal">
+      <h2>Cadastrar Veículo</h2>
+      <div class="form-group">
+        <label>Marca</label>
+        <select id="v-marca">
+          <option value="">Selecione</option>
+          <option>Volkswagen</option><option>Fiat</option><option>Chevrolet</option>
+          <option>Hyundai</option><option>Toyota</option><option>Honda</option>
+          <option>Renault</option><option>Jeep</option><option>Ford</option><option>Outro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Modelo</label>
+        <input type="text" id="v-modelo" placeholder="Ex: Golf 1.4 TSI" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Ano</label>
+          <input type="number" id="v-ano" placeholder="2018" min="1990" max="2027" />
+        </div>
+        <div class="form-group">
+          <label>Placa</label>
+          <input type="text" id="v-placa" placeholder="ABC-1D23" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Km atual</label>
+        <input type="number" id="v-km" placeholder="Ex: 45000" />
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button class="btn btn-outline btn-block" onclick="fecharModal('modal-veiculo')">Cancelar</button>
+        <button class="btn btn-primary btn-block" onclick="salvarVeiculo()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
   <script>
+    // ===================== DADOS =====================
+    const PREVENTIVAS = [
+      { nome: 'Troca de óleo e filtro', intervaloKm: 10000, intervaloMeses: 12 },
+      { nome: 'Filtro de ar', intervaloKm: 20000, intervaloMeses: 24 },
+      { nome: 'Filtro de combustível', intervaloKm: 20000, intervaloMeses: 24 },
+      { nome: 'Pastilhas de freio', intervaloKm: 20000, intervaloMeses: 24 },
+      { nome: 'Correia dentada', intervaloKm: 60000, intervaloMeses: 48 },
+      { nome: 'Fluido de freio', intervaloKm: 30000, intervaloMeses: 24 },
+      { nome: 'Velas de ignição', intervaloKm: 40000, intervaloMeses: 36 },
+    ];
+
+    const HORARIOS = ['08:00','09:00','10:00','11:00','14:00','15:00','16:00','17:00'];
+
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+    function load() {
+      const raw = localStorage.getItem('autocare_data');
+      if (raw) return JSON.parse(raw);
+      return {
+        veiculos: [
+          { id: 'v1', marca: 'Volkswagen', modelo: 'Golf 1.4 TSI', ano: 2018, placa: 'ABC-1D23', km: 87450, ultimoAbastKm: 87450 },
+          { id: 'v2', marca: 'Fiat', modelo: 'Argo 1.0', ano: 2021, placa: 'XYZ-9K87', km: 34210, ultimoAbastKm: 34210 },
+        ],
+        abastecimentos: [
+          { id: 'a1', veiculoId: 'v1', data: '2026-09-12', km: 87450, litros: 42.3, valor: 265.40 },
+          { id: 'a2', veiculoId: 'v1', data: '2026-08-28', km: 86890, litros: 38.7, valor: 241.10 },
+        ],
+        oficinas: [
+          { id: 'o1', nome: 'Oficina Central', nota: 4.8, distancia: '2,1 km' },
+          { id: 'o2', nome: 'Auto Center Silva', nota: 4.6, distancia: '3,4 km' },
+          { id: 'o3', nome: 'Mecânica do João', nota: 4.9, distancia: '5,0 km' },
+        ],
+        agendamentos: [
+          { id: 'ag1', veiculoId: 'v1', oficinaId: 'o1', data: '2026-09-21', hora: '09:00', servico: 'Troca de óleo', status: 'em_andamento', cliente: 'Carlos Mendes', notas: '' },
+          { id: 'ag2', veiculoId: 'v2', oficinaId: 'o1', data: '2026-09-21', hora: '14:30', servico: 'Freios', status: 'confirmado', cliente: 'Ana Souza', notas: '' },
+          { id: 'ag3', veiculoId: null, oficinaId: 'o1', data: '2026-09-22', hora: '15:00', servico: 'Revisão', status: 'confirmado', cliente: 'Roberto Lima', notas: 'Civic 2019' },
+        ],
+        servicos: [
+          { id: 's1', veiculoId: 'v1', oficinaId: 'o1', data: '2026-07-15', km: 85900, itens: ['Troca de óleo','Filtro de óleo'], fotos: [], observacoes: 'Óleo 5W40 sintético', cliente: 'Carlos Mendes' },
+        ],
+        ultimaManutencao: {
+          v1: { 'Troca de óleo e filtro': 85900 },
+          v2: {},
+        }
+      };
+    }
+
+    function save(data) {
+      localStorage.setItem('autocare_data', JSON.stringify(data));
+    }
+
+    let DB = load();
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    function resetData() {
+      if (confirm('Apagar todos os dados de teste e voltar ao estado inicial?')) {
+        localStorage.removeItem('autocare_data');
+        DB = load();
+        toast('Dados reiniciados');
+        location.reload();
+      }
+    }
+
+    // ===================== NAVEGAÇÃO =====================
     function entrar(perfil) {
       document.getElementById('login').style.display = 'none';
       if (perfil === 'dono') {
         document.getElementById('app-dono').classList.add('active');
+        renderDonoVeiculos();
       } else {
         document.getElementById('app-mecanica').classList.add('active');
+        renderMecanicaAgenda();
       }
     }
 
@@ -757,28 +355,574 @@
     }
 
     function mostrarTela(perfil, tela) {
-      // Esconde todas as telas do perfil
-      const screens = document.querySelectorAll(`#app-${perfil} .screen`);
-      screens.forEach(s => s.classList.remove('active'));
-
-      // Mostra a tela escolhida
+      document.querySelectorAll(`#app-${perfil} .screen`).forEach(s => s.classList.remove('active'));
       document.getElementById(`${perfil}-${tela}`).classList.add('active');
+      document.querySelectorAll(`#nav-${perfil} button`).forEach(b => b.classList.remove('active'));
+      const btn = document.querySelector(`#nav-${perfil} button[data-tela="${tela}"]`);
+      if (btn) btn.classList.add('active');
 
-      // Atualiza botões da nav
-      const buttons = document.querySelectorAll(`#app-${perfil} nav button`);
-      buttons.forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
+      if (perfil === 'dono') {
+        if (tela === 'veiculos') renderDonoVeiculos();
+        if (tela === 'abastecimento') renderDonoAbastecimento();
+        if (tela === 'manutencao') renderDonoManutencao();
+        if (tela === 'agendar') renderDonoAgendar();
+      } else {
+        if (tela === 'agenda') renderMecanicaAgenda();
+        if (tela === 'servicos') renderMecanicaServicos();
+        if (tela === 'novo-servico') renderMecanicaNovoServico();
+      }
     }
 
-    function mostrarPreview(input, previewId) {
+    function fecharModal(id) {
+      document.getElementById(id).classList.remove('show');
+    }
+
+    // ===================== DONO - VEÍCULOS =====================
+    function renderDonoVeiculos() {
+      const el = document.getElementById('dono-veiculos');
+      let html = `
+        <div class="section-title">
+          Meus Veículos
+          <button class="btn btn-sm btn-primary" onclick="document.getElementById('modal-veiculo').classList.add('show')">+ Adicionar</button>
+        </div>`;
+
+      if (DB.veiculos.length === 0) {
+        html += `<div class="empty">Nenhum veículo cadastrado ainda.</div>`;
+      } else {
+        DB.veiculos.forEach(v => {
+          const prox = calcProximaRevisao(v);
+          html += `
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h3>${v.marca} ${v.modelo}</h3>
+                  <div class="meta">${v.ano} • Placa ${v.placa}</div>
+                </div>
+                <span class="km-badge">${v.km.toLocaleString('pt-BR')} km</span>
+              </div>
+              <div class="grid-2" style="margin-top:12px">
+                <div>
+                  <div class="meta">Próxima revisão</div>
+                  <strong style="color:${prox.cor}">${prox.texto}</strong>
+                </div>
+                <div>
+                  <div class="meta">Último abastecimento</div>
+                  <strong>${ultimoAbastTexto(v.id)}</strong>
+                </div>
+              </div>
+            </div>`;
+        });
+      }
+      el.innerHTML = html;
+    }
+
+    function calcProximaRevisao(v) {
+      const ultima = (DB.ultimaManutencao[v.id] || {})['Troca de óleo e filtro'] || 0;
+      const falta = 10000 - (v.km - ultima);
+      if (falta <= 0) return { texto: 'Atrasada!', cor: 'var(--danger)' };
+      if (falta <= 2000) return { texto: `Em ${falta.toLocaleString('pt-BR')} km`, cor: 'var(--warning)' };
+      return { texto: `Em ${falta.toLocaleString('pt-BR')} km`, cor: 'var(--success)' };
+    }
+
+    function ultimoAbastTexto(veiculoId) {
+      const ab = DB.abastecimentos.filter(a => a.veiculoId === veiculoId).sort((a,b) => b.data.localeCompare(a.data))[0];
+      return ab ? ab.data.split('-').reverse().join('/') : '—';
+    }
+
+    function salvarVeiculo() {
+      const marca = document.getElementById('v-marca').value;
+      const modelo = document.getElementById('v-modelo').value.trim();
+      const ano = parseInt(document.getElementById('v-ano').value);
+      const placa = document.getElementById('v-placa').value.trim().toUpperCase();
+      const km = parseInt(document.getElementById('v-km').value);
+
+      if (!marca || !modelo || !ano || !placa || !km) {
+        toast('Preencha todos os campos');
+        return;
+      }
+
+      const novo = { id: uid(), marca, modelo, ano, placa, km, ultimoAbastKm: km };
+      DB.veiculos.push(novo);
+      DB.ultimaManutencao[novo.id] = {};
+      save(DB);
+      fecharModal('modal-veiculo');
+      document.getElementById('v-marca').value = '';
+      document.getElementById('v-modelo').value = '';
+      document.getElementById('v-ano').value = '';
+      document.getElementById('v-placa').value = '';
+      document.getElementById('v-km').value = '';
+      toast('Veículo cadastrado!');
+      renderDonoVeiculos();
+    }
+
+    // ===================== DONO - ABASTECIMENTO =====================
+    function renderDonoAbastecimento() {
+      const el = document.getElementById('dono-abastecimento');
+      let options = DB.veiculos.map(v => `<option value="${v.id}">${v.marca} ${v.modelo} (${v.km.toLocaleString('pt-BR')} km)</option>`).join('');
+
+      el.innerHTML = `
+        <div class="section-title">Novo Abastecimento</div>
+        <div class="card">
+          <div class="form-group">
+            <label>Veículo</label>
+            <select id="ab-veiculo" onchange="atualizarKmAnterior()">${options}</select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Km anterior (automático)</label>
+              <input type="number" id="ab-km-ant" readonly />
+            </div>
+            <div class="form-group">
+              <label>Km atual</label>
+              <input type="number" id="ab-km" placeholder="Ex: 87620" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Foto do Odômetro (opcional)</label>
+            <div class="photo-area" onclick="document.getElementById('ab-foto').click()">
+              <div id="ab-preview">📷 Clique para tirar/enviar foto do odômetro</div>
+              <input type="file" id="ab-foto" accept="image/*" capture="environment" style="display:none" onchange="previewFoto(this,'ab-preview')" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Litros</label>
+              <input type="number" id="ab-litros" step="0.01" placeholder="Ex: 42.5" />
+            </div>
+            <div class="form-group">
+              <label>Valor total (R$)</label>
+              <input type="number" id="ab-valor" step="0.01" placeholder="Ex: 268.00" />
+            </div>
+          </div>
+          <button class="btn btn-primary btn-block" onclick="salvarAbastecimento()">Salvar Abastecimento</button>
+        </div>
+        <div class="section-title" style="margin-top:28px">Histórico recente</div>
+        <div class="card" id="lista-abastecimentos"></div>
+      `;
+      atualizarKmAnterior();
+      renderListaAbastecimentos();
+    }
+
+    function atualizarKmAnterior() {
+      const id = document.getElementById('ab-veiculo')?.value;
+      const v = DB.veiculos.find(x => x.id === id);
+      if (v) document.getElementById('ab-km-ant').value = v.ultimoAbastKm || v.km;
+    }
+
+    function previewFoto(input, previewId) {
       const preview = document.getElementById(previewId);
       if (input.files && input.files[0]) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-          preview.innerHTML = `<img src="${e.target.result}" alt="Preview" />`;
-        };
+        reader.onload = e => { preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`; };
         reader.readAsDataURL(input.files[0]);
       }
+    }
+
+    function salvarAbastecimento() {
+      const veiculoId = document.getElementById('ab-veiculo').value;
+      const km = parseInt(document.getElementById('ab-km').value);
+      const litros = parseFloat(document.getElementById('ab-litros').value);
+      const valor = parseFloat(document.getElementById('ab-valor').value);
+      const v = DB.veiculos.find(x => x.id === veiculoId);
+
+      if (!v || !km || !litros || !valor) {
+        toast('Preencha km, litros e valor');
+        return;
+      }
+      if (km < v.ultimoAbastKm) {
+        toast('Km atual não pode ser menor que o anterior');
+        return;
+      }
+
+      const ab = {
+        id: uid(),
+        veiculoId,
+        data: new Date().toISOString().slice(0,10),
+        km,
+        litros,
+        valor
+      };
+      DB.abastecimentos.unshift(ab);
+      v.km = km;
+      v.ultimoAbastKm = km;
+      save(DB);
+      toast('Abastecimento salvo!');
+      renderDonoAbastecimento();
+    }
+
+    function renderListaAbastecimentos() {
+      const lista = document.getElementById('lista-abastecimentos');
+      if (!lista) return;
+      const abs = DB.abastecimentos.slice(0, 8);
+      if (abs.length === 0) {
+        lista.innerHTML = '<div class="empty">Nenhum abastecimento ainda.</div>';
+        return;
+      }
+      lista.innerHTML = abs.map(a => {
+        const v = DB.veiculos.find(x => x.id === a.veiculoId);
+        const ant = DB.abastecimentos.find(x => x.veiculoId === a.veiculoId && x.km < a.km);
+        let media = '—';
+        if (ant) {
+          const dist = a.km - ant.km;
+          media = (dist / a.litros).toFixed(1) + ' km/L';
+        }
+        return `
+          <div class="list-item">
+            <div>
+              <strong>${a.data.split('-').reverse().join('/')}</strong>
+              <div class="meta">${v ? v.modelo : ''} • ${a.litros} L • R$ ${a.valor.toFixed(2)} • ${media}</div>
+            </div>
+            <span class="km-badge">${a.km.toLocaleString('pt-BR')} km</span>
+          </div>`;
+      }).join('');
+    }
+
+    // ===================== DONO - MANUTENÇÕES =====================
+    function renderDonoManutencao() {
+      const el = document.getElementById('dono-manutencao');
+      let html = `
+        <div class="section-title">
+          Manutenções
+          <button class="btn btn-sm btn-primary" onclick="registrarManutencaoManual()">+ Registrar</button>
+        </div>`;
+
+      DB.veiculos.forEach(v => {
+        html += `<div class="card"><h3 style="margin-bottom:12px">${v.marca} ${v.modelo} — ${v.km.toLocaleString('pt-BR')} km</h3>`;
+        PREVENTIVAS.forEach(p => {
+          const ultima = (DB.ultimaManutencao[v.id] || {})[p.nome] || 0;
+          const falta = p.intervaloKm - (v.km - ultima);
+          let statusClass = 'ok', statusTexto = `Em ${falta.toLocaleString('pt-BR')} km`;
+          if (falta <= 0) { statusClass = 'late'; statusTexto = 'Atrasada / Verificar'; }
+          else if (falta <= 2000) { statusClass = 'warn'; }
+          html += `
+            <div class="list-item">
+              <div>
+                <strong>${p.nome}</strong>
+                <div class="meta">A cada ${p.intervaloKm.toLocaleString('pt-BR')} km</div>
+              </div>
+              <span class="status ${statusClass}">${statusTexto}</span>
+            </div>`;
+        });
+        html += `</div>`;
+      });
+
+      html += `<div class="card"><h3 style="margin-bottom:12px">Histórico de serviços</h3>`;
+      if (DB.servicos.length === 0) {
+        html += `<div class="empty">Nenhum serviço registrado ainda.</div>`;
+      } else {
+        DB.servicos.forEach(s => {
+          const v = DB.veiculos.find(x => x.id === s.veiculoId);
+          const of = DB.oficinas.find(x => x.id === s.oficinaId);
+          html += `
+            <div class="list-item">
+              <div>
+                <strong>${s.data.split('-').reverse().join('/')} – ${of ? of.nome : 'Oficina'}</strong>
+                <div class="meta">${v ? v.modelo : ''} • ${s.itens.join(', ')} • ${s.km.toLocaleString('pt-BR')} km</div>
+              </div>
+            </div>`;
+        });
+      }
+      html += `</div>`;
+      el.innerHTML = html;
+    }
+
+    function registrarManutencaoManual() {
+      if (DB.veiculos.length === 0) { toast('Cadastre um veículo primeiro'); return; }
+      const v = DB.veiculos[0];
+      const nome = prompt('Qual manutenção foi feita? (ex: Troca de óleo e filtro)');
+      if (!nome) return;
+      if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
+      DB.ultimaManutencao[v.id][nome] = v.km;
+      save(DB);
+      toast('Manutenção registrada!');
+      renderDonoManutencao();
+    }
+
+    // ===================== DONO - AGENDAR =====================
+    function renderDonoAgendar() {
+      const el = document.getElementById('dono-agendar');
+      const veiculosOpt = DB.veiculos.map(v => `<option value="${v.id}">${v.marca} ${v.modelo}</option>`).join('');
+      const oficinasOpt = DB.oficinas.map(o => `<option value="${o.id}">${o.nome} – ${o.nota}★ (${o.distancia})</option>`).join('');
+
+      el.innerHTML = `
+        <div class="section-title">Agendar Serviço</div>
+        <div class="card">
+          <div class="form-group">
+            <label>Veículo</label>
+            <select id="ag-veiculo">${veiculosOpt}</select>
+          </div>
+          <div class="form-group">
+            <label>Tipo de serviço</label>
+            <select id="ag-servico">
+              <option>Revisão preventiva</option>
+              <option>Troca de óleo</option>
+              <option>Freios</option>
+              <option>Suspensão</option>
+              <option>Outro / Corretiva</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Oficina</label>
+            <select id="ag-oficina">${oficinasOpt}</select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Data</label>
+              <input type="date" id="ag-data" value="2026-09-22" />
+            </div>
+            <div class="form-group">
+              <label>Horário preferido</label>
+              <select id="ag-hora">${HORARIOS.map(h => `<option>${h}</option>`).join('')}</select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Observações</label>
+            <textarea id="ag-notas" rows="3" placeholder="Descreva o problema ou o que precisa ser feito..."></textarea>
+          </div>
+          <button class="btn btn-primary btn-block" onclick="solicitarAgendamento()">Solicitar Agendamento</button>
+        </div>
+        <div class="section-title" style="margin-top:24px">Meus agendamentos</div>
+        <div class="card" id="meus-agendamentos"></div>
+      `;
+      renderMeusAgendamentos();
+    }
+
+    function solicitarAgendamento() {
+      const veiculoId = document.getElementById('ag-veiculo').value;
+      const servico = document.getElementById('ag-servico').value;
+      const oficinaId = document.getElementById('ag-oficina').value;
+      const data = document.getElementById('ag-data').value;
+      const hora = document.getElementById('ag-hora').value;
+      const notas = document.getElementById('ag-notas').value;
+
+      if (!veiculoId || !data) { toast('Preencha os campos'); return; }
+
+      DB.agendamentos.push({
+        id: uid(),
+        veiculoId,
+        oficinaId,
+        data,
+        hora,
+        servico,
+        status: 'pendente',
+        cliente: 'Você',
+        notas
+      });
+      save(DB);
+      toast('Agendamento solicitado!');
+      renderDonoAgendar();
+    }
+
+    function renderMeusAgendamentos() {
+      const el = document.getElementById('meus-agendamentos');
+      if (!el) return;
+      const meus = DB.agendamentos.filter(a => a.cliente === 'Você' || a.veiculoId);
+      if (meus.length === 0) {
+        el.innerHTML = '<div class="empty">Nenhum agendamento ainda.</div>';
+        return;
+      }
+      el.innerHTML = meus.slice().reverse().map(a => {
+        const v = DB.veiculos.find(x => x.id === a.veiculoId);
+        const of = DB.oficinas.find(x => x.id === a.oficinaId);
+        const st = { pendente: 'info', confirmado: 'ok', em_andamento: 'warn', concluido: 'ok' }[a.status] || 'info';
+        return `
+          <div class="list-item">
+            <div>
+              <strong>${a.data.split('-').reverse().join('/')} ${a.hora} – ${a.servico}</strong>
+              <div class="meta">${v ? v.modelo : ''} • ${of ? of.nome : ''}</div>
+            </div>
+            <span class="status ${st}">${a.status.replace('_',' ')}</span>
+          </div>`;
+      }).join('');
+    }
+
+    // ===================== MECÂNICA - AGENDA =====================
+    function renderMecanicaAgenda() {
+      const el = document.getElementById('mecanica-agenda');
+      const hoje = '2026-09-21';
+      const amanha = '2026-09-22';
+
+      function slotsDoDia(data) {
+        const ags = DB.agendamentos.filter(a => a.data === data && a.oficinaId === 'o1');
+        let html = '';
+        HORARIOS.forEach(h => {
+          const ag = ags.find(a => a.hora === h);
+          if (ag) {
+            const v = DB.veiculos.find(x => x.id === ag.veiculoId);
+            const nomeVeic = v ? `${v.modelo}` : (ag.notas || 'Veículo');
+            const stClass = ag.status === 'em_andamento' ? 'warn' : 'ok';
+            html += `
+              <div class="slot occupied">
+                <div>
+                  <strong>${h} – ${nomeVeic}</strong>
+                  <div class="meta">${ag.cliente} • ${ag.servico}</div>
+                </div>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <span class="status ${stClass}">${ag.status.replace('_',' ')}</span>
+                  ${ag.status === 'pendente' ? `<button class="btn btn-sm btn-success" onclick="confirmarAg('${ag.id}')">Confirmar</button>` : ''}
+                </div>
+              </div>`;
+          } else {
+            html += `
+              <div class="slot free">
+                <div><strong>${h} – Disponível</strong></div>
+                <button class="btn btn-sm btn-success" onclick="abrirHorario('${data}','${h}')">Abrir</button>
+              </div>`;
+          }
+        });
+        return html;
+      }
+
+      el.innerHTML = `
+        <div class="section-title">Agenda da Oficina</div>
+        <div class="agenda-day">
+          <h4>Hoje – 21/09/2026</h4>
+          ${slotsDoDia(hoje)}
+        </div>
+        <div class="agenda-day">
+          <h4>Amanhã – 22/09/2026</h4>
+          ${slotsDoDia(amanha)}
+        </div>
+      `;
+    }
+
+    function confirmarAg(id) {
+      const ag = DB.agendamentos.find(a => a.id === id);
+      if (ag) {
+        ag.status = 'confirmado';
+        save(DB);
+        toast('Agendamento confirmado');
+        renderMecanicaAgenda();
+      }
+    }
+
+    function abrirHorario(data, hora) {
+      toast(`Horário ${hora} de ${data} está aberto para agendamento`);
+    }
+
+    // ===================== MECÂNICA - SERVIÇOS =====================
+    function renderMecanicaServicos() {
+      const el = document.getElementById('mecanica-servicos');
+      let html = `<div class="section-title">Últimos Serviços</div><div class="card">`;
+      if (DB.servicos.length === 0) {
+        html += `<div class="empty">Nenhum serviço registrado.</div>`;
+      } else {
+        DB.servicos.forEach(s => {
+          const v = DB.veiculos.find(x => x.id === s.veiculoId);
+          html += `
+            <div class="list-item">
+              <div>
+                <strong>${v ? v.modelo : 'Veículo'} – ${s.cliente}</strong>
+                <div class="meta">${s.data.split('-').reverse().join('/')} • ${s.itens.join(', ')} • ${s.km.toLocaleString('pt-BR')} km</div>
+              </div>
+            </div>`;
+        });
+      }
+      html += `</div>`;
+      el.innerHTML = html;
+    }
+
+    // ===================== MECÂNICA - REGISTRAR SERVIÇO =====================
+    function renderMecanicaNovoServico() {
+      const el = document.getElementById('mecanica-novo-servico');
+      const pendentes = DB.agendamentos.filter(a => ['confirmado','em_andamento','pendente'].includes(a.status));
+      const opts = pendentes.map(a => {
+        const v = DB.veiculos.find(x => x.id === a.veiculoId);
+        return `<option value="${a.id}">${a.cliente} – ${v ? v.modelo : a.servico} (${a.data} ${a.hora})</option>`;
+      }).join('');
+
+      el.innerHTML = `
+        <div class="section-title">Registrar Serviço Realizado</div>
+        <div class="card">
+          <div class="form-group">
+            <label>Agendamento / Cliente</label>
+            <select id="sv-ag">${opts || '<option value="">Nenhum agendamento ativo</option>'}</select>
+          </div>
+          <div class="form-group">
+            <label>Km no momento do serviço</label>
+            <input type="number" id="sv-km" placeholder="Ex: 87620" />
+          </div>
+          <div class="form-group">
+            <label>Itens realizados</label>
+            <div class="check-list">
+              <label><input type="checkbox" value="Troca de óleo" checked> Troca de óleo</label>
+              <label><input type="checkbox" value="Filtro de óleo" checked> Filtro de óleo</label>
+              <label><input type="checkbox" value="Filtro de ar"> Filtro de ar</label>
+              <label><input type="checkbox" value="Pastilhas de freio"> Pastilhas de freio</label>
+              <label><input type="checkbox" value="Fluido de freio"> Fluido de freio</label>
+              <label><input type="checkbox" value="Correia dentada"> Correia dentada</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Fotos dos itens / serviço</label>
+            <div class="photo-area" onclick="document.getElementById('sv-fotos').click()">
+              <div id="sv-preview">📷 Clique para adicionar fotos</div>
+              <input type="file" id="sv-fotos" accept="image/*" multiple capture="environment" style="display:none" onchange="previewMulti(this,'sv-preview')" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Observações</label>
+            <textarea id="sv-obs" rows="3" placeholder="Observações técnicas, recomendações..."></textarea>
+          </div>
+          <button class="btn btn-success btn-block" onclick="finalizarServico()">Finalizar e Registrar Serviço</button>
+        </div>
+      `;
+    }
+
+    function previewMulti(input, previewId) {
+      const preview = document.getElementById(previewId);
+      if (input.files && input.files.length) {
+        let html = '<div class="photo-thumbs">';
+        Array.from(input.files).forEach(f => {
+          const url = URL.createObjectURL(f);
+          html += `<img src="${url}" alt="foto">`;
+        });
+        html += '</div>';
+        preview.innerHTML = html;
+      }
+    }
+
+    function finalizarServico() {
+      const agId = document.getElementById('sv-ag').value;
+      const km = parseInt(document.getElementById('sv-km').value);
+      const obs = document.getElementById('sv-obs').value;
+      const checks = [...document.querySelectorAll('.check-list input:checked')].map(c => c.value);
+
+      if (!agId) { toast('Selecione um agendamento'); return; }
+      if (!km) { toast('Informe o km'); return; }
+      if (checks.length === 0) { toast('Marque pelo menos um item'); return; }
+
+      const ag = DB.agendamentos.find(a => a.id === agId);
+      if (!ag) return;
+
+      const v = DB.veiculos.find(x => x.id === ag.veiculoId);
+      if (v && km > v.km) v.km = km;
+
+      if (v) {
+        if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
+        checks.forEach(item => {
+          const key = PREVENTIVAS.find(p => p.nome.toLowerCase().includes(item.toLowerCase().split(' ')[0]))?.nome || item;
+          DB.ultimaManutencao[v.id][key] = km;
+        });
+      }
+
+      DB.servicos.unshift({
+        id: uid(),
+        veiculoId: ag.veiculoId,
+        oficinaId: ag.oficinaId,
+        data: new Date().toISOString().slice(0,10),
+        km,
+        itens: checks,
+        fotos: [],
+        observacoes: obs,
+        cliente: ag.cliente
+      });
+
+      ag.status = 'concluido';
+      save(DB);
+      toast('Serviço registrado com sucesso!');
+      renderMecanicaNovoServico();
+      renderMecanicaServicos();
     }
   </script>
 </body>
