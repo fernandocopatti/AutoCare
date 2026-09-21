@@ -1,659 +1,782 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Rodagem</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#15181B; --panel:#1D2226; --panel-2:#262B30; --border:#31383E;
-  --text:#EDEAE2; --text-dim:#8D9399; --text-faint:#5D6469;
-  --accent:#E8862A; --accent-dim:#8A5321; --accent-2:#4E9BC4; --accent-2-dim:#2C5A73;
-  --danger:#E1615C; --danger-dim:#5A2624; --success:#5FA777; --success-dim:#25402F;
-  --radius:10px;
-  box-sizing:border-box;
-  padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:env(safe-area-inset-bottom,0px);
-}
-*{box-sizing:border-box;}
-html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px);}
-body{
-  height:100%;margin:0;background:var(--bg);color:var(--text);
-  font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;
-}
-h1,h2,h3,.num{font-family:'Space Grotesk',sans-serif;}
-#app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;position:relative;}
-.topbar{
-  padding:18px 20px 14px;border-bottom:1px solid var(--border);
-  padding-top:calc(18px + env(safe-area-inset-top,0px));
-}
-.topbar .brand{display:flex;align-items:center;justify-content:space-between;}
-.topbar h1{font-size:20px;font-weight:700;margin:0;letter-spacing:.2px;}
-.topbar .brand small{color:var(--text-faint);font-size:12px;}
-.km-hero{margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:baseline;justify-content:space-between;}
-.km-hero .label{font-size:12px;color:var(--text-dim);text-transform:lowercase;}
-.km-hero .val{font-size:30px;font-weight:700;letter-spacing:.5px;}
-.km-hero .unit{font-size:13px;color:var(--text-dim);margin-left:4px;}
-main{flex:1;padding:16px 20px 96px;}
-.view{display:none;}
-.view.active{display:block;}
-section.block{margin-bottom:22px;}
-.block h2{font-size:14px;font-weight:600;color:var(--text-dim);text-transform:none;margin:0 0 10px;font-family:'Inter',sans-serif;}
-.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;}
-.card.tight{padding:12px 14px;}
-.row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.row + .row{margin-top:8px;}
-.chip{display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;}
-.chip.overdue{background:var(--danger-dim);color:#F5B4B1;}
-.chip.soon{background:var(--accent-dim);color:#F5C68D;}
-.chip.ok{background:var(--success-dim);color:#A9D8B9;}
-.muted{color:var(--text-dim);font-size:13px;}
-.faint{color:var(--text-faint);font-size:12px;}
-.empty{border:1px dashed var(--border);border-radius:var(--radius);padding:22px 16px;text-align:center;color:var(--text-dim);font-size:13px;}
-.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.stat{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;}
-.stat .label{font-size:11px;color:var(--text-dim);}
-.stat .val{font-size:20px;font-weight:700;margin-top:2px;}
-button{font-family:inherit;}
-.btn{
-  appearance:none;border:1px solid var(--border);background:var(--panel-2);color:var(--text);
-  padding:11px 16px;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;
-}
-.btn:active{transform:scale(0.98);}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#241300;}
-.btn.block{width:100%;}
-.btn.ghost{background:transparent;}
-.btn.small{padding:8px 12px;font-size:13px;}
-.btn.danger-text{color:var(--danger);border-color:var(--danger-dim);background:transparent;}
-label{display:block;font-size:12px;color:var(--text-dim);margin:12px 0 5px;}
-label:first-child{margin-top:0;}
-input,select,textarea{
-  width:100%;background:var(--panel-2);border:1px solid var(--border);color:var(--text);
-  padding:10px 12px;border-radius:8px;font-size:15px;font-family:inherit;
-}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent-2);}
-textarea{resize:vertical;min-height:60px;}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.helper{font-size:11px;color:var(--text-faint);margin-top:4px;}
-.tabbar{
-  position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;
-  display:flex;background:var(--panel);border-top:1px solid var(--border);
-  padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));
-}
-.tabbar button{
-  flex:1;background:none;border:none;color:var(--text-faint);display:flex;flex-direction:column;
-  align-items:center;gap:3px;font-size:11px;padding:6px 2px;border-radius:8px;
-}
-.tabbar button.active{color:var(--accent);}
-.tabbar .ic{width:20px;height:20px;display:block;}
-.fab-add{position:absolute;top:0;right:0;}
-.modal-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;z-index:50;
-}
-.modal-overlay.open{display:flex;}
-.modal{
-  width:100%;max-width:480px;background:var(--bg);border-top:1px solid var(--border);
-  border-radius:16px 16px 0 0;max-height:88vh;overflow-y:auto;padding:16px 20px calc(20px + env(safe-area-inset-bottom,0px));
-}
-.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-.modal-head h3{font-size:16px;margin:0;}
-.modal-head button{background:none;border:none;color:var(--text-dim);font-size:20px;padding:4px 8px;}
-.err{color:var(--danger);font-size:12px;margin-top:5px;display:none;}
-.err.show{display:block;}
-.photo-input{
-  border:1px dashed var(--border);border-radius:8px;padding:14px;text-align:center;
-  color:var(--text-dim);font-size:13px;cursor:pointer;position:relative;
-}
-.photo-input img{max-width:100%;border-radius:6px;display:block;margin-top:8px;}
-.photo-input input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
-.ocr-status{font-size:12px;color:var(--accent-2);margin-top:6px;display:none;}
-.ocr-status.show{display:block;}
-.item-photo{width:44px;height:44px;border-radius:6px;object-fit:cover;border:1px solid var(--border);}
-.list-item{display:flex;gap:10px;align-items:flex-start;}
-.list-item .grow{flex:1;min-width:0;}
-.list-item .ttl{font-size:14px;font-weight:600;}
-.list-item .meta{font-size:12px;color:var(--text-dim);margin-top:2px;}
-.list-item .cost{font-size:14px;font-weight:600;color:var(--accent-2);white-space:nowrap;}
-hr.sep{border:none;border-top:1px solid var(--border);margin:10px 0;}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoCare – Protótipo</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ===== LOGIN ===== */
+    .login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    }
+
+    .login-box {
+      background: white;
+      border-radius: 16px;
+      padding: 40px 32px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    }
+
+    .login-box h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .login-box p {
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+
+    .profile-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+
+    .btn-outline {
+      background: white;
+      border: 2px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+    .btn-success { background: var(--success); color: white; }
+    .btn-warning { background: var(--warning); color: white; }
+    .btn-sm { padding: 8px 14px; font-size: 13px; }
+
+    /* ===== APP LAYOUT ===== */
+    .app { display: none; min-height: 100vh; }
+    .app.active { display: flex; flex-direction: column; }
+
+    header {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    header .logo {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--primary);
+    }
+
+    header .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+    }
+
+    .badge {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    nav {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      overflow-x: auto;
+      padding: 0 12px;
+    }
+
+    nav button {
+      padding: 14px 18px;
+      background: none;
+      border: none;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+    }
+
+    nav button.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    main {
+      flex: 1;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .card h3 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .card .meta {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* ===== FORM ===== */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--muted);
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 15px;
+      background: white;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px #dbeafe;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ===== LIST ===== */
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .list-item:last-child { border-bottom: none; }
+
+    .status {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .status.ok { background: #dcfce7; color: #166534; }
+    .status.warn { background: #fef3c7; color: #92400e; }
+    .status.late { background: #fee2e2; color: #991b1b; }
+
+    /* ===== PHOTO UPLOAD ===== */
+    .photo-area {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .photo-area:hover {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+
+    .photo-area img {
+      max-width: 100%;
+      max-height: 180px;
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+
+    /* ===== AGENDA ===== */
+    .agenda-day {
+      margin-bottom: 20px;
+    }
+
+    .agenda-day h4 {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .slot {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .slot.occupied {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    .slot.free {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+    }
+
+    /* ===== EMPTY ===== */
+    .empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .km-badge {
+      background: #1e293b;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+  </style>
 </head>
 <body>
-<div id="app">
 
-  <header class="topbar">
-    <div class="brand">
-      <div>
-        <h1>Rodagem</h1>
-        <small id="vehicle-subtitle">nenhum veículo cadastrado</small>
+  <!-- ========== TELA DE LOGIN ========== -->
+  <div id="login" class="login-screen">
+    <div class="login-box">
+      <h1>Autocare</h1>
+      <p>Gestão de manutenção e abastecimento</p>
+      <div class="profile-buttons">
+        <button class="btn btn-primary" onclick="entrar('dono')">
+          Entrar como Proprietário
+        </button>
+        <button class="btn btn-outline" onclick="entrar('mecanica')">
+          Entrar como Mecânica
+        </button>
       </div>
     </div>
-    <div class="km-hero">
-      <div>
-        <div class="label">km atual</div>
-        <div><span class="val num" id="hero-km">—</span><span class="unit">km</span></div>
+  </div>
+
+  <!-- ========== APP DONO ========== -->
+  <div id="app-dono" class="app">
+    <header>
+      <div class="logo">Autocare</div>
+      <div class="user-info">
+        <span class="badge">Proprietário</span>
+        <button class="btn btn-sm btn-outline" onclick="sair()">Sair</button>
       </div>
-      <button class="btn small" id="btn-edit-km">atualizar km</button>
-    </div>
-  </header>
+    </header>
 
-  <main>
+    <nav>
+      <button class="active" onclick="mostrarTela('dono', 'veiculos')">Meus Veículos</button>
+      <button onclick="mostrarTela('dono', 'abastecimento')">Abastecimentos</button>
+      <button onclick="mostrarTela('dono', 'manutencao')">Manutenções</button>
+      <button onclick="mostrarTela('dono', 'agendar')">Agendar</button>
+    </nav>
 
-    <section class="view active" id="view-painel">
-      <section class="block">
-        <h2>Próximas manutenções</h2>
-        <div id="painel-alerts"></div>
-      </section>
-      <section class="block">
-        <h2>Consumo</h2>
-        <div class="stats-grid">
-          <div class="stat"><div class="label">último km/l</div><div class="val num" id="stat-last-consumo">—</div></div>
-          <div class="stat"><div class="label">média (5 últimos)</div><div class="val num" id="stat-avg-consumo">—</div></div>
+    <main>
+      <!-- VEÍCULOS -->
+      <div id="dono-veiculos" class="screen active">
+        <div class="section-title">
+          Meus Veículos
+          <button class="btn btn-sm btn-primary" onclick="alert('Em breve: cadastrar novo veículo')">+ Adicionar</button>
         </div>
-      </section>
-      <section class="block">
-        <h2>Gasto com manutenção</h2>
-        <div class="stats-grid">
-          <div class="stat"><div class="label">últimos 12 meses</div><div class="val num" id="stat-cost-year">—</div></div>
-          <div class="stat"><div class="label">total registrado</div><div class="val num" id="stat-cost-total">—</div></div>
-        </div>
-      </section>
-    </section>
 
-    <section class="view" id="view-veiculo">
-      <section class="block">
-        <h2>Dados do veículo</h2>
         <div class="card">
-          <label>Marca</label>
-          <input id="v-marca" placeholder="ex: Volkswagen">
-          <label>Modelo</label>
-          <input id="v-modelo" placeholder="ex: Polo">
-          <div class="two-col">
-            <div><label>Ano</label><input id="v-ano" type="number" inputmode="numeric" placeholder="2020"></div>
-            <div><label>Placa (opcional)</label><input id="v-placa" placeholder="ABC1D23"></div>
+          <div class="card-header">
+            <div>
+              <h3>Volkswagen Golf 1.4 TSI</h3>
+              <div class="meta">2018 • Placa ABC-1D23</div>
+            </div>
+            <span class="km-badge">87.450 km</span>
           </div>
-          <label>Km atual</label>
-          <input id="v-km" type="number" inputmode="numeric" placeholder="0">
-          <button class="btn primary block" style="margin-top:14px" id="btn-save-vehicle">salvar veículo</button>
-          <div class="err" id="v-err">preencha marca, modelo, ano e km atual</div>
-          <button class="btn ghost block" style="margin-top:10px" id="btn-suggest-revisions">sugerir plano de manutenção (IA)</button>
-          <div class="faint" style="margin-top:6px">estimativa geral para o tipo de veículo — não é o manual oficial deste modelo, confira antes de confiar</div>
-          <div id="suggest-status" class="ocr-status" style="margin-top:8px"></div>
-          <div id="suggest-box"></div>
+          <div class="grid-2" style="margin-top: 12px;">
+            <div>
+              <div class="meta">Próxima revisão</div>
+              <strong style="color: var(--warning)">Em 1.550 km</strong>
+            </div>
+            <div>
+              <div class="meta">Último abastecimento</div>
+              <strong>12/09/2026</strong>
+            </div>
+          </div>
         </div>
-      </section>
-    </section>
 
-    <section class="view" id="view-manutencoes">
-      <section class="block">
-        <div class="row"><h2 style="margin:0">Histórico</h2><button class="btn primary small" id="btn-new-manutencao">+ registrar</button></div>
-        <div id="lista-manutencoes"></div>
-      </section>
-    </section>
-
-    <section class="view" id="view-abastecimentos">
-      <section class="block">
-        <div class="row"><h2 style="margin:0">Abastecimentos</h2><button class="btn primary small" id="btn-new-abastecimento">+ registrar</button></div>
-        <div id="lista-abastecimentos"></div>
-      </section>
-    </section>
-
-  </main>
-
-  <nav class="tabbar">
-    <button data-view="painel" class="active">
-      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 12l4-4"/></svg>
-      painel
-    </button>
-    <button data-view="veiculo">
-      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16l1.5-5A2 2 0 0 1 7.4 9.5h9.2A2 2 0 0 1 18.5 11L20 16"/><rect x="3" y="16" width="18" height="4" rx="1"/><circle cx="7.5" cy="20" r="1.2"/><circle cx="16.5" cy="20" r="1.2"/></svg>
-      veículo
-    </button>
-    <button data-view="manutencoes">
-      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.3 2.3-2-2z"/></svg>
-      manutenções
-    </button>
-    <button data-view="abastecimentos">
-      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 20V6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v14"/><path d="M4 20h11"/><path d="M14 9h2.5l2 2.5V17a1 1 0 0 1-1 1h-.5"/><circle cx="16.5" cy="18.5" r="1.3"/></svg>
-      abastec.
-    </button>
-  </nav>
-
-  <div class="modal-overlay" id="overlay-manutencao">
-    <div class="modal">
-      <div class="modal-head"><h3>Registrar manutenção</h3><button data-close>&times;</button></div>
-      <label>Tipo</label>
-      <input id="m-tipo" list="tipos-manutencao" placeholder="ex: troca de óleo">
-      <datalist id="tipos-manutencao">
-        <option value="Troca de óleo"><option value="Filtro de óleo"><option value="Filtro de ar">
-        <option value="Filtro de combustível"><option value="Pastilhas de freio"><option value="Discos de freio">
-        <option value="Correia dentada"><option value="Velas de ignição"><option value="Bateria">
-        <option value="Pneus"><option value="Alinhamento e balanceamento"><option value="Fluido de freio">
-        <option value="Arrefecimento">
-      </datalist>
-      <div class="two-col">
-        <div><label>Data</label><input id="m-data" type="date"></div>
-        <div><label>Km</label><input id="m-km" type="number" inputmode="numeric"></div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3>Fiat Argo 1.0</h3>
+              <div class="meta">2021 • Placa XYZ-9K87</div>
+            </div>
+            <span class="km-badge">34.210 km</span>
+          </div>
+          <div class="grid-2" style="margin-top: 12px;">
+            <div>
+              <div class="meta">Próxima revisão</div>
+              <strong style="color: var(--success)">Em 4.790 km</strong>
+            </div>
+            <div>
+              <div class="meta">Último abastecimento</div>
+              <strong>18/09/2026</strong>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="two-col">
-        <div><label>Custo (R$)</label><input id="m-custo" type="number" inputmode="decimal" step="0.01"></div>
-        <div><label>Oficina</label><input id="m-oficina" placeholder="opcional"></div>
+
+      <!-- ABASTECIMENTOS -->
+      <div id="dono-abastecimento" class="screen">
+        <div class="section-title">
+          Novo Abastecimento
+        </div>
+
+        <div class="card">
+          <div class="form-group">
+            <label>Veículo</label>
+            <select id="veiculo-abast">
+              <option>Volkswagen Golf 1.4 TSI (87.450 km)</option>
+              <option>Fiat Argo 1.0 (34.210 km)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Km anterior (automático)</label>
+              <input type="number" value="87450" readonly style="background:#f1f5f9" />
+            </div>
+            <div class="form-group">
+              <label>Km atual</label>
+              <input type="number" id="km-atual" placeholder="Ex: 87620" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Foto do Odômetro (OCR futuro)</label>
+            <div class="photo-area" onclick="document.getElementById('foto-odo').click()">
+              <div id="preview-odo"> Clique para tirar/enviar foto do odômetro</div>
+              <input type="file" id="foto-odo" accept="image/*" capture="environment" style="display:none" onchange="mostrarPreview(this, 'preview-odo')" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Litros</label>
+              <input type="number" step="0.01" placeholder="Ex: 42.5" />
+            </div>
+            <div class="form-group">
+              <label>Valor total (R$)</label>
+              <input type="number" step="0.01" placeholder="Ex: 268.00" />
+            </div>
+          </div>
+
+          <button class="btn btn-primary" style="width:100%" onclick="alert('Abastecimento registrado! (simulação)')">
+            Salvar Abastecimento
+          </button>
+        </div>
+
+        <div class="section-title" style="margin-top: 28px;">Histórico recente</div>
+        <div class="card">
+          <div class="list-item">
+            <div>
+              <strong>12/09/2026</strong>
+              <div class="meta">42,3 L • R$ 265,40 • 11,8 km/L</div>
+            </div>
+            <span class="km-badge">87.450 km</span>
+          </div>
+          <div class="list-item">
+            <div>
+              <strong>28/08/2026</strong>
+              <div class="meta">38,7 L • R$ 241,10 • 12,1 km/L</div>
+            </div>
+            <span class="km-badge">86.890 km</span>
+          </div>
+        </div>
       </div>
-      <label>Observações</label>
-      <textarea id="m-obs" placeholder="opcional"></textarea>
-      <label>Próxima troca (opcional)</label>
-      <div class="two-col">
-        <div><input id="m-prox-km" type="number" inputmode="numeric" placeholder="km"></div>
-        <div><input id="m-prox-data" type="date"></div>
+
+      <!-- MANUTENÇÕES -->
+      <div id="dono-manutencao" class="screen">
+        <div class="section-title">
+          Manutenções
+          <button class="btn btn-sm btn-primary" onclick="alert('Registrar manutenção manual')">+ Registrar</button>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom: 12px;">Preventivas (baseado no manual)</h3>
+          <div class="list-item">
+            <div>
+              <strong>Troca de óleo e filtro</strong>
+              <div class="meta">A cada 10.000 km ou 12 meses</div>
+            </div>
+            <span class="status warn">Em 1.550 km</span>
+          </div>
+          <div class="list-item">
+            <div>
+              <strong>Filtro de ar</strong>
+              <div class="meta">A cada 20.000 km</div>
+            </div>
+            <span class="status ok">Em 8.550 km</span>
+          </div>
+          <div class="list-item">
+            <div>
+              <strong>Correia dentada</strong>
+              <div class="meta">A cada 60.000 km</div>
+            </div>
+            <span class="status ok">Em 32.550 km</span>
+          </div>
+          <div class="list-item">
+            <div>
+              <strong>Pastilhas de freio</strong>
+              <div class="meta">Verificar a cada 20.000 km</div>
+            </div>
+            <span class="status late">Verificar agora</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom: 12px;">Histórico de serviços</h3>
+          <div class="list-item">
+            <div>
+              <strong>15/07/2026 – Oficina Central</strong>
+              <div class="meta">Troca de óleo + filtro • 85.900 km</div>
+            </div>
+            <button class="btn btn-sm btn-outline">Ver fotos</button>
+          </div>
+        </div>
       </div>
-      <label>Foto do item trocado (opcional)</label>
-      <div class="photo-input" id="m-photo-wrap">
-        <span id="m-photo-label">toque para adicionar foto</span>
-        <input type="file" accept="image/*" id="m-photo-file">
+
+      <!-- AGENDAR -->
+      <div id="dono-agendar" class="screen">
+        <div class="section-title">Agendar Serviço</div>
+
+        <div class="card">
+          <div class="form-group">
+            <label>Veículo</label>
+            <select>
+              <option>Volkswagen Golf 1.4 TSI</option>
+              <option>Fiat Argo 1.0</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tipo de serviço</label>
+            <select>
+              <option>Revisão preventiva</option>
+              <option>Troca de óleo</option>
+              <option>Freios</option>
+              <option>Suspensão</option>
+              <option>Outro / Corretiva</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Oficina</label>
+            <select>
+              <option>Oficina Central – 4,8 (2,1 km)</option>
+              <option>Auto Center Silva – 4,6 (3,4 km)</option>
+              <option>Mecânica do João – 4,9 (5,0 km)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Observações</label>
+            <textarea rows="3" placeholder="Descreva o problema ou o que precisa ser feito..."></textarea>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="alert('Solicitação enviada para a oficina! (simulação)')">
+            Solicitar Agendamento
+          </button>
+        </div>
       </div>
-      <div class="err" id="m-err">informe ao menos o tipo, a data e o km</div>
-      <button class="btn primary block" style="margin-top:16px" id="btn-save-manutencao">salvar</button>
-    </div>
+    </main>
   </div>
 
-  <div class="modal-overlay" id="overlay-abastecimento">
-    <div class="modal">
-      <div class="modal-head"><h3>Registrar abastecimento</h3><button data-close>&times;</button></div>
-      <label>Data</label>
-      <input id="a-data" type="date">
-      <div class="two-col">
-        <div><label>Km inicial</label><input id="a-km-inicial" type="number" inputmode="numeric"></div>
-        <div><label>Km final</label><input id="a-km-final" type="number" inputmode="numeric"></div>
+  <!-- ========== APP MECÂNICA ========== -->
+  <div id="app-mecanica" class="app">
+    <header>
+      <div class="logo">Autocare</div>
+      <div class="user-info">
+        <span class="badge" style="background:#dcfce7;color:#166534">Oficina Central</span>
+        <button class="btn btn-sm btn-outline" onclick="sair()">Sair</button>
       </div>
-      <label>Foto do odômetro (opcional — tenta ler o km final automaticamente)</label>
-      <div class="photo-input" id="a-photo-wrap">
-        <span id="a-photo-label">toque para adicionar foto</span>
-        <input type="file" accept="image/*" id="a-photo-file">
+    </header>
+
+    <nav>
+      <button class="active" onclick="mostrarTela('mecanica', 'agenda')">Agenda</button>
+      <button onclick="mostrarTela('mecanica', 'servicos')">Serviços</button>
+      <button onclick="mostrarTela('mecanica', 'novo-servico')">Registrar Serviço</button>
+    </nav>
+
+    <main>
+      <!-- AGENDA -->
+      <div id="mecanica-agenda" class="screen active">
+        <div class="section-title">
+          Agenda da Oficina
+          <button class="btn btn-sm btn-outline">Gerenciar horários</button>
+        </div>
+
+        <div class="agenda-day">
+          <h4>Hoje – 20/09/2026</h4>
+          <div class="slot occupied">
+            <div>
+              <strong>09:00 – Golf 1.4 TSI</strong>
+              <div class="meta">Carlos Mendes • Troca de óleo</div>
+            </div>
+            <span class="status warn">Em andamento</span>
+          </div>
+          <div class="slot free">
+            <div>
+              <strong>11:00 – Disponível</strong>
+            </div>
+            <button class="btn btn-sm btn-success">Abrir</button>
+          </div>
+          <div class="slot occupied">
+            <div>
+              <strong>14:30 – Argo 1.0</strong>
+              <div class="meta">Ana Souza • Freios</div>
+            </div>
+            <span class="status ok">Confirmado</span>
+          </div>
+        </div>
+
+        <div class="agenda-day">
+          <h4>Amanhã – 21/09/2026</h4>
+          <div class="slot free">
+            <div><strong>08:30 – Disponível</strong></div>
+            <button class="btn btn-sm btn-success">Abrir</button>
+          </div>
+          <div class="slot free">
+            <div><strong>10:00 – Disponível</strong></div>
+            <button class="btn btn-sm btn-success">Abrir</button>
+          </div>
+          <div class="slot occupied">
+            <div>
+              <strong>15:00 – Civic 2019</strong>
+              <div class="meta">Roberto Lima • Revisão</div>
+            </div>
+            <span class="status ok">Confirmado</span>
+          </div>
+        </div>
       </div>
-      <div class="ocr-status" id="a-ocr-status">lendo o odômetro…</div>
-      <div class="two-col">
-        <div><label>Litros</label><input id="a-litros" type="number" inputmode="decimal" step="0.01"></div>
-        <div><label>Valor total (R$)</label><input id="a-valor" type="number" inputmode="decimal" step="0.01"></div>
+
+      <!-- SERVIÇOS -->
+      <div id="mecanica-servicos" class="screen">
+        <div class="section-title">Últimos Serviços</div>
+        <div class="card">
+          <div class="list-item">
+            <div>
+              <strong>Golf 1.4 TSI – Carlos Mendes</strong>
+              <div class="meta">15/09/2026 • Troca de óleo + filtro • 85.900 km</div>
+            </div>
+            <button class="btn btn-sm btn-outline">Ver detalhes</button>
+          </div>
+          <div class="list-item">
+            <div>
+              <strong>Onix 1.0 – Maria Oliveira</strong>
+              <div class="meta">12/09/2026 • Pastilhas de freio • 62.300 km</div>
+            </div>
+            <button class="btn btn-sm btn-outline">Ver detalhes</button>
+          </div>
+        </div>
       </div>
-      <div class="err" id="a-err">informe km inicial, km final, litros e valor válidos (km final maior que o inicial)</div>
-      <button class="btn primary block" style="margin-top:16px" id="btn-save-abastecimento">salvar</button>
-    </div>
+
+      <!-- REGISTRAR SERVIÇO -->
+      <div id="mecanica-novo-servico" class="screen">
+        <div class="section-title">Registrar Serviço Realizado</div>
+
+        <div class="card">
+          <div class="form-group">
+            <label>Cliente / Veículo</label>
+            <select>
+              <option>Carlos Mendes – Golf 1.4 TSI</option>
+              <option>Ana Souza – Argo 1.0</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Km no momento do serviço</label>
+            <input type="number" placeholder="Ex: 87620" />
+          </div>
+
+          <div class="form-group">
+            <label>Itens realizados</label>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+              <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text);">
+                <input type="checkbox" checked /> Troca de óleo
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text);">
+                <input type="checkbox" checked /> Filtro de óleo
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text);">
+                <input type="checkbox" /> Filtro de ar
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text);">
+                <input type="checkbox" /> Pastilhas de freio
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Fotos dos itens trocados / serviço</label>
+            <div class="photo-area" onclick="document.getElementById('foto-servico').click()">
+              <div id="preview-servico"> Clique para adicionar fotos</div>
+              <input type="file" id="foto-servico" accept="image/*" multiple capture="environment" style="display:none" onchange="mostrarPreview(this, 'preview-servico')" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Observações</label>
+            <textarea rows="3" placeholder="Observações técnicas, recomendações..."></textarea>
+          </div>
+
+          <button class="btn btn-success" style="width:100%" onclick="alert('Serviço registrado com sucesso! (simulação)')">
+            Finalizar e Registrar Serviço
+          </button>
+        </div>
+      </div>
+    </main>
   </div>
 
-</div>
-
-<script>
-const store = {
-  async get(key){ try{ const r = await window.storage.get(key,false); return r? JSON.parse(r.value): null; }catch(e){ return null; } },
-  async set(key,val){ try{ await window.storage.set(key, JSON.stringify(val), false); }catch(e){ console.error('storage error',e); } }
-};
-
-let vehicle = null;
-let manutencoes = [];
-let abastecimentos = [];
-let pendingPhoto = { manutencao:null, abastecimento:null };
-
-function fmtMoney(n){ if(n===null||n===undefined||isNaN(n)) return '—'; return 'R$ ' + Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function fmtKm(n){ if(n===null||n===undefined||isNaN(n)) return '—'; return Number(n).toLocaleString('pt-BR') + ' km'; }
-function fmtDate(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
-
-function compressImage(file, maxW){
-  return new Promise((resolve,reject)=>{
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxW/img.width);
-        const w = Math.round(img.width*scale), h = Math.round(img.height*scale);
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img,0,0,w,h);
-        resolve(canvas.toDataURL('image/jpeg',0.6));
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-async function readOdometerFromPhoto(dataUrl){
-  const base64 = dataUrl.split(',')[1];
-  const res = await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      model:'claude-sonnet-4-6',
-      max_tokens:20,
-      messages:[{role:'user',content:[
-        {type:'image',source:{type:'base64',media_type:'image/jpeg',data:base64}},
-        {type:'text',text:'Leia o valor numérico mostrado no odômetro (painel de quilometragem) desta foto. Responda apenas com o número inteiro de quilômetros, sem texto, sem pontuação, sem unidade. Se não conseguir ler com confiança, responda apenas com NAO.'}
-      ]}]
-    })
-  });
-  const data = await res.json();
-  const txt = (data.content||[]).map(c=>c.text||'').join('').trim();
-  const n = parseInt(txt.replace(/\D/g,''),10);
-  if(!txt || txt.toUpperCase().includes('NAO') || isNaN(n)) return null;
-  return n;
-}
-
-function renderVehicle(){
-  if(!vehicle){
-    document.getElementById('vehicle-subtitle').textContent = 'nenhum veículo cadastrado';
-    document.getElementById('hero-km').textContent = '—';
-    return;
-  }
-  document.getElementById('vehicle-subtitle').textContent = `${vehicle.marca} ${vehicle.modelo} · ${vehicle.ano}`;
-  document.getElementById('hero-km').textContent = Number(vehicle.km).toLocaleString('pt-BR');
-  document.getElementById('v-marca').value = vehicle.marca||'';
-  document.getElementById('v-modelo').value = vehicle.modelo||'';
-  document.getElementById('v-ano').value = vehicle.ano||'';
-  document.getElementById('v-placa').value = vehicle.placa||'';
-  document.getElementById('v-km').value = vehicle.km||'';
-}
-
-function diasEntre(iso){
-  const d1 = new Date(iso+'T00:00:00'); const d2 = new Date(todayISO()+'T00:00:00');
-  return Math.round((d1-d2)/86400000);
-}
-
-function computeAlerts(){
-  if(!vehicle) return [];
-  const kmAtual = Number(vehicle.km)||0;
-  const alerts = manutencoes.filter(m=>m.proxKm || m.proxData).map(m=>{
-    let status='ok', detail=[];
-    if(m.proxKm){
-      const restam = m.proxKm - kmAtual;
-      detail.push(restam<=0 ? `${Math.abs(restam).toLocaleString('pt-BR')} km atrasado` : `faltam ${restam.toLocaleString('pt-BR')} km`);
-      if(restam<=0) status='overdue'; else if(restam<=1000 && status!=='overdue') status='soon';
+  <script>
+    function entrar(perfil) {
+      document.getElementById('login').style.display = 'none';
+      if (perfil === 'dono') {
+        document.getElementById('app-dono').classList.add('active');
+      } else {
+        document.getElementById('app-mecanica').classList.add('active');
+      }
     }
-    if(m.proxData){
-      const dias = diasEntre(m.proxData);
-      detail.push(dias<=0 ? `${Math.abs(dias)}d atrasado` : `em ${dias}d`);
-      if(dias<=0) status='overdue'; else if(dias<=30 && status!=='overdue') status='soon';
+
+    function sair() {
+      document.getElementById('app-dono').classList.remove('active');
+      document.getElementById('app-mecanica').classList.remove('active');
+      document.getElementById('login').style.display = 'flex';
     }
-    return { tipo:m.tipo, detail: detail.join(' · '), status, sortKey: (m.proxKm? m.proxKm-kmAtual : diasEntre(m.proxData)*40) };
-  });
-  alerts.sort((a,b)=>{
-    const rank = s => s==='overdue'?0:(s==='soon'?1:2);
-    if(rank(a.status)!==rank(b.status)) return rank(a.status)-rank(b.status);
-    return a.sortKey-b.sortKey;
-  });
-  return alerts;
-}
 
-function renderPainel(){
-  const box = document.getElementById('painel-alerts');
-  const alerts = computeAlerts();
-  if(!vehicle){
-    box.innerHTML = '<div class="empty">cadastre seu veículo na aba "veículo" para começar</div>';
-  } else if(alerts.length===0){
-    box.innerHTML = '<div class="empty">nenhuma manutenção com próxima troca definida ainda</div>';
-  } else {
-    box.innerHTML = alerts.slice(0,6).map(a=>`
-      <div class="card tight row">
-        <div><div style="font-weight:600;font-size:14px">${a.tipo}</div><div class="faint">${a.detail}</div></div>
-        <span class="chip ${a.status}">${a.status==='overdue'?'atrasado':a.status==='soon'?'em breve':'ok'}</span>
-      </div>`).join('');
-  }
+    function mostrarTela(perfil, tela) {
+      // Esconde todas as telas do perfil
+      const screens = document.querySelectorAll(`#app-${perfil} .screen`);
+      screens.forEach(s => s.classList.remove('active'));
 
-  const abOrdenados = [...abastecimentos].sort((x,y)=> new Date(y.data)-new Date(x.data));
-  function consumo(a){ const d = a.kmFinal-a.kmInicial; return d>0 && a.litros>0 ? d/a.litros : null; }
-  document.getElementById('stat-last-consumo').textContent = abOrdenados[0] ? consumo(abOrdenados[0]).toFixed(1)+' km/l' : '—';
-  const ultimos5 = abOrdenados.slice(0,5).map(consumo).filter(c=>c!==null);
-  document.getElementById('stat-avg-consumo').textContent = ultimos5.length ? (ultimos5.reduce((s,c)=>s+c,0)/ultimos5.length).toFixed(1)+' km/l' : '—';
+      // Mostra a tela escolhida
+      document.getElementById(`${perfil}-${tela}`).classList.add('active');
 
-  const now = new Date();
-  const yearAgo = new Date(now.getFullYear()-1, now.getMonth(), now.getDate());
-  const totalAno = manutencoes.filter(m=>new Date(m.data)>=yearAgo).reduce((s,m)=>s+(Number(m.custo)||0),0);
-  const totalGeral = manutencoes.reduce((s,m)=>s+(Number(m.custo)||0),0);
-  document.getElementById('stat-cost-year').textContent = fmtMoney(totalAno);
-  document.getElementById('stat-cost-total').textContent = fmtMoney(totalGeral);
-}
-
-function renderManutencoes(){
-  const box = document.getElementById('lista-manutencoes');
-  if(manutencoes.length===0){ box.innerHTML = '<div class="empty">nenhuma manutenção registrada ainda</div>'; return; }
-  const ordenados = [...manutencoes].sort((a,b)=> new Date(b.data)-new Date(a.data));
-  box.innerHTML = ordenados.map(m=>`
-    <div class="card list-item">
-      ${m.foto? `<img class="item-photo" src="${m.foto}">` : ''}
-      <div class="grow">
-        <div class="ttl">${m.tipo}</div>
-        <div class="meta">${fmtDate(m.data)} · ${fmtKm(m.km)}${m.oficina? ' · '+m.oficina:''}</div>
-        ${m.obs? `<div class="faint" style="margin-top:2px">${m.obs}</div>`:''}
-      </div>
-      <div class="cost">${m.custo? fmtMoney(m.custo): ''}</div>
-    </div>`).join('');
-}
-
-function renderAbastecimentos(){
-  const box = document.getElementById('lista-abastecimentos');
-  if(abastecimentos.length===0){ box.innerHTML = '<div class="empty">nenhum abastecimento registrado ainda</div>'; return; }
-  const ordenados = [...abastecimentos].sort((a,b)=> new Date(b.data)-new Date(a.data));
-  box.innerHTML = ordenados.map(a=>{
-    const d = a.kmFinal-a.kmInicial;
-    const kml = d>0 && a.litros>0 ? (d/a.litros).toFixed(1) : null;
-    return `<div class="card list-item">
-      <div class="grow">
-        <div class="ttl">${fmtKm(a.kmInicial)} → ${fmtKm(a.kmFinal)}</div>
-        <div class="meta">${fmtDate(a.data)} · ${a.litros}L${kml? ' · '+kml+' km/l':''}</div>
-      </div>
-      <div class="cost">${fmtMoney(a.valor)}</div>
-    </div>`;
-  }).join('');
-}
-
-function renderAll(){ renderVehicle(); renderPainel(); renderManutencoes(); renderAbastecimentos(); }
-
-document.querySelectorAll('.tabbar button').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('view-'+btn.dataset.view).classList.add('active');
-  });
-});
-
-document.getElementById('btn-edit-km').addEventListener('click', ()=>{
-  document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  document.querySelector('[data-view=veiculo]').classList.add('active');
-  document.getElementById('view-veiculo').classList.add('active');
-  document.getElementById('v-km').focus();
-});
-
-async function fetchSuggestedPlan(marca, modelo, ano){
-  const res = await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      model:'claude-sonnet-4-6',
-      max_tokens:700,
-      messages:[{role:'user',content:
-        `Liste itens típicos de manutenção preventiva para um ${marca} ${modelo} ${ano}, com base em conhecimento geral do mercado brasileiro (não é o manual oficial deste veículo específico). `+
-        `Responda APENAS com um array JSON, sem markdown, sem texto antes ou depois, no formato: `+
-        `[{"item":"Troca de óleo do motor","km":10000,"meses":12}, ...]. `+
-        `Inclua de 6 a 10 itens comuns (óleo e filtro de óleo, filtro de ar, filtro de combustível, velas de ignição, pastilhas de freio, fluido de freio, correia dentada ou corrente, bateria, arrefecimento, alinhamento e balanceamento — ajuste ao que fizer sentido para o modelo). Use intervalos plausíveis em km e em meses (meses pode ser null se não fizer sentido).`
-      }]
-    })
-  });
-  const data = await res.json();
-  let txt = (data.content||[]).map(c=>c.text||'').join('').trim();
-  txt = txt.replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
-  return JSON.parse(txt);
-}
-
-document.getElementById('btn-suggest-revisions').addEventListener('click', async ()=>{
-  const marca = document.getElementById('v-marca').value.trim();
-  const modelo = document.getElementById('v-modelo').value.trim();
-  const ano = document.getElementById('v-ano').value;
-  const status = document.getElementById('suggest-status');
-  const box = document.getElementById('suggest-box');
-  if(!marca || !modelo || !ano){ status.textContent='preencha marca, modelo e ano antes de pedir sugestões'; status.classList.add('show'); return; }
-  status.textContent = 'buscando sugestões…'; status.classList.add('show');
-  box.innerHTML = '';
-  try{
-    const plano = await fetchSuggestedPlan(marca, modelo, ano);
-    status.textContent = 'estimativa geral — confira os intervalos no manual do seu veículo antes de confiar';
-    box.innerHTML = `
-      ${plano.map((p,i)=>`
-        <label class="row" style="margin-top:8px;cursor:pointer">
-          <span style="display:flex;align-items:center;gap:8px">
-            <input type="checkbox" checked data-idx="${i}" class="suggest-check" style="width:auto">
-            <span>${p.item}<br><span class="faint">a cada ${p.km? p.km.toLocaleString('pt-BR')+' km':''}${p.km&&p.meses? ' ou ':''}${p.meses? p.meses+' meses':''}</span></span>
-          </span>
-        </label>`).join('')}
-      <button class="btn primary block" style="margin-top:12px" id="btn-apply-suggestions">adicionar selecionados como metas</button>
-    `;
-    document.getElementById('btn-apply-suggestions').addEventListener('click', async ()=>{
-      const checks = document.querySelectorAll('.suggest-check:checked');
-      const kmBase = Number(document.getElementById('v-km').value)||0;
-      const hoje = todayISO();
-      checks.forEach(ch=>{
-        const p = plano[Number(ch.dataset.idx)];
-        let proxData = null;
-        if(p.meses){ const d = new Date(); d.setMonth(d.getMonth()+p.meses); proxData = d.toISOString().slice(0,10); }
-        manutencoes.push({
-          id: uid(), tipo: p.item, data: hoje, km: kmBase, custo: null, oficina: '',
-          obs: 'meta sugerida automaticamente (estimativa geral) — confirme o intervalo no manual do veículo',
-          proxKm: p.km? kmBase + p.km : null, proxData, foto: null
-        });
-      });
-      await store.set('manutencoes', manutencoes);
-      box.innerHTML = ''; status.textContent = 'metas adicionadas ao histórico de manutenções';
-      renderAll();
-    });
-  }catch(e){
-    status.textContent = 'não consegui gerar sugestões agora — tente novamente';
-  }
-});
-
-document.getElementById('btn-save-vehicle').addEventListener('click', async ()=>{
-  const marca = document.getElementById('v-marca').value.trim();
-  const modelo = document.getElementById('v-modelo').value.trim();
-  const ano = document.getElementById('v-ano').value;
-  const km = document.getElementById('v-km').value;
-  const err = document.getElementById('v-err');
-  if(!marca || !modelo || !ano || km===''){ err.classList.add('show'); return; }
-  err.classList.remove('show');
-  vehicle = { marca, modelo, ano:Number(ano), placa: document.getElementById('v-placa').value.trim(), km:Number(km) };
-  await store.set('veiculo', vehicle);
-  renderAll();
-});
-
-function openModal(id){ document.getElementById(id).classList.add('open'); }
-function closeModal(id){ document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('[data-close]').forEach(b=> b.addEventListener('click', e=>{
-  closeModal(e.target.closest('.modal-overlay').id);
-}));
-
-document.getElementById('btn-new-manutencao').addEventListener('click', ()=>{
-  ['m-tipo','m-km','m-custo','m-oficina','m-obs','m-prox-km','m-prox-data'].forEach(id=> document.getElementById(id).value='');
-  document.getElementById('m-data').value = todayISO();
-  document.getElementById('m-err').classList.remove('show');
-  document.getElementById('m-photo-label').textContent = 'toque para adicionar foto';
-  pendingPhoto.manutencao = null;
-  openModal('overlay-manutencao');
-});
-
-document.getElementById('m-photo-file').addEventListener('change', async e=>{
-  const file = e.target.files[0]; if(!file) return;
-  const dataUrl = await compressImage(file, 700);
-  pendingPhoto.manutencao = dataUrl;
-  document.getElementById('m-photo-label').textContent = 'foto adicionada — toque para trocar';
-});
-
-document.getElementById('btn-save-manutencao').addEventListener('click', async ()=>{
-  const tipo = document.getElementById('m-tipo').value.trim();
-  const data = document.getElementById('m-data').value;
-  const km = document.getElementById('m-km').value;
-  const err = document.getElementById('m-err');
-  if(!tipo || !data || km===''){ err.classList.add('show'); return; }
-  err.classList.remove('show');
-  const rec = {
-    id: uid(), tipo, data, km:Number(km),
-    custo: document.getElementById('m-custo').value? Number(document.getElementById('m-custo').value): null,
-    oficina: document.getElementById('m-oficina').value.trim(),
-    obs: document.getElementById('m-obs').value.trim(),
-    proxKm: document.getElementById('m-prox-km').value? Number(document.getElementById('m-prox-km').value): null,
-    proxData: document.getElementById('m-prox-data').value || null,
-    foto: pendingPhoto.manutencao
-  };
-  manutencoes.push(rec);
-  await store.set('manutencoes', manutencoes);
-  closeModal('overlay-manutencao');
-  renderAll();
-});
-
-document.getElementById('btn-new-abastecimento').addEventListener('click', ()=>{
-  document.getElementById('a-data').value = todayISO();
-  const ultimoKm = abastecimentos.length ? Math.max(...abastecimentos.map(a=>a.kmFinal)) : (vehicle? vehicle.km : '');
-  document.getElementById('a-km-inicial').value = ultimoKm;
-  document.getElementById('a-km-final').value = '';
-  document.getElementById('a-litros').value = '';
-  document.getElementById('a-valor').value = '';
-  document.getElementById('a-err').classList.remove('show');
-  document.getElementById('a-ocr-status').classList.remove('show');
-  document.getElementById('a-photo-label').textContent = 'toque para adicionar foto';
-  pendingPhoto.abastecimento = null;
-  openModal('overlay-abastecimento');
-});
-
-document.getElementById('a-photo-file').addEventListener('change', async e=>{
-  const file = e.target.files[0]; if(!file) return;
-  const dataUrl = await compressImage(file, 900);
-  pendingPhoto.abastecimento = dataUrl;
-  document.getElementById('a-photo-label').textContent = 'foto adicionada — toque para trocar';
-  const status = document.getElementById('a-ocr-status');
-  status.textContent = 'lendo o odômetro…'; status.classList.add('show');
-  try{
-    const km = await readOdometerFromPhoto(dataUrl);
-    if(km){
-      document.getElementById('a-km-final').value = km;
-      status.textContent = `km lido automaticamente: ${km.toLocaleString('pt-BR')} — confira antes de salvar`;
-    } else {
-      status.textContent = 'não consegui ler o número com segurança — preencha o km final manualmente';
+      // Atualiza botões da nav
+      const buttons = document.querySelectorAll(`#app-${perfil} nav button`);
+      buttons.forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
     }
-  }catch(err){
-    status.textContent = 'falha ao tentar ler a foto — preencha o km final manualmente';
-  }
-});
 
-document.getElementById('btn-save-abastecimento').addEventListener('click', async ()=>{
-  const kmInicial = Number(document.getElementById('a-km-inicial').value);
-  const kmFinal = Number(document.getElementById('a-km-final').value);
-  const litros = Number(document.getElementById('a-litros').value);
-  const valor = Number(document.getElementById('a-valor').value);
-  const err = document.getElementById('a-err');
-  if(!kmInicial || !kmFinal || !litros || !valor || kmFinal<=kmInicial){ err.classList.add('show'); return; }
-  err.classList.remove('show');
-  const rec = { id: uid(), data: document.getElementById('a-data').value, kmInicial, kmFinal, litros, valor, foto: pendingPhoto.abastecimento };
-  abastecimentos.push(rec);
-  await store.set('abastecimentos', abastecimentos);
-  if(vehicle && kmFinal > vehicle.km){ vehicle.km = kmFinal; await store.set('veiculo', vehicle); }
-  closeModal('overlay-abastecimento');
-  renderAll();
-});
-
-(async function init(){
-  vehicle = await store.get('veiculo');
-  manutencoes = (await store.get('manutencoes')) || [];
-  abastecimentos = (await store.get('abastecimentos')) || [];
-  renderAll();
-  if(!vehicle){
-    document.querySelectorAll('.tabbar button').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    document.querySelector('[data-view=veiculo]').classList.add('active');
-    document.getElementById('view-veiculo').classList.add('active');
-  }
-})();
-</script>
+    function mostrarPreview(input, previewId) {
+      const preview = document.getElementById(previewId);
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.innerHTML = `<img src="${e.target.result}" alt="Preview" />`;
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+  </script>
 </body>
 </html>
