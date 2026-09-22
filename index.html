@@ -392,7 +392,10 @@
           <option>Volkswagen</option><option>Fiat</option><option>Chevrolet</option>
           <option>Hyundai</option><option>Toyota</option><option>Honda</option>
           <option>Renault</option><option>Jeep</option><option>Ford</option>
-          <option>Nissan</option><option>Peugeot</option><option>Outro</option>
+          <option>Nissan</option><option>Peugeot</option><option>Citroën</option>
+          <option>Mercedes-Benz</option><option>BMW</option><option>Audi</option>
+          <option>Opel</option><option>Gurgel</option><option>Puma</option>
+          <option>Willys</option><option>Simca</option><option>Outro</option>
         </select>
       </div>
       <div class="form-group">
@@ -402,7 +405,7 @@
       <div class="form-row">
         <div class="form-group">
           <label>Ano</label>
-          <input type="number" id="v-ano" placeholder="2018" min="1980" max="2027" />
+          <input type="number" id="v-ano" placeholder="Ex: 1973" min="1950" max="2027" />
         </div>
         <div class="form-group">
           <label>Placa</label>
@@ -412,6 +415,14 @@
       <div class="form-group">
         <label>Km atual</label>
         <input type="number" id="v-km" placeholder="Ex: 45000" min="0" />
+      </div>
+      <div class="form-group">
+        <button type="button" class="btn btn-outline btn-block" onclick="buscarDadosVeiculo()" style="border-style:dashed">
+          🔍 Buscar dados do modelo na internet
+        </button>
+        <p style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center">
+          Abre busca com manual, intervalos de manutenção e fichas técnicas
+        </p>
       </div>
       <div class="modal-actions">
         <button class="btn btn-outline btn-block" onclick="fecharModal('modal-veiculo')">Cancelar</button>
@@ -506,6 +517,36 @@
       document.getElementById(id).classList.remove('show');
     }
 
+    function buscarDadosVeiculo() {
+      const marca = document.getElementById('v-marca').value;
+      const modelo = document.getElementById('v-modelo').value.trim();
+      const ano = document.getElementById('v-ano').value;
+
+      if (!marca && !modelo) {
+        toast('Informe pelo menos a marca ou o modelo');
+        return;
+      }
+
+      const partes = [];
+      if (marca) partes.push(marca);
+      if (modelo) partes.push(modelo);
+      if (ano) partes.push(ano);
+
+      const q = encodeURIComponent(partes.join(' ') + ' manual manutenção intervalos revisão especificação técnica');
+      // Abre busca no Google (usuário pode ver manuais, fóruns, FIPE, etc.)
+      window.open('https://www.google.com/search?q=' + q, '_blank', 'noopener');
+
+      // Também oferece link direto para busca na Wikipedia (útil para carros clássicos)
+      const wikiQ = encodeURIComponent((marca + ' ' + modelo).trim());
+      setTimeout(() => {
+        if (confirm('Abrir também a Wikipedia para dados históricos do modelo?')) {
+          window.open('https://pt.wikipedia.org/w/index.php?search=' + wikiQ, '_blank', 'noopener');
+        }
+      }, 400);
+
+      toast('Busca aberta em nova aba');
+    }
+
     function fmtKm(n) {
       return (n || 0).toLocaleString('pt-BR');
     }
@@ -590,7 +631,7 @@
 
       if (!marca) { toast('Selecione a marca'); return; }
       if (!modelo) { toast('Informe o modelo'); return; }
-      if (!ano || ano < 1980 || ano > 2027) { toast('Ano inválido'); return; }
+      if (!ano || ano < 1950 || ano > 2027) { toast('Ano inválido (1950–2027)'); return; }
       if (!placa || placa.length < 6) { toast('Placa inválida'); return; }
       if (isNaN(km) || km < 0) { toast('Informe o km atual'); return; }
 
