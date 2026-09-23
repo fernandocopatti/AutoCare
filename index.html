@@ -29,174 +29,142 @@
       --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
       --shadow-md: 0 4px 6px -1px rgba(0,0,0,.07), 0 2px 4px -2px rgba(0,0,0,.05);
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
+      background: var(--bg); color: var(--text); line-height: 1.5;
+      min-height: 100vh; -webkit-font-smoothing: antialiased;
     }
 
-    /* ===== LOGIN ===== */
+    /* LOGIN */
     .login-screen {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 50%, #1e40af 100%);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 24px; background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 55%, #1e40af 100%);
     }
     .login-box {
-      background: var(--surface);
-      border-radius: 20px;
-      padding: 48px 40px;
-      width: 100%;
-      max-width: 420px;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,.35);
+      background: var(--surface); border-radius: 20px; padding: 44px 36px;
+      width: 100%; max-width: 440px; box-shadow: 0 25px 50px -12px rgba(0,0,0,.35);
     }
-    .login-logo {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 8px;
-    }
+    .login-logo { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 6px; }
     .login-logo .icon {
-      width: 48px; height: 48px;
-      background: var(--primary);
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      color: white; font-size: 24px;
+      width: 48px; height: 48px; background: var(--primary); border-radius: 14px;
+      display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;
     }
     .login-box h1 { font-size: 26px; font-weight: 700; text-align: center; letter-spacing: -0.02em; }
-    .login-box .subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 36px; font-size: 15px; }
-    .profile-buttons { display: flex; flex-direction: column; gap: 12px; }
+    .login-box .subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 28px; font-size: 14px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary); }
+    input, select, textarea {
+      width: 100%; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 15px; background: var(--surface); font-family: inherit; color: var(--text);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30,64,175,.12);
+    }
+    input[readonly] { background: #f1f5f9; color: var(--text-secondary); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } }
 
-    /* ===== BUTTONS ===== */
+    .role-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
+    .role-card {
+      border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 16px;
+      cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all .15s;
+      background: var(--surface);
+    }
+    .role-card:hover { border-color: var(--primary); background: #f8fafc; }
+    .role-card.selected { border-color: var(--primary); background: var(--primary-light); box-shadow: 0 0 0 2px rgba(30,64,175,.15); }
+    .role-card .role-icon { font-size: 22px; width: 40px; text-align: center; }
+    .role-card .role-title { font-weight: 600; font-size: 14px; }
+    .role-card .role-desc { font-size: 12px; color: var(--muted); }
+
     .btn {
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
       padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
-      border: none; cursor: pointer; transition: all .15s ease;
-      font-family: inherit;
+      border: none; cursor: pointer; transition: all .15s ease; font-family: inherit;
     }
     .btn:active { transform: scale(0.98); }
     .btn-primary { background: var(--primary); color: white; }
     .btn-primary:hover { background: var(--primary-hover); }
-    .btn-outline {
-      background: var(--surface); border: 1.5px solid var(--border); color: var(--text);
-    }
+    .btn-outline { background: var(--surface); border: 1.5px solid var(--border); color: var(--text); }
     .btn-outline:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
     .btn-success { background: var(--success); color: white; }
     .btn-success:hover { background: #047857; }
+    .btn-danger { background: var(--danger); color: white; }
     .btn-ghost { background: transparent; color: var(--text-secondary); border: none; }
     .btn-ghost:hover { background: var(--bg); color: var(--text); }
     .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 8px; }
     .btn-block { width: 100%; }
-    .btn-icon {
-      width: 36px; height: 36px; padding: 0; border-radius: 8px;
-      display: inline-flex; align-items: center; justify-content: center;
-    }
+    .btn-icon { width: 36px; height: 36px; padding: 0; border-radius: 8px; }
 
-    /* ===== APP SHELL ===== */
+    .login-footer { margin-top: 20px; display: flex; flex-direction: column; gap: 6px; }
+    .login-footer .btn { font-size: 13px; color: var(--muted); }
+
+    /* APP */
     .app { display: none; min-height: 100vh; flex-direction: column; }
     .app.active { display: flex; }
 
     .topbar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      height: 64px;
-      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between;
       position: sticky; top: 0; z-index: 50;
     }
-    .topbar-brand {
-      display: flex; align-items: center; gap: 10px;
-      font-weight: 700; font-size: 18px; color: var(--primary);
-    }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--primary); }
     .topbar-brand .icon {
-      width: 36px; height: 36px; background: var(--primary);
-      border-radius: 10px; display: flex; align-items: center; justify-content: center;
-      color: white; font-size: 18px;
+      width: 36px; height: 36px; background: var(--primary); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;
     }
     .topbar-right { display: flex; align-items: center; gap: 12px; }
     .badge {
       display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 12px; border-radius: 20px;
-      font-size: 12px; font-weight: 600;
+      padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
     }
     .badge-owner { background: var(--primary-light); color: var(--primary); }
     .badge-shop { background: var(--success-bg); color: #065f46; }
+    .badge-admin { background: #fef3c7; color: #92400e; }
 
     .nav {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      display: flex; overflow-x: auto; padding: 0 16px;
-      gap: 4px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; overflow-x: auto; padding: 0 16px; gap: 4px;
     }
     .nav button {
-      padding: 14px 16px; background: none; border: none;
-      font-size: 14px; font-weight: 500; color: var(--muted);
-      cursor: pointer; white-space: nowrap;
-      border-bottom: 2px solid transparent;
-      display: flex; align-items: center; gap: 8px;
-      font-family: inherit; transition: all .15s;
+      padding: 14px 16px; background: none; border: none; font-size: 14px; font-weight: 500;
+      color: var(--muted); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent;
+      display: flex; align-items: center; gap: 8px; font-family: inherit; transition: all .15s;
     }
     .nav button:hover { color: var(--text); }
-    .nav button.active {
-      color: var(--primary); border-bottom-color: var(--primary); font-weight: 600;
-    }
-    .nav button .nav-icon { font-size: 16px; }
+    .nav button.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
 
-    main {
-      flex: 1; padding: 28px 24px;
-      max-width: 860px; margin: 0 auto; width: 100%;
-    }
-
+    main { flex: 1; padding: 28px 24px; max-width: 900px; margin: 0 auto; width: 100%; }
     .screen { display: none; }
     .screen.active { display: block; animation: fadeIn .2s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-    /* ===== CARDS & UI ===== */
     .page-header {
       display: flex; justify-content: space-between; align-items: center;
       margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
     }
-    .page-header h2 {
-      font-size: 22px; font-weight: 700; letter-spacing: -0.02em;
-    }
+    .page-header h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
     .page-header p { color: var(--text-secondary); font-size: 14px; margin-top: 2px; }
 
     .card {
-      background: var(--surface);
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      padding: 20px 22px;
-      margin-bottom: 16px;
-      box-shadow: var(--shadow);
-      transition: box-shadow .15s;
+      background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
+      padding: 20px 22px; margin-bottom: 16px; box-shadow: var(--shadow); transition: box-shadow .15s;
     }
     .card:hover { box-shadow: var(--shadow-md); }
 
-    .vehicle-card .card-top {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      margin-bottom: 16px;
-    }
+    .vehicle-card .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
     .vehicle-card h3 { font-size: 17px; font-weight: 600; }
     .vehicle-card .meta { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
     .km-badge {
-      background: #0f172a; color: white;
-      padding: 6px 12px; border-radius: 8px;
-      font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
+      background: #0f172a; color: white; padding: 6px 12px; border-radius: 8px;
+      font-size: 13px; font-weight: 600;
     }
-
     .stats-row {
       display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
       padding-top: 14px; border-top: 1px solid var(--border);
     }
+    @media (max-width: 520px) { .stats-row { grid-template-columns: 1fr; } }
     .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
     .stat-value { font-size: 15px; font-weight: 600; margin-top: 2px; }
 
@@ -208,39 +176,17 @@
     .list-item:first-child { padding-top: 0; }
 
     .status {
-      font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
-      white-space: nowrap;
+      font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 20px; white-space: nowrap;
     }
     .status.ok { background: var(--success-bg); color: #065f46; }
     .status.warn { background: var(--warning-bg); color: #92400e; }
     .status.late { background: var(--danger-bg); color: #991b1b; }
     .status.info { background: var(--info-bg); color: #075985; }
 
-    /* ===== FORMS ===== */
-    .form-group { margin-bottom: 18px; }
-    .form-group label {
-      display: block; font-size: 13px; font-weight: 500;
-      margin-bottom: 6px; color: var(--text-secondary);
-    }
-    input, select, textarea {
-      width: 100%; padding: 11px 14px;
-      border: 1.5px solid var(--border); border-radius: 10px;
-      font-size: 15px; background: var(--surface);
-      font-family: inherit; color: var(--text);
-      transition: border-color .15s, box-shadow .15s;
-    }
-    input:focus, select:focus, textarea:focus {
-      outline: none; border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(30,64,175,.12);
-    }
-    input[readonly] { background: #f1f5f9; color: var(--text-secondary); }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    @media (max-width: 520px) { .form-row, .stats-row { grid-template-columns: 1fr; } }
-
     .photo-area {
       border: 2px dashed var(--border); border-radius: 12px; padding: 28px;
-      text-align: center; background: #f8fafc; cursor: pointer;
-      transition: all .15s; color: var(--text-secondary); font-size: 14px;
+      text-align: center; background: #f8fafc; cursor: pointer; transition: all .15s;
+      color: var(--text-secondary); font-size: 14px;
     }
     .photo-area:hover { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
     .photo-area img { max-width: 100%; max-height: 150px; border-radius: 8px; margin-top: 12px; }
@@ -249,39 +195,29 @@
 
     .check-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
     .check-list label {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 14px; color: var(--text); cursor: pointer;
-      padding: 8px 12px; border-radius: 8px; margin: 0;
-      transition: background .1s;
+      display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text);
+      cursor: pointer; padding: 8px 12px; border-radius: 8px; margin: 0;
     }
     .check-list label:hover { background: var(--bg); }
     .check-list input { width: 18px; height: 18px; accent-color: var(--primary); }
 
-    /* ===== AGENDA ===== */
     .agenda-day { margin-bottom: 28px; }
     .agenda-day h4 {
       font-size: 12px; font-weight: 600; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.06em;
-      margin-bottom: 12px;
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px;
     }
     .slot {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 10px; padding: 14px 16px; margin-bottom: 8px;
-      display: flex; justify-content: space-between; align-items: center;
-      transition: all .15s;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
     }
     .slot.occupied { background: #eff6ff; border-color: #bfdbfe; }
     .slot.free { background: #f0fdf4; border-color: #bbf7d0; }
-    .slot .slot-time { font-weight: 600; font-size: 14px; }
-    .slot .slot-meta { font-size: 13px; color: var(--text-secondary); }
+    .slot-time { font-weight: 600; font-size: 14px; }
+    .slot-meta { font-size: 13px; color: var(--text-secondary); }
 
-    .empty-state {
-      text-align: center; padding: 48px 24px; color: var(--muted);
-    }
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
     .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: .6; }
-    .empty-state p { font-size: 15px; }
 
-    /* ===== MODAL ===== */
     .modal-bg {
       position: fixed; inset: 0; background: rgba(15,23,42,.5);
       display: none; align-items: center; justify-content: center;
@@ -296,60 +232,121 @@
     .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
     .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
 
-    /* ===== TOAST ===== */
     .toast {
       position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
       background: #0f172a; color: white; padding: 12px 22px; border-radius: 10px;
-      font-size: 14px; font-weight: 500; z-index: 300;
-      opacity: 0; transition: all .25s ease; pointer-events: none;
-      box-shadow: 0 10px 25px rgba(0,0,0,.2);
+      font-size: 14px; font-weight: 500; z-index: 300; opacity: 0; transition: all .25s ease;
+      pointer-events: none; box-shadow: 0 10px 25px rgba(0,0,0,.2);
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
     .actions-row { display: flex; gap: 8px; }
+    .user-chip { font-size: 13px; color: var(--text-secondary); }
   </style>
+  <!-- Google Identity Services - substitua SEU_CLIENT_ID pelo Client ID do Google Cloud -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
-  <!-- LOGIN -->
+  <!-- ========== LOGIN ========== -->
   <div id="login" class="login-screen">
     <div class="login-box">
-      <div class="login-logo">
-        <div class="icon">🚗</div>
-      </div>
+      <div class="login-logo"><div class="icon">🚗</div></div>
       <h1>AutoCare</h1>
-      <p class="subtitle">Gestão inteligente de manutenção e abastecimento</p>
-      <div class="profile-buttons">
-        <button class="btn btn-primary btn-block" onclick="entrar('dono')">
-          <span>👤</span> Entrar como Proprietário
-        </button>
-        <button class="btn btn-outline btn-block" onclick="entrar('mecanica')">
-          <span>🔧</span> Entrar como Mecânica
-        </button>
-        <button class="btn btn-ghost btn-block" style="margin-top:8px;color:var(--muted);font-size:13px" onclick="location.reload()">
-          🔄 Recarregar App
-        </button>
-        <button class="btn btn-ghost btn-block" style="color:var(--danger);font-size:13px" onclick="resetData()">
-          🗑️ Limpar dados de teste
-        </button>
+      <p class="subtitle">Gestão de manutenção · abastecimento · oficinas</p>
+
+      <div class="form-group">
+        <label>Seu nome</label>
+        <input type="text" id="login-nome" placeholder="Ex: Maria Silva" autocomplete="name" />
+      </div>
+
+      <label style="display:block;font-size:13px;font-weight:500;margin-bottom:10px;color:var(--text-secondary)">Tipo de acesso</label>
+      <div class="role-grid" id="role-grid">
+        <div class="role-card selected" data-role="dono" onclick="selectRole(this)">
+          <div class="role-icon">👤</div>
+          <div>
+            <div class="role-title">Proprietário</div>
+            <div class="role-desc">Veículos, abastecimentos e agendamentos</div>
+          </div>
+        </div>
+        <div class="role-card" data-role="mecanica" onclick="selectRole(this)">
+          <div class="role-icon">🔧</div>
+          <div>
+            <div class="role-title">Oficina / Mecânica</div>
+            <div class="role-desc">Agenda, serviços e histórico</div>
+          </div>
+        </div>
+        <div class="role-card" data-role="admin" onclick="selectRole(this)">
+          <div class="role-icon">⚙️</div>
+          <div>
+            <div class="role-title">Administrador</div>
+            <div class="role-desc">Cadastrar e gerenciar oficinas</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Select oficina (só para perfil mecânica) -->
+      <div class="form-group" id="login-oficina-wrap" style="display:none">
+        <label>Oficina</label>
+        <select id="login-oficina"></select>
+      </div>
+
+      <button class="btn btn-primary btn-block" onclick="fazerLogin()">Entrar</button>
+
+      <div style="display:flex;align-items:center;gap:12px;margin:18px 0 14px">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:12px;color:var(--muted)">ou</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+
+      <div id="google-btn-wrap" style="display:flex;justify-content:center;margin-bottom:8px">
+        <div id="g_id_onload"
+             data-client_id="SEU_CLIENT_ID.apps.googleusercontent.com"
+             data-context="signin"
+             data-callback="onGoogleSignIn"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-shape="rectangular"
+             data-theme="outline"
+             data-text="signin_with"
+             data-size="large"
+             data-logo_alignment="left"
+             data-width="320">
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:12px">
+        Configure o Client ID no código (Google Cloud Console). Sem isso, use o login por nome + perfil.
+      </p>
+
+      <div class="login-footer">
+        <button class="btn btn-ghost btn-block" onclick="exportarBackup()">☁️ Exportar backup (JSON)</button>
+        <button class="btn btn-ghost btn-block" onclick="document.getElementById('import-backup').click()">📥 Importar backup</button>
+        <input type="file" id="import-backup" accept="application/json,.json" style="display:none" onchange="importarBackup(event)" />
+        <button class="btn btn-ghost btn-block" onclick="mostrarAjudaGithub()">🔗 Backup no GitHub (como fazer)</button>
+        <button class="btn btn-ghost btn-block" onclick="carregarDemo()">📦 Carregar dados de demonstração</button>
+        <button class="btn btn-ghost btn-block" onclick="location.reload()">🔄 Recarregar App</button>
+        <button class="btn btn-ghost btn-block" style="color:var(--danger)" onclick="limparBase()">🗑️ Limpar base (zerar tudo)</button>
       </div>
     </div>
   </div>
 
-  <!-- APP DONO -->
+  <!-- ========== APP DONO ========== -->
   <div id="app-dono" class="app">
     <div class="topbar">
       <div class="topbar-brand"><div class="icon">🚗</div> AutoCare</div>
       <div class="topbar-right">
+        <span class="user-chip" id="dono-user-name"></span>
         <span class="badge badge-owner">👤 Proprietário</span>
         <button class="btn btn-sm btn-outline" onclick="sair()">Sair</button>
       </div>
     </div>
     <nav class="nav" id="nav-dono">
-      <button class="active" data-tela="veiculos" onclick="mostrarTela('dono','veiculos')"><span class="nav-icon">🚙</span> Veículos</button>
-      <button data-tela="abastecimento" onclick="mostrarTela('dono','abastecimento')"><span class="nav-icon">⛽</span> Abastecer</button>
-      <button data-tela="manutencao" onclick="mostrarTela('dono','manutencao')"><span class="nav-icon">🛠️</span> Manutenções</button>
-      <button data-tela="agendar" onclick="mostrarTela('dono','agendar')"><span class="nav-icon">📅</span> Agendar</button>
+      <button class="active" data-tela="veiculos" onclick="mostrarTela('dono','veiculos')">🚙 Veículos</button>
+      <button data-tela="abastecimento" onclick="mostrarTela('dono','abastecimento')">⛽ Abastecer</button>
+      <button data-tela="manutencao" onclick="mostrarTela('dono','manutencao')">🛠️ Manutenções</button>
+      <button data-tela="agendar" onclick="mostrarTela('dono','agendar')">📅 Agendar</button>
     </nav>
     <main>
       <div id="dono-veiculos" class="screen active"></div>
@@ -359,24 +356,45 @@
     </main>
   </div>
 
-  <!-- APP MECÂNICA -->
+  <!-- ========== APP MECÂNICA ========== -->
   <div id="app-mecanica" class="app">
     <div class="topbar">
       <div class="topbar-brand"><div class="icon">🚗</div> AutoCare</div>
       <div class="topbar-right">
-        <span class="badge badge-shop">🔧 Oficina Central</span>
+        <span class="user-chip" id="mec-user-name"></span>
+        <span class="badge badge-shop" id="mec-oficina-badge">🔧 Oficina</span>
         <button class="btn btn-sm btn-outline" onclick="sair()">Sair</button>
       </div>
     </div>
     <nav class="nav" id="nav-mecanica">
-      <button class="active" data-tela="agenda" onclick="mostrarTela('mecanica','agenda')"><span class="nav-icon">📋</span> Agenda</button>
-      <button data-tela="servicos" onclick="mostrarTela('mecanica','servicos')"><span class="nav-icon">✅</span> Serviços</button>
-      <button data-tela="novo-servico" onclick="mostrarTela('mecanica','novo-servico')"><span class="nav-icon">➕</span> Registrar</button>
+      <button class="active" data-tela="agenda" onclick="mostrarTela('mecanica','agenda')">📋 Agenda</button>
+      <button data-tela="servicos" onclick="mostrarTela('mecanica','servicos')">✅ Serviços</button>
+      <button data-tela="novo-servico" onclick="mostrarTela('mecanica','novo-servico')">➕ Registrar</button>
     </nav>
     <main>
       <div id="mecanica-agenda" class="screen active"></div>
       <div id="mecanica-servicos" class="screen"></div>
       <div id="mecanica-novo-servico" class="screen"></div>
+    </main>
+  </div>
+
+  <!-- ========== APP ADMIN ========== -->
+  <div id="app-admin" class="app">
+    <div class="topbar">
+      <div class="topbar-brand"><div class="icon">🚗</div> AutoCare</div>
+      <div class="topbar-right">
+        <span class="user-chip" id="admin-user-name"></span>
+        <span class="badge badge-admin">⚙️ Administrador</span>
+        <button class="btn btn-sm btn-outline" onclick="sair()">Sair</button>
+      </div>
+    </div>
+    <nav class="nav" id="nav-admin">
+      <button class="active" data-tela="oficinas" onclick="mostrarTela('admin','oficinas')">🏢 Oficinas</button>
+      <button data-tela="resumo" onclick="mostrarTela('admin','resumo')">📊 Resumo</button>
+    </nav>
+    <main>
+      <div id="admin-oficinas" class="screen active"></div>
+      <div id="admin-resumo" class="screen"></div>
     </main>
   </div>
 
@@ -400,7 +418,7 @@
       </div>
       <div class="form-group">
         <label>Modelo</label>
-        <input type="text" id="v-modelo" placeholder="Ex: Golf 1.4 TSI" />
+        <input type="text" id="v-modelo" placeholder="Ex: Fusca 1300" />
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -421,7 +439,7 @@
           🔍 Buscar dados do modelo na internet
         </button>
         <p style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center">
-          Abre busca com manual, intervalos de manutenção e fichas técnicas
+          Manual, intervalos de manutenção e fichas técnicas
         </p>
       </div>
       <div class="modal-actions">
@@ -431,10 +449,50 @@
     </div>
   </div>
 
+  <!-- MODAL OFICINA (ADMIN) -->
+  <div id="modal-oficina" class="modal-bg" onclick="if(event.target===this)fecharModal('modal-oficina')">
+    <div class="modal">
+      <h2 id="modal-oficina-titulo">Cadastrar Oficina</h2>
+      <input type="hidden" id="o-id" value="" />
+      <div class="form-group">
+        <label>Nome da oficina *</label>
+        <input type="text" id="o-nome" placeholder="Ex: Oficina Central" />
+      </div>
+      <div class="form-group">
+        <label>Responsável / Contato</label>
+        <input type="text" id="o-contato" placeholder="Ex: João Silva" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Telefone</label>
+          <input type="text" id="o-telefone" placeholder="(11) 99999-0000" />
+        </div>
+        <div class="form-group">
+          <label>Nota (0–5)</label>
+          <input type="number" id="o-nota" min="0" max="5" step="0.1" placeholder="4.8" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Endereço / Distância</label>
+        <input type="text" id="o-distancia" placeholder="Ex: 2,1 km · Rua das Oficinas, 100" />
+      </div>
+      <div class="form-group">
+        <label>Especialidades</label>
+        <input type="text" id="o-especialidades" placeholder="Ex: Motor, freios, suspensão" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline btn-block" onclick="fecharModal('modal-oficina')">Cancelar</button>
+        <button class="btn btn-primary btn-block" onclick="salvarOficina()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast"></div>
 
   <script>
-    // ===================== CONSTANTS & DATA =====================
+    // ===================== STORAGE =====================
+    const STORAGE_KEY = 'autocare_v3';
+
     const PREVENTIVAS = [
       { nome: 'Troca de óleo e filtro', intervaloKm: 10000 },
       { nome: 'Filtro de ar', intervaloKm: 20000 },
@@ -450,7 +508,20 @@
       return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     }
 
-    function defaultData() {
+    /** Base realmente vazia */
+    function emptyData() {
+      return {
+        veiculos: [],
+        abastecimentos: [],
+        oficinas: [],
+        agendamentos: [],
+        servicos: [],
+        ultimaManutencao: {}
+      };
+    }
+
+    /** Dados só de demonstração (opcional) */
+    function demoData() {
       return {
         veiculos: [
           { id: 'v1', marca: 'Volkswagen', modelo: 'Golf 1.4 TSI', ano: 2018, placa: 'ABC1D23', km: 87450, ultimoAbastKm: 87450 },
@@ -461,17 +532,16 @@
           { id: 'a2', veiculoId: 'v1', data: '2026-08-28', km: 86890, litros: 38.7, valor: 241.10 },
         ],
         oficinas: [
-          { id: 'o1', nome: 'Oficina Central', nota: 4.8, distancia: '2,1 km' },
-          { id: 'o2', nome: 'Auto Center Silva', nota: 4.6, distancia: '3,4 km' },
-          { id: 'o3', nome: 'Mecânica do João', nota: 4.9, distancia: '5,0 km' },
+          { id: 'o1', nome: 'Oficina Central', contato: 'Carlos', telefone: '(11) 98888-0001', nota: 4.8, distancia: '2,1 km', especialidades: 'Motor, óleo, freios' },
+          { id: 'o2', nome: 'Auto Center Silva', contato: 'Pedro', telefone: '(11) 97777-0002', nota: 4.6, distancia: '3,4 km', especialidades: 'Suspensão, alinhamento' },
+          { id: 'o3', nome: 'Mecânica do João', contato: 'João', telefone: '(11) 96666-0003', nota: 4.9, distancia: '5,0 km', especialidades: 'Geral' },
         ],
         agendamentos: [
-          { id: 'ag1', veiculoId: 'v1', oficinaId: 'o1', data: '2026-09-21', hora: '09:00', servico: 'Troca de óleo', status: 'em_andamento', cliente: 'Carlos Mendes', notas: '' },
-          { id: 'ag2', veiculoId: 'v2', oficinaId: 'o1', data: '2026-09-21', hora: '14:30', servico: 'Freios', status: 'confirmado', cliente: 'Ana Souza', notas: '' },
-          { id: 'ag3', veiculoId: null, oficinaId: 'o1', data: '2026-09-22', hora: '15:00', servico: 'Revisão', status: 'confirmado', cliente: 'Roberto Lima', notas: 'Civic 2019' },
+          { id: 'ag1', veiculoId: 'v1', oficinaId: 'o1', data: '2026-09-22', hora: '09:00', servico: 'Troca de óleo', status: 'em_andamento', cliente: 'Carlos Mendes', notas: '' },
+          { id: 'ag2', veiculoId: 'v2', oficinaId: 'o1', data: '2026-09-22', hora: '14:30', servico: 'Freios', status: 'confirmado', cliente: 'Ana Souza', notas: '' },
         ],
         servicos: [
-          { id: 's1', veiculoId: 'v1', oficinaId: 'o1', data: '2026-07-15', km: 85900, itens: ['Troca de óleo', 'Filtro de óleo'], fotos: [], observacoes: 'Óleo 5W40 sintético', cliente: 'Carlos Mendes' },
+          { id: 's1', veiculoId: 'v1', oficinaId: 'o1', data: '2026-07-15', km: 85900, itens: ['Troca de óleo', 'Filtro de óleo'], fotos: [], observacoes: 'Óleo 5W40', cliente: 'Carlos Mendes' },
         ],
         ultimaManutencao: {
           v1: { 'Troca de óleo e filtro': 85900 },
@@ -482,17 +552,18 @@
 
     function load() {
       try {
-        const raw = localStorage.getItem('autocare_v2');
+        const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) return JSON.parse(raw);
       } catch (e) {}
-      return defaultData();
+      return emptyData(); // primeira visita = vazio
     }
 
     function save() {
-      localStorage.setItem('autocare_v2', JSON.stringify(DB));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
     }
 
     let DB = load();
+    let SESSION = { role: null, nome: '', oficinaId: null };
 
     // ===================== UTILS =====================
     function toast(msg) {
@@ -503,76 +574,192 @@
       window._toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
     }
 
-    function resetData() {
-      if (confirm('Apagar todos os dados e voltar ao estado inicial?')) {
-        localStorage.removeItem('autocare_v2');
-        DB = defaultData();
-        save();
-        toast('Dados reiniciados');
-        setTimeout(() => location.reload(), 400);
+    function limparBase() {
+      if (!confirm('Isso apaga TODOS os dados (veículos, oficinas, agendamentos…).\nA base ficará realmente vazia.\n\nContinuar?')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      DB = emptyData();
+      save();
+      toast('Base limpa — sem dados padrão');
+      atualizarSelectOficinasLogin();
+    }
+
+    function carregarDemo() {
+      if (DB.veiculos.length || DB.oficinas.length) {
+        if (!confirm('Já existem dados. Substituir pelos dados de demonstração?')) return;
+      }
+      DB = demoData();
+      save();
+      toast('Dados de demonstração carregados');
+      atualizarSelectOficinasLogin();
+    }
+
+    // ---------- Backup JSON (mesma lógica de export/import do caixa) ----------
+    function exportarBackup() {
+      const payload = {
+        app: 'AutoCare',
+        version: 3,
+        exportedAt: new Date().toISOString(),
+        data: DB
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      const dia = new Date().toISOString().slice(0, 10);
+      a.href = URL.createObjectURL(blob);
+      a.download = `autocare-backup-${dia}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('Backup baixado');
+    }
+
+    function importarBackup(ev) {
+      const file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          const data = parsed.data || parsed;
+          if (!data || typeof data !== 'object') throw new Error('Formato inválido');
+          // garante chaves mínimas
+          DB = {
+            veiculos: data.veiculos || [],
+            abastecimentos: data.abastecimentos || [],
+            oficinas: data.oficinas || [],
+            agendamentos: data.agendamentos || [],
+            servicos: data.servicos || [],
+            ultimaManutencao: data.ultimaManutencao || {}
+          };
+          save();
+          toast('Backup importado com sucesso');
+          atualizarSelectOficinasLogin();
+        } catch (e) {
+          toast('Arquivo de backup inválido');
+          console.error(e);
+        }
+        ev.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    function mostrarAjudaGithub() {
+      const msg = [
+        'Backup no GitHub (igual à ideia do caixa inteligente):',
+        '',
+        '1) Clique em “Exportar backup” e salve o JSON.',
+        '2) No repositório do projeto no GitHub, faça upload do arquivo',
+        '   (ou commit pela interface / GitHub Desktop).',
+        '3) Para restaurar: baixe o JSON do GitHub e use “Importar backup”.',
+        '',
+        'Produção: o ideal é backend (API) gravando no repo ou em Gist',
+        'com token — não coloque Personal Access Token no HTML público.',
+        '',
+        'Quer que eu prepare o fluxo com GitHub Gist (token no localStorage)?',
+      ].join('\n');
+      alert(msg);
+    }
+
+    // ---------- Google Sign-In ----------
+    // Substitua SEU_CLIENT_ID no data-client_id do HTML.
+    // Crie OAuth 2.0 Client ID (tipo Web) em https://console.cloud.google.com/
+    // Authorized JavaScript origins: http://localhost e o domínio do app.
+    function onGoogleSignIn(response) {
+      try {
+        // response.credential é um JWT; decodifica o payload (sem validar assinatura no client)
+        const payload = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        const nome = payload.name || payload.email || 'Usuário Google';
+        const email = payload.email || '';
+        document.getElementById('login-nome').value = nome;
+        SESSION.google = { email, name: nome, picture: payload.picture || '' };
+        toast('Google: ' + nome + ' — escolha o perfil e clique em Entrar');
+      } catch (e) {
+        console.error(e);
+        toast('Falha ao ler login Google');
       }
     }
+
+    // Expõe callback global para o GIS
+    window.onGoogleSignIn = onGoogleSignIn;
 
     function fecharModal(id) {
       document.getElementById(id).classList.remove('show');
     }
 
-    function buscarDadosVeiculo() {
-      const marca = document.getElementById('v-marca').value;
-      const modelo = document.getElementById('v-modelo').value.trim();
-      const ano = document.getElementById('v-ano').value;
-
-      if (!marca && !modelo) {
-        toast('Informe pelo menos a marca ou o modelo');
-        return;
-      }
-
-      const partes = [];
-      if (marca) partes.push(marca);
-      if (modelo) partes.push(modelo);
-      if (ano) partes.push(ano);
-
-      const q = encodeURIComponent(partes.join(' ') + ' manual manutenção intervalos revisão especificação técnica');
-      // Abre busca no Google (usuário pode ver manuais, fóruns, FIPE, etc.)
-      window.open('https://www.google.com/search?q=' + q, '_blank', 'noopener');
-
-      // Também oferece link direto para busca na Wikipedia (útil para carros clássicos)
-      const wikiQ = encodeURIComponent((marca + ' ' + modelo).trim());
-      setTimeout(() => {
-        if (confirm('Abrir também a Wikipedia para dados históricos do modelo?')) {
-          window.open('https://pt.wikipedia.org/w/index.php?search=' + wikiQ, '_blank', 'noopener');
-        }
-      }, 400);
-
-      toast('Busca aberta em nova aba');
-    }
-
-    function fmtKm(n) {
-      return (n || 0).toLocaleString('pt-BR');
-    }
-
+    function fmtKm(n) { return (n || 0).toLocaleString('pt-BR'); }
     function fmtDate(iso) {
       if (!iso) return '—';
       const [y, m, d] = iso.split('-');
       return `${d}/${m}/${y}`;
     }
 
-    // ===================== NAV =====================
-    function entrar(perfil) {
-      document.getElementById('login').style.display = 'none';
-      if (perfil === 'dono') {
-        document.getElementById('app-dono').classList.add('active');
-        mostrarTela('dono', 'veiculos');
+    // ===================== LOGIN / PERFIS =====================
+    let selectedRole = 'dono';
+
+    function selectRole(el) {
+      document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedRole = el.dataset.role;
+      const wrap = document.getElementById('login-oficina-wrap');
+      if (selectedRole === 'mecanica') {
+        wrap.style.display = 'block';
+        atualizarSelectOficinasLogin();
       } else {
+        wrap.style.display = 'none';
+      }
+    }
+
+    function atualizarSelectOficinasLogin() {
+      const sel = document.getElementById('login-oficina');
+      if (!sel) return;
+      if (DB.oficinas.length === 0) {
+        sel.innerHTML = '<option value="">Nenhuma oficina cadastrada — use o Admin</option>';
+      } else {
+        sel.innerHTML = DB.oficinas.map(o =>
+          `<option value="${o.id}">${o.nome}</option>`
+        ).join('');
+      }
+    }
+
+    function fazerLogin() {
+      const nome = (document.getElementById('login-nome').value || '').trim() || 'Usuário';
+      SESSION.role = selectedRole;
+      SESSION.nome = nome;
+      SESSION.oficinaId = null;
+
+      if (selectedRole === 'mecanica') {
+        const ofId = document.getElementById('login-oficina').value;
+        if (!ofId) {
+          toast('Cadastre oficinas no perfil Administrador primeiro');
+          return;
+        }
+        SESSION.oficinaId = ofId;
+      }
+
+      document.getElementById('login').style.display = 'none';
+
+      if (selectedRole === 'dono') {
+        document.getElementById('app-dono').classList.add('active');
+        document.getElementById('dono-user-name').textContent = nome;
+        mostrarTela('dono', 'veiculos');
+      } else if (selectedRole === 'mecanica') {
         document.getElementById('app-mecanica').classList.add('active');
+        document.getElementById('mec-user-name').textContent = nome;
+        const of = DB.oficinas.find(o => o.id === SESSION.oficinaId);
+        document.getElementById('mec-oficina-badge').textContent = '🔧 ' + (of ? of.nome : 'Oficina');
         mostrarTela('mecanica', 'agenda');
+      } else if (selectedRole === 'admin') {
+        document.getElementById('app-admin').classList.add('active');
+        document.getElementById('admin-user-name').textContent = nome;
+        mostrarTela('admin', 'oficinas');
       }
     }
 
     function sair() {
       document.getElementById('app-dono').classList.remove('active');
       document.getElementById('app-mecanica').classList.remove('active');
+      document.getElementById('app-admin').classList.remove('active');
       document.getElementById('login').style.display = 'flex';
+      SESSION = { role: null, nome: '', oficinaId: null };
+      atualizarSelectOficinasLogin();
     }
 
     function mostrarTela(perfil, tela) {
@@ -589,18 +776,156 @@
         if (tela === 'abastecimento') renderDonoAbastecimento();
         if (tela === 'manutencao') renderDonoManutencao();
         if (tela === 'agendar') renderDonoAgendar();
-      } else {
+      } else if (perfil === 'mecanica') {
         if (tela === 'agenda') renderMecanicaAgenda();
         if (tela === 'servicos') renderMecanicaServicos();
         if (tela === 'novo-servico') renderMecanicaNovoServico();
+      } else if (perfil === 'admin') {
+        if (tela === 'oficinas') renderAdminOficinas();
+        if (tela === 'resumo') renderAdminResumo();
       }
     }
 
-    // ===================== VEÍCULOS =====================
-    function abrirModalVeiculo(id = null) {
-      const titulo = document.getElementById('modal-veiculo-titulo');
-      document.getElementById('v-id').value = id || '';
+    // ===================== ADMIN — OFICINAS =====================
+    function renderAdminOficinas() {
+      const el = document.getElementById('admin-oficinas');
+      let html = `
+        <div class="page-header">
+          <div>
+            <h2>Oficinas</h2>
+            <p>${DB.oficinas.length} oficina${DB.oficinas.length !== 1 ? 's' : ''} cadastrada${DB.oficinas.length !== 1 ? 's' : ''}</p>
+          </div>
+          <button class="btn btn-primary" onclick="abrirModalOficina()">+ Nova oficina</button>
+        </div>`;
 
+      if (DB.oficinas.length === 0) {
+        html += `<div class="card empty-state">
+          <div class="empty-icon">🏢</div>
+          <p>Nenhuma oficina cadastrada.<br>Cadastre a primeira para que mecânicos possam entrar.</p>
+        </div>`;
+      } else {
+        DB.oficinas.forEach(o => {
+          html += `
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+                <div>
+                  <h3 style="font-size:16px;font-weight:600">${o.nome}</h3>
+                  <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">
+                    ${o.contato ? o.contato + ' · ' : ''}${o.telefone || ''}
+                  </div>
+                  <div style="font-size:13px;color:var(--muted);margin-top:2px">
+                    ${o.distancia || '—'} ${o.especialidades ? '· ' + o.especialidades : ''}
+                  </div>
+                  ${o.nota != null && o.nota !== '' ? `<div style="margin-top:8px"><span class="status ok">${o.nota} ★</span></div>` : ''}
+                </div>
+                <div class="actions-row">
+                  <button class="btn btn-sm btn-outline btn-icon" title="Editar" onclick="abrirModalOficina('${o.id}')">✏️</button>
+                  <button class="btn btn-sm btn-outline btn-icon" title="Excluir" onclick="excluirOficina('${o.id}')">🗑️</button>
+                </div>
+              </div>
+            </div>`;
+        });
+      }
+      el.innerHTML = html;
+    }
+
+    function abrirModalOficina(id = null) {
+      document.getElementById('o-id').value = id || '';
+      const titulo = document.getElementById('modal-oficina-titulo');
+      if (id) {
+        const o = DB.oficinas.find(x => x.id === id);
+        if (!o) return;
+        titulo.textContent = 'Editar Oficina';
+        document.getElementById('o-nome').value = o.nome || '';
+        document.getElementById('o-contato').value = o.contato || '';
+        document.getElementById('o-telefone').value = o.telefone || '';
+        document.getElementById('o-nota').value = o.nota ?? '';
+        document.getElementById('o-distancia').value = o.distancia || '';
+        document.getElementById('o-especialidades').value = o.especialidades || '';
+      } else {
+        titulo.textContent = 'Cadastrar Oficina';
+        document.getElementById('o-nome').value = '';
+        document.getElementById('o-contato').value = '';
+        document.getElementById('o-telefone').value = '';
+        document.getElementById('o-nota').value = '';
+        document.getElementById('o-distancia').value = '';
+        document.getElementById('o-especialidades').value = '';
+      }
+      document.getElementById('modal-oficina').classList.add('show');
+    }
+
+    function salvarOficina() {
+      const id = document.getElementById('o-id').value;
+      const nome = document.getElementById('o-nome').value.trim();
+      const contato = document.getElementById('o-contato').value.trim();
+      const telefone = document.getElementById('o-telefone').value.trim();
+      const notaRaw = document.getElementById('o-nota').value;
+      const nota = notaRaw === '' ? null : parseFloat(notaRaw);
+      const distancia = document.getElementById('o-distancia').value.trim();
+      const especialidades = document.getElementById('o-especialidades').value.trim();
+
+      if (!nome) { toast('Informe o nome da oficina'); return; }
+      if (nota != null && (isNaN(nota) || nota < 0 || nota > 5)) {
+        toast('Nota deve ser entre 0 e 5'); return;
+      }
+
+      if (id) {
+        const o = DB.oficinas.find(x => x.id === id);
+        if (!o) { toast('Oficina não encontrada'); return; }
+        Object.assign(o, { nome, contato, telefone, nota, distancia, especialidades });
+        toast('Oficina atualizada');
+      } else {
+        DB.oficinas.push({
+          id: uid(), nome, contato, telefone, nota, distancia, especialidades
+        });
+        toast('Oficina cadastrada');
+      }
+      save();
+      fecharModal('modal-oficina');
+      renderAdminOficinas();
+      atualizarSelectOficinasLogin();
+    }
+
+    function excluirOficina(id) {
+      if (!confirm('Excluir esta oficina? Agendamentos vinculados permanecem no histórico.')) return;
+      DB.oficinas = DB.oficinas.filter(o => o.id !== id);
+      save();
+      toast('Oficina excluída');
+      renderAdminOficinas();
+      atualizarSelectOficinasLogin();
+    }
+
+    function renderAdminResumo() {
+      const el = document.getElementById('admin-resumo');
+      el.innerHTML = `
+        <div class="page-header">
+          <div><h2>Resumo do sistema</h2><p>Visão geral da base</p></div>
+        </div>
+        <div class="card">
+          <div class="list-item"><div><strong>Oficinas</strong></div><span class="km-badge">${DB.oficinas.length}</span></div>
+          <div class="list-item"><div><strong>Veículos</strong></div><span class="km-badge">${DB.veiculos.length}</span></div>
+          <div class="list-item"><div><strong>Abastecimentos</strong></div><span class="km-badge">${DB.abastecimentos.length}</span></div>
+          <div class="list-item"><div><strong>Agendamentos</strong></div><span class="km-badge">${DB.agendamentos.length}</span></div>
+          <div class="list-item"><div><strong>Serviços registrados</strong></div><span class="km-badge">${DB.servicos.length}</span></div>
+        </div>
+        <div class="card" style="margin-top:8px">
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
+            Use <strong>Limpar base</strong> na tela de login para zerar tudo.
+            Backup e restauração ficam na tela de login (Exportar / Importar JSON) — mesmo padrão do caixa inteligente.
+          </p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="exportarBackup()">☁️ Exportar backup</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-backup').click()">📥 Importar backup</button>
+            <button class="btn btn-outline btn-sm" onclick="mostrarAjudaGithub()">🔗 GitHub</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // ===================== DONO — VEÍCULOS =====================
+    function abrirModalVeiculo(id = null) {
+      document.getElementById('v-id').value = id || '';
+      const titulo = document.getElementById('modal-veiculo-titulo');
       if (id) {
         const v = DB.veiculos.find(x => x.id === id);
         if (!v) return;
@@ -621,6 +946,17 @@
       document.getElementById('modal-veiculo').classList.add('show');
     }
 
+    function buscarDadosVeiculo() {
+      const marca = document.getElementById('v-marca').value;
+      const modelo = document.getElementById('v-modelo').value.trim();
+      const ano = document.getElementById('v-ano').value;
+      if (!marca && !modelo) { toast('Informe marca ou modelo'); return; }
+      const partes = [marca, modelo, ano].filter(Boolean);
+      const q = encodeURIComponent(partes.join(' ') + ' manual manutenção intervalos revisão');
+      window.open('https://www.google.com/search?q=' + q, '_blank', 'noopener');
+      toast('Busca aberta em nova aba');
+    }
+
     function salvarVeiculo() {
       const id = document.getElementById('v-id').value;
       const marca = document.getElementById('v-marca').value;
@@ -636,40 +972,24 @@
       if (isNaN(km) || km < 0) { toast('Informe o km atual'); return; }
 
       if (id) {
-        // Edição
         const v = DB.veiculos.find(x => x.id === id);
         if (!v) { toast('Veículo não encontrado'); return; }
-        v.marca = marca;
-        v.modelo = modelo;
-        v.ano = ano;
-        v.placa = placa;
-        // Só atualiza km se for maior ou igual
-        if (km >= v.km) {
-          v.km = km;
-          if (!v.ultimoAbastKm || km > v.ultimoAbastKm) v.ultimoAbastKm = km;
-        } else {
-          v.km = km; // permite correção manual
-        }
-        toast('Veículo atualizado!');
+        v.marca = marca; v.modelo = modelo; v.ano = ano; v.placa = placa; v.km = km;
+        if (!v.ultimoAbastKm || km > v.ultimoAbastKm) v.ultimoAbastKm = km;
+        toast('Veículo atualizado');
       } else {
-        // Novo
-        const novo = {
-          id: uid(),
-          marca, modelo, ano, placa, km,
-          ultimoAbastKm: km
-        };
+        const novo = { id: uid(), marca, modelo, ano, placa, km, ultimoAbastKm: km };
         DB.veiculos.push(novo);
         DB.ultimaManutencao[novo.id] = {};
-        toast('Veículo cadastrado!');
+        toast('Veículo cadastrado');
       }
-
       save();
       fecharModal('modal-veiculo');
       renderDonoVeiculos();
     }
 
     function excluirVeiculo(id) {
-      if (!confirm('Excluir este veículo e todo o histórico relacionado?')) return;
+      if (!confirm('Excluir este veículo e o histórico relacionado?')) return;
       DB.veiculos = DB.veiculos.filter(v => v.id !== id);
       DB.abastecimentos = DB.abastecimentos.filter(a => a.veiculoId !== id);
       DB.agendamentos = DB.agendamentos.filter(a => a.veiculoId !== id);
@@ -705,7 +1025,7 @@
         </div>`;
 
       if (DB.veiculos.length === 0) {
-        html += `<div class="card empty-state"><div class="empty-icon">🚙</div><p>Nenhum veículo cadastrado.<br>Clique em “Novo veículo” para começar.</p></div>`;
+        html += `<div class="card empty-state"><div class="empty-icon">🚙</div><p>Nenhum veículo.<br>Cadastre o primeiro para começar.</p></div>`;
       } else {
         DB.veiculos.forEach(v => {
           const prox = calcProximaRevisao(v);
@@ -719,8 +1039,8 @@
                 <div style="display:flex;align-items:center;gap:10px">
                   <span class="km-badge">${fmtKm(v.km)} km</span>
                   <div class="actions-row">
-                    <button class="btn btn-sm btn-outline btn-icon" title="Editar" onclick="abrirModalVeiculo('${v.id}')">✏️</button>
-                    <button class="btn btn-sm btn-outline btn-icon" title="Excluir" onclick="excluirVeiculo('${v.id}')">🗑️</button>
+                    <button class="btn btn-sm btn-outline btn-icon" onclick="abrirModalVeiculo('${v.id}')">✏️</button>
+                    <button class="btn btn-sm btn-outline btn-icon" onclick="excluirVeiculo('${v.id}')">🗑️</button>
                   </div>
                 </div>
               </div>
@@ -748,53 +1068,35 @@
           <div class="card empty-state"><div class="empty-icon">⛽</div><p>Cadastre um veículo primeiro.</p></div>`;
         return;
       }
-
       const options = DB.veiculos.map(v =>
         `<option value="${v.id}">${v.marca} ${v.modelo} (${fmtKm(v.km)} km)</option>`
       ).join('');
 
       el.innerHTML = `
-        <div class="page-header">
-          <div><h2>Novo Abastecimento</h2><p>Registre e acompanhe o consumo</p></div>
-        </div>
+        <div class="page-header"><div><h2>Novo Abastecimento</h2><p>Km anterior automático · média de consumo</p></div></div>
         <div class="card">
           <div class="form-group">
             <label>Veículo</label>
             <select id="ab-veiculo" onchange="atualizarKmAnterior()">${options}</select>
           </div>
           <div class="form-row">
-            <div class="form-group">
-              <label>Km anterior</label>
-              <input type="number" id="ab-km-ant" readonly />
-            </div>
-            <div class="form-group">
-              <label>Km atual *</label>
-              <input type="number" id="ab-km" placeholder="Ex: 87620" />
-            </div>
+            <div class="form-group"><label>Km anterior</label><input type="number" id="ab-km-ant" readonly /></div>
+            <div class="form-group"><label>Km atual *</label><input type="number" id="ab-km" placeholder="Ex: 87620" /></div>
           </div>
           <div class="form-group">
             <label>Foto do odômetro (opcional)</label>
             <div class="photo-area" onclick="document.getElementById('ab-foto').click()">
               <div id="ab-preview">📷 Toque para fotografar o odômetro</div>
-              <input type="file" id="ab-foto" accept="image/*" capture="environment" style="display:none"
-                onchange="previewFoto(this,'ab-preview')" />
+              <input type="file" id="ab-foto" accept="image/*" capture="environment" style="display:none" onchange="previewFoto(this,'ab-preview')" />
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group">
-              <label>Litros *</label>
-              <input type="number" id="ab-litros" step="0.01" placeholder="42.50" />
-            </div>
-            <div class="form-group">
-              <label>Valor total (R$) *</label>
-              <input type="number" id="ab-valor" step="0.01" placeholder="268.00" />
-            </div>
+            <div class="form-group"><label>Litros *</label><input type="number" id="ab-litros" step="0.01" placeholder="42.50" /></div>
+            <div class="form-group"><label>Valor total (R$) *</label><input type="number" id="ab-valor" step="0.01" placeholder="268.00" /></div>
           </div>
           <button class="btn btn-primary btn-block" onclick="salvarAbastecimento()">Salvar abastecimento</button>
         </div>
-        <div class="page-header" style="margin-top:32px">
-          <div><h2 style="font-size:18px">Histórico recente</h2></div>
-        </div>
+        <div class="page-header" style="margin-top:32px"><div><h2 style="font-size:18px">Histórico recente</h2></div></div>
         <div class="card" id="lista-abastecimentos"></div>
       `;
       atualizarKmAnterior();
@@ -823,26 +1125,19 @@
       const litros = parseFloat(document.getElementById('ab-litros').value);
       const valor = parseFloat(document.getElementById('ab-valor').value);
       const v = DB.veiculos.find(x => x.id === veiculoId);
-
       if (!v) { toast('Selecione um veículo'); return; }
       if (isNaN(km) || km < 0) { toast('Informe o km atual'); return; }
       if (isNaN(litros) || litros <= 0) { toast('Informe os litros'); return; }
       if (isNaN(valor) || valor <= 0) { toast('Informe o valor'); return; }
-      if (km < (v.ultimoAbastKm || 0)) {
-        toast('Km atual não pode ser menor que o anterior');
-        return;
-      }
+      if (km < (v.ultimoAbastKm || 0)) { toast('Km atual não pode ser menor que o anterior'); return; }
 
       DB.abastecimentos.unshift({
-        id: uid(),
-        veiculoId,
-        data: new Date().toISOString().slice(0, 10),
-        km, litros, valor
+        id: uid(), veiculoId, data: new Date().toISOString().slice(0, 10), km, litros, valor
       });
       v.km = km;
       v.ultimoAbastKm = km;
       save();
-      toast('Abastecimento salvo!');
+      toast('Abastecimento salvo');
       renderDonoAbastecimento();
     }
 
@@ -851,7 +1146,7 @@
       if (!lista) return;
       const abs = DB.abastecimentos.slice(0, 10);
       if (abs.length === 0) {
-        lista.innerHTML = '<div class="empty-state"><p>Nenhum abastecimento registrado.</p></div>';
+        lista.innerHTML = '<div class="empty-state" style="padding:24px"><p>Nenhum abastecimento.</p></div>';
         return;
       }
       lista.innerHTML = abs.map(a => {
@@ -867,7 +1162,7 @@
           <div class="list-item">
             <div>
               <strong>${fmtDate(a.data)}</strong>
-              <div class="meta" style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${a.litros} L · R$ ${a.valor.toFixed(2)} · ${media}</div>
+              <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${a.litros} L · R$ ${a.valor.toFixed(2)} · ${media}</div>
             </div>
             <span class="km-badge">${fmtKm(a.km)} km</span>
           </div>`;
@@ -879,10 +1174,7 @@
       const el = document.getElementById('dono-manutencao');
       let html = `
         <div class="page-header">
-          <div>
-            <h2>Manutenções</h2>
-            <p>Preventivas baseadas em intervalos de fábrica</p>
-          </div>
+          <div><h2>Manutenções</h2><p>Preventivas por intervalo de km</p></div>
           <button class="btn btn-primary btn-sm" onclick="registrarManutencaoManual()">+ Registrar manual</button>
         </div>`;
 
@@ -916,10 +1208,9 @@
         html += `</div>`;
       });
 
-      html += `<div class="card" style="margin-top:8px">
-        <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">Histórico de serviços</h3>`;
+      html += `<div class="card"><h3 style="font-size:15px;font-weight:600;margin-bottom:12px">Histórico de serviços</h3>`;
       if (DB.servicos.length === 0) {
-        html += `<div class="empty-state" style="padding:24px"><p>Nenhum serviço registrado ainda.</p></div>`;
+        html += `<div class="empty-state" style="padding:24px"><p>Nenhum serviço ainda.</p></div>`;
       } else {
         DB.servicos.forEach(s => {
           const v = DB.veiculos.find(x => x.id === s.veiculoId);
@@ -949,7 +1240,7 @@
       if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
       DB.ultimaManutencao[v.id][nome.trim()] = v.km;
       save();
-      toast('Manutenção registrada!');
+      toast('Manutenção registrada');
       renderDonoManutencao();
     }
 
@@ -961,55 +1252,41 @@
           <div class="card empty-state"><div class="empty-icon">📅</div><p>Cadastre um veículo primeiro.</p></div>`;
         return;
       }
+      if (DB.oficinas.length === 0) {
+        el.innerHTML = `<div class="page-header"><div><h2>Agendar Serviço</h2></div></div>
+          <div class="card empty-state"><div class="empty-icon">🏢</div><p>Nenhuma oficina cadastrada.<br>Peça ao Administrador para cadastrar.</p></div>`;
+        return;
+      }
 
       const veiculosOpt = DB.veiculos.map(v => `<option value="${v.id}">${v.marca} ${v.modelo}</option>`).join('');
-      const oficinasOpt = DB.oficinas.map(o => `<option value="${o.id}">${o.nome} · ${o.nota}★ (${o.distancia})</option>`).join('');
+      const oficinasOpt = DB.oficinas.map(o =>
+        `<option value="${o.id}">${o.nome}${o.nota != null ? ' · ' + o.nota + '★' : ''}${o.distancia ? ' (' + o.distancia + ')' : ''}</option>`
+      ).join('');
 
       el.innerHTML = `
-        <div class="page-header">
-          <div><h2>Agendar Serviço</h2><p>Solicite horário em oficinas parceiras</p></div>
-        </div>
+        <div class="page-header"><div><h2>Agendar Serviço</h2><p>Solicite horário em oficinas cadastradas</p></div></div>
         <div class="card">
-          <div class="form-group">
-            <label>Veículo</label>
-            <select id="ag-veiculo">${veiculosOpt}</select>
-          </div>
+          <div class="form-group"><label>Veículo</label><select id="ag-veiculo">${veiculosOpt}</select></div>
           <div class="form-group">
             <label>Tipo de serviço</label>
             <select id="ag-servico">
-              <option>Revisão preventiva</option>
-              <option>Troca de óleo</option>
-              <option>Freios</option>
-              <option>Suspensão</option>
-              <option>Diagnóstico</option>
-              <option>Outro / Corretiva</option>
+              <option>Revisão preventiva</option><option>Troca de óleo</option><option>Freios</option>
+              <option>Suspensão</option><option>Diagnóstico</option><option>Outro / Corretiva</option>
             </select>
           </div>
-          <div class="form-group">
-            <label>Oficina</label>
-            <select id="ag-oficina">${oficinasOpt}</select>
-          </div>
+          <div class="form-group"><label>Oficina</label><select id="ag-oficina">${oficinasOpt}</select></div>
           <div class="form-row">
-            <div class="form-group">
-              <label>Data</label>
-              <input type="date" id="ag-data" value="2026-09-22" />
-            </div>
-            <div class="form-group">
-              <label>Horário</label>
-              <select id="ag-hora">${HORARIOS.map(h => `<option>${h}</option>`).join('')}</select>
-            </div>
+            <div class="form-group"><label>Data</label><input type="date" id="ag-data" /></div>
+            <div class="form-group"><label>Horário</label><select id="ag-hora">${HORARIOS.map(h => `<option>${h}</option>`).join('')}</select></div>
           </div>
-          <div class="form-group">
-            <label>Observações</label>
-            <textarea id="ag-notas" rows="3" placeholder="Descreva o que precisa ser feito..."></textarea>
-          </div>
+          <div class="form-group"><label>Observações</label><textarea id="ag-notas" rows="3" placeholder="O que precisa ser feito..."></textarea></div>
           <button class="btn btn-primary btn-block" onclick="solicitarAgendamento()">Solicitar agendamento</button>
         </div>
-        <div class="page-header" style="margin-top:28px">
-          <div><h2 style="font-size:18px">Meus agendamentos</h2></div>
-        </div>
+        <div class="page-header" style="margin-top:28px"><div><h2 style="font-size:18px">Meus agendamentos</h2></div></div>
         <div class="card" id="meus-agendamentos"></div>
       `;
+      const hoje = new Date().toISOString().slice(0, 10);
+      document.getElementById('ag-data').value = hoje;
       renderMeusAgendamentos();
     }
 
@@ -1020,18 +1297,14 @@
       const data = document.getElementById('ag-data').value;
       const hora = document.getElementById('ag-hora').value;
       const notas = document.getElementById('ag-notas').value.trim();
-
-      if (!veiculoId || !data) { toast('Preencha veículo e data'); return; }
+      if (!veiculoId || !data || !oficinaId) { toast('Preencha os campos obrigatórios'); return; }
 
       DB.agendamentos.push({
-        id: uid(),
-        veiculoId, oficinaId, data, hora, servico,
-        status: 'pendente',
-        cliente: 'Você',
-        notas
+        id: uid(), veiculoId, oficinaId, data, hora, servico,
+        status: 'pendente', cliente: SESSION.nome || 'Você', notas
       });
       save();
-      toast('Agendamento solicitado!');
+      toast('Agendamento solicitado');
       renderDonoAgendar();
     }
 
@@ -1040,13 +1313,13 @@
       if (!el) return;
       const meus = [...DB.agendamentos].reverse();
       if (meus.length === 0) {
-        el.innerHTML = '<div class="empty-state" style="padding:24px"><p>Nenhum agendamento ainda.</p></div>';
+        el.innerHTML = '<div class="empty-state" style="padding:24px"><p>Nenhum agendamento.</p></div>';
         return;
       }
+      const stMap = { pendente: 'info', confirmado: 'ok', em_andamento: 'warn', concluido: 'ok' };
       el.innerHTML = meus.map(a => {
         const v = DB.veiculos.find(x => x.id === a.veiculoId);
         const of = DB.oficinas.find(x => x.id === a.oficinaId);
-        const stMap = { pendente: 'info', confirmado: 'ok', em_andamento: 'warn', concluido: 'ok' };
         return `
           <div class="list-item">
             <div>
@@ -1058,16 +1331,20 @@
       }).join('');
     }
 
-    // ===================== MECÂNICA - AGENDA =====================
+    // ===================== MECÂNICA =====================
     function renderMecanicaAgenda() {
       const el = document.getElementById('mecanica-agenda');
+      const ofId = SESSION.oficinaId;
+      const hoje = new Date();
+      const d0 = hoje.toISOString().slice(0, 10);
+      const d1 = new Date(hoje.getTime() + 86400000).toISOString().slice(0, 10);
       const dias = [
-        { label: 'Hoje · 21/09/2026', data: '2026-09-21' },
-        { label: 'Amanhã · 22/09/2026', data: '2026-09-22' },
+        { label: 'Hoje · ' + fmtDate(d0), data: d0 },
+        { label: 'Amanhã · ' + fmtDate(d1), data: d1 },
       ];
 
       function slots(data) {
-        const ags = DB.agendamentos.filter(a => a.data === data && a.oficinaId === 'o1');
+        const ags = DB.agendamentos.filter(a => a.data === data && a.oficinaId === ofId);
         return HORARIOS.map(h => {
           const ag = ags.find(a => a.hora === h);
           if (ag) {
@@ -1089,20 +1366,14 @@
           return `
             <div class="slot free">
               <div class="slot-time">${h} · Disponível</div>
-              <button class="btn btn-sm btn-success" onclick="toast('Horário ${h} aberto')">Abrir</button>
+              <span class="status ok">Livre</span>
             </div>`;
         }).join('');
       }
 
       el.innerHTML = `
-        <div class="page-header">
-          <div><h2>Agenda</h2><p>Oficina Central</p></div>
-        </div>
-        ${dias.map(d => `
-          <div class="agenda-day">
-            <h4>${d.label}</h4>
-            ${slots(d.data)}
-          </div>`).join('')}
+        <div class="page-header"><div><h2>Agenda</h2><p>Horários da sua oficina</p></div></div>
+        ${dias.map(d => `<div class="agenda-day"><h4>${d.label}</h4>${slots(d.data)}</div>`).join('')}
       `;
     }
 
@@ -1116,18 +1387,16 @@
       }
     }
 
-    // ===================== MECÂNICA - SERVIÇOS =====================
     function renderMecanicaServicos() {
       const el = document.getElementById('mecanica-servicos');
+      const lista = DB.servicos.filter(s => s.oficinaId === SESSION.oficinaId);
       let html = `
-        <div class="page-header">
-          <div><h2>Serviços realizados</h2><p>${DB.servicos.length} registro${DB.servicos.length !== 1 ? 's' : ''}</p></div>
-        </div>
+        <div class="page-header"><div><h2>Serviços realizados</h2><p>${lista.length} registro${lista.length !== 1 ? 's' : ''}</p></div></div>
         <div class="card">`;
-      if (DB.servicos.length === 0) {
-        html += `<div class="empty-state"><div class="empty-icon">✅</div><p>Nenhum serviço registrado ainda.</p></div>`;
+      if (lista.length === 0) {
+        html += `<div class="empty-state"><div class="empty-icon">✅</div><p>Nenhum serviço registrado nesta oficina.</p></div>`;
       } else {
-        DB.servicos.forEach(s => {
+        lista.forEach(s => {
           const v = DB.veiculos.find(x => x.id === s.veiculoId);
           html += `
             <div class="list-item">
@@ -1142,28 +1411,24 @@
       el.innerHTML = html;
     }
 
-    // ===================== MECÂNICA - REGISTRAR =====================
     function renderMecanicaNovoServico() {
       const el = document.getElementById('mecanica-novo-servico');
-      const ativos = DB.agendamentos.filter(a => ['confirmado', 'em_andamento', 'pendente'].includes(a.status));
+      const ativos = DB.agendamentos.filter(a =>
+        a.oficinaId === SESSION.oficinaId && ['confirmado', 'em_andamento', 'pendente'].includes(a.status)
+      );
       const opts = ativos.map(a => {
         const v = DB.veiculos.find(x => x.id === a.veiculoId);
         return `<option value="${a.id}">${a.cliente} · ${v ? v.modelo : a.servico} (${fmtDate(a.data)} ${a.hora})</option>`;
       }).join('');
 
       el.innerHTML = `
-        <div class="page-header">
-          <div><h2>Registrar Serviço</h2><p>Finalize o atendimento e atualize o histórico</p></div>
-        </div>
+        <div class="page-header"><div><h2>Registrar Serviço</h2><p>Finalize e atualize o histórico do veículo</p></div></div>
         <div class="card">
           <div class="form-group">
             <label>Agendamento / Cliente</label>
             <select id="sv-ag">${opts || '<option value="">Nenhum agendamento ativo</option>'}</select>
           </div>
-          <div class="form-group">
-            <label>Km no momento do serviço *</label>
-            <input type="number" id="sv-km" placeholder="Ex: 87620" />
-          </div>
+          <div class="form-group"><label>Km no momento do serviço *</label><input type="number" id="sv-km" placeholder="Ex: 87620" /></div>
           <div class="form-group">
             <label>Itens realizados</label>
             <div class="check-list">
@@ -1176,17 +1441,13 @@
             </div>
           </div>
           <div class="form-group">
-            <label>Fotos dos itens / serviço</label>
+            <label>Fotos</label>
             <div class="photo-area" onclick="document.getElementById('sv-fotos').click()">
               <div id="sv-preview">📷 Adicionar fotos</div>
-              <input type="file" id="sv-fotos" accept="image/*" multiple capture="environment" style="display:none"
-                onchange="previewMulti(this,'sv-preview')" />
+              <input type="file" id="sv-fotos" accept="image/*" multiple capture="environment" style="display:none" onchange="previewMulti(this,'sv-preview')" />
             </div>
           </div>
-          <div class="form-group">
-            <label>Observações</label>
-            <textarea id="sv-obs" rows="3" placeholder="Observações técnicas, recomendações ao cliente..."></textarea>
-          </div>
+          <div class="form-group"><label>Observações</label><textarea id="sv-obs" rows="3" placeholder="Observações técnicas..."></textarea></div>
           <button class="btn btn-success btn-block" onclick="finalizarServico()">Finalizar e registrar serviço</button>
         </div>
       `;
@@ -1196,9 +1457,7 @@
       const preview = document.getElementById(previewId);
       if (!preview || !input.files || !input.files.length) return;
       let html = '<div class="photo-thumbs">';
-      Array.from(input.files).forEach(f => {
-        html += `<img src="${URL.createObjectURL(f)}" alt="foto">`;
-      });
+      Array.from(input.files).forEach(f => { html += `<img src="${URL.createObjectURL(f)}" alt="foto">`; });
       html += '</div>';
       preview.innerHTML = html;
     }
@@ -1208,7 +1467,6 @@
       const km = parseInt(document.getElementById('sv-km').value, 10);
       const obs = document.getElementById('sv-obs').value.trim();
       const checks = [...document.querySelectorAll('.check-list input:checked')].map(c => c.value);
-
       if (!agId) { toast('Selecione um agendamento'); return; }
       if (isNaN(km) || km < 0) { toast('Informe o km'); return; }
       if (checks.length === 0) { toast('Marque pelo menos um item'); return; }
@@ -1221,29 +1479,24 @@
         if (km > v.km) v.km = km;
         if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
         checks.forEach(item => {
-          const key = PREVENTIVAS.find(p =>
-            p.nome.toLowerCase().includes(item.toLowerCase().split(' ')[0])
-          )?.nome || item;
+          const key = PREVENTIVAS.find(p => p.nome.toLowerCase().includes(item.toLowerCase().split(' ')[0]))?.nome || item;
           DB.ultimaManutencao[v.id][key] = km;
         });
       }
 
       DB.servicos.unshift({
-        id: uid(),
-        veiculoId: ag.veiculoId,
-        oficinaId: ag.oficinaId,
-        data: new Date().toISOString().slice(0, 10),
-        km,
-        itens: checks,
-        fotos: [],
-        observacoes: obs,
-        cliente: ag.cliente
+        id: uid(), veiculoId: ag.veiculoId, oficinaId: ag.oficinaId,
+        data: new Date().toISOString().slice(0, 10), km, itens: checks, fotos: [],
+        observacoes: obs, cliente: ag.cliente
       });
       ag.status = 'concluido';
       save();
-      toast('Serviço registrado com sucesso!');
+      toast('Serviço registrado');
       renderMecanicaNovoServico();
     }
+
+    // Init
+    atualizarSelectOficinasLogin();
   </script>
 </body>
 </html>
