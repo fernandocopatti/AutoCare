@@ -516,7 +516,8 @@
         oficinas: [],
         agendamentos: [],
         servicos: [],
-        ultimaManutencao: {}
+        ultimaManutencao: {},
+        adminPin: null
       };
     }
 
@@ -627,7 +628,8 @@
             oficinas: data.oficinas || [],
             agendamentos: data.agendamentos || [],
             servicos: data.servicos || [],
-            ultimaManutencao: data.ultimaManutencao || {}
+            ultimaManutencao: data.ultimaManutencao || {},
+            adminPin: data.adminPin || null
           };
           save();
           toast('Backup importado com sucesso');
@@ -691,6 +693,66 @@
       return `${d}/${m}/${y}`;
     }
 
+    // ---------- Identidade do dono (isolamento de dados por usuário) ----------
+    // Nota: enquanto o app não tiver backend, isso separa os veículos por login
+    // dentro do MESMO navegador/dispositivo. Não sincroniza entre aparelhos.
+    function currentDonoId() {
+      if (SESSION.google && SESSION.google.email) return 'g:' + SESSION.google.email.toLowerCase();
+      return 'n:' + (SESSION.nome || '').trim().toLowerCase();
+    }
+    function meusVeiculos() {
+      const id = currentDonoId();
+      // veículos sem donoId (dados antigos/demo) continuam visíveis pra não quebrar backups existentes
+      return DB.veiculos.filter(v => !v.donoId || v.donoId === id);
+    }
+
+    // ---------- Fotos: compressão e leitura de odômetro por IA ----------
+    function compressImageFile(file, maxW) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            const scale = Math.min(1, maxW / img.width);
+            const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.6));
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function lerOdometroPorFoto(dataUrl) {
+      try {
+        const base64 = dataUrl.split(',')[1];
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-6',
+            max_tokens: 20,
+            messages: [{
+              role: 'user', content: [
+                { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+                { type: 'text', text: 'Leia o valor numérico do odômetro nesta foto. Responda apenas com o número inteiro de quilômetros, sem texto. Se não conseguir ler com confiança, responda NAO.' }
+              ]
+            }]
+          })
+        });
+        const data = await res.json();
+        const txt = (data.content || []).map(c => c.text || '').join('').trim();
+        const n = parseInt(txt.replace(/\D/g, ''), 10);
+        if (!txt || txt.toUpperCase().includes('NAO') || isNaN(n)) return null;
+        return n;
+      } catch (e) { return null; }
+    }
+
     // ===================== LOGIN / PERFIS =====================
     let selectedRole = 'dono';
 
@@ -732,6 +794,21 @@
           return;
         }
         SESSION.oficinaId = ofId;
+      }
+
+      if (selectedRole === 'admin') {
+        // Gate simples por PIN — não é segurança real (é tudo client-side),
+        // só evita que qualquer pessoa entre como admin sem querer.
+        if (!DB.adminPin) {
+          const novoPin = prompt('Primeiro acesso como Administrador.\nCrie um PIN (mín. 4 dígitos) para proteger esta área:');
+          if (!novoPin || novoPin.trim().length < 4) { toast('PIN precisa ter ao menos 4 dígitos'); return; }
+          DB.adminPin = novoPin.trim();
+          save();
+          toast('PIN de administrador criado');
+        } else {
+          const pin = prompt('PIN de administrador:');
+          if (pin !== DB.adminPin) { toast('PIN incorreto'); return; }
+        }
       }
 
       document.getElementById('login').style.display = 'none';
@@ -978,7 +1055,7 @@
         if (!v.ultimoAbastKm || km > v.ultimoAbastKm) v.ultimoAbastKm = km;
         toast('Veículo atualizado');
       } else {
-        const novo = { id: uid(), marca, modelo, ano, placa, km, ultimoAbastKm: km };
+        const novo = { id: uid(), marca, modelo, ano, placa, km, ultimoAbastKm: km, donoId: currentDonoId() };
         DB.veiculos.push(novo);
         DB.ultimaManutencao[novo.id] = {};
         toast('Veículo cadastrado');
@@ -1015,19 +1092,20 @@
 
     function renderDonoVeiculos() {
       const el = document.getElementById('dono-veiculos');
+      const meus = meusVeiculos();
       let html = `
         <div class="page-header">
           <div>
             <h2>Meus Veículos</h2>
-            <p>${DB.veiculos.length} veículo${DB.veiculos.length !== 1 ? 's' : ''} cadastrado${DB.veiculos.length !== 1 ? 's' : ''}</p>
+            <p>${meus.length} veículo${meus.length !== 1 ? 's' : ''} cadastrado${meus.length !== 1 ? 's' : ''}</p>
           </div>
           <button class="btn btn-primary" onclick="abrirModalVeiculo()">+ Novo veículo</button>
         </div>`;
 
-      if (DB.veiculos.length === 0) {
+      if (meus.length === 0) {
         html += `<div class="card empty-state"><div class="empty-icon">🚙</div><p>Nenhum veículo.<br>Cadastre o primeiro para começar.</p></div>`;
       } else {
-        DB.veiculos.forEach(v => {
+        meus.forEach(v => {
           const prox = calcProximaRevisao(v);
           html += `
             <div class="card vehicle-card">
@@ -1061,14 +1139,18 @@
     }
 
     // ===================== ABASTECIMENTO =====================
+    let pendingFotoOdometro = null;
+
     function renderDonoAbastecimento() {
       const el = document.getElementById('dono-abastecimento');
-      if (DB.veiculos.length === 0) {
+      pendingFotoOdometro = null;
+      const meus = meusVeiculos();
+      if (meus.length === 0) {
         el.innerHTML = `<div class="page-header"><div><h2>Abastecimentos</h2></div></div>
           <div class="card empty-state"><div class="empty-icon">⛽</div><p>Cadastre um veículo primeiro.</p></div>`;
         return;
       }
-      const options = DB.veiculos.map(v =>
+      const options = meus.map(v =>
         `<option value="${v.id}">${v.marca} ${v.modelo} (${fmtKm(v.km)} km)</option>`
       ).join('');
 
@@ -1084,11 +1166,12 @@
             <div class="form-group"><label>Km atual *</label><input type="number" id="ab-km" placeholder="Ex: 87620" /></div>
           </div>
           <div class="form-group">
-            <label>Foto do odômetro (opcional)</label>
+            <label>Foto do odômetro (opcional — tenta ler o km automaticamente)</label>
             <div class="photo-area" onclick="document.getElementById('ab-foto').click()">
               <div id="ab-preview">📷 Toque para fotografar o odômetro</div>
               <input type="file" id="ab-foto" accept="image/*" capture="environment" style="display:none" onchange="previewFoto(this,'ab-preview')" />
             </div>
+            <p id="ab-ocr-status" style="font-size:12px;color:var(--info);margin-top:6px;display:none"></p>
           </div>
           <div class="form-row">
             <div class="form-group"><label>Litros *</label><input type="number" id="ab-litros" step="0.01" placeholder="42.50" /></div>
@@ -1111,12 +1194,24 @@
       if (v && input) input.value = v.ultimoAbastKm || v.km;
     }
 
-    function previewFoto(input, previewId) {
+    async function previewFoto(input, previewId) {
       const preview = document.getElementById(previewId);
       if (!preview || !input.files || !input.files[0]) return;
-      const reader = new FileReader();
-      reader.onload = e => { preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`; };
-      reader.readAsDataURL(input.files[0]);
+      const dataUrl = await compressImageFile(input.files[0], 900);
+      pendingFotoOdometro = dataUrl;
+      preview.innerHTML = `<img src="${dataUrl}" alt="Preview">`;
+      const status = document.getElementById('ab-ocr-status');
+      if (status) {
+        status.style.display = 'block';
+        status.textContent = 'lendo o odômetro…';
+        const km = await lerOdometroPorFoto(dataUrl);
+        if (km) {
+          document.getElementById('ab-km').value = km;
+          status.textContent = `km lido automaticamente: ${fmtKm(km)} — confira antes de salvar`;
+        } else {
+          status.textContent = 'não consegui ler o número — preencha o km manualmente';
+        }
+      }
     }
 
     function salvarAbastecimento() {
@@ -1132,10 +1227,11 @@
       if (km < (v.ultimoAbastKm || 0)) { toast('Km atual não pode ser menor que o anterior'); return; }
 
       DB.abastecimentos.unshift({
-        id: uid(), veiculoId, data: new Date().toISOString().slice(0, 10), km, litros, valor
+        id: uid(), veiculoId, data: new Date().toISOString().slice(0, 10), km, litros, valor, foto: pendingFotoOdometro
       });
       v.km = km;
       v.ultimoAbastKm = km;
+      pendingFotoOdometro = null;
       save();
       toast('Abastecimento salvo');
       renderDonoAbastecimento();
@@ -1144,7 +1240,8 @@
     function renderListaAbastecimentos() {
       const lista = document.getElementById('lista-abastecimentos');
       if (!lista) return;
-      const abs = DB.abastecimentos.slice(0, 10);
+      const meusIds = meusVeiculos().map(v => v.id);
+      const abs = DB.abastecimentos.filter(a => meusIds.includes(a.veiculoId)).slice(0, 10);
       if (abs.length === 0) {
         lista.innerHTML = '<div class="empty-state" style="padding:24px"><p>Nenhum abastecimento.</p></div>';
         return;
@@ -1172,19 +1269,21 @@
     // ===================== MANUTENÇÕES =====================
     function renderDonoManutencao() {
       const el = document.getElementById('dono-manutencao');
+      const meus = meusVeiculos();
+      const meusIds = meus.map(v => v.id);
       let html = `
         <div class="page-header">
           <div><h2>Manutenções</h2><p>Preventivas por intervalo de km</p></div>
           <button class="btn btn-primary btn-sm" onclick="registrarManutencaoManual()">+ Registrar manual</button>
         </div>`;
 
-      if (DB.veiculos.length === 0) {
+      if (meus.length === 0) {
         html += `<div class="card empty-state"><div class="empty-icon">🛠️</div><p>Cadastre um veículo primeiro.</p></div>`;
         el.innerHTML = html;
         return;
       }
 
-      DB.veiculos.forEach(v => {
+      meus.forEach(v => {
         html += `<div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
             <h3 style="font-size:16px;font-weight:600">${v.marca} ${v.modelo}</h3>
@@ -1209,18 +1308,21 @@
       });
 
       html += `<div class="card"><h3 style="font-size:15px;font-weight:600;margin-bottom:12px">Histórico de serviços</h3>`;
-      if (DB.servicos.length === 0) {
+      const meusServicos = DB.servicos.filter(s => meusIds.includes(s.veiculoId));
+      if (meusServicos.length === 0) {
         html += `<div class="empty-state" style="padding:24px"><p>Nenhum serviço ainda.</p></div>`;
       } else {
-        DB.servicos.forEach(s => {
+        meusServicos.forEach(s => {
           const v = DB.veiculos.find(x => x.id === s.veiculoId);
           const of = DB.oficinas.find(x => x.id === s.oficinaId);
+          const foto = (s.fotos && s.fotos[0]) ? `<img src="${s.fotos[0]}" style="width:40px;height:40px;border-radius:6px;object-fit:cover;margin-left:10px">` : '';
           html += `
             <div class="list-item">
               <div>
                 <strong style="font-size:14px">${fmtDate(s.data)} · ${of ? of.nome : 'Oficina'}</strong>
                 <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${s.itens.join(', ')} · ${fmtKm(s.km)} km</div>
               </div>
+              ${foto}
             </div>`;
         });
       }
@@ -1229,12 +1331,13 @@
     }
 
     function registrarManutencaoManual() {
-      if (DB.veiculos.length === 0) { toast('Cadastre um veículo primeiro'); return; }
-      const nomes = DB.veiculos.map((v, i) => `${i + 1}. ${v.marca} ${v.modelo}`).join('\n');
+      const meus = meusVeiculos();
+      if (meus.length === 0) { toast('Cadastre um veículo primeiro'); return; }
+      const nomes = meus.map((v, i) => `${i + 1}. ${v.marca} ${v.modelo}`).join('\n');
       const idx = prompt(`Qual veículo?\n${nomes}\n\nDigite o número:`);
       const i = parseInt(idx, 10) - 1;
-      if (isNaN(i) || i < 0 || i >= DB.veiculos.length) return;
-      const v = DB.veiculos[i];
+      if (isNaN(i) || i < 0 || i >= meus.length) return;
+      const v = meus[i];
       const nome = prompt('Nome da manutenção (ex: Troca de óleo e filtro):');
       if (!nome || !nome.trim()) return;
       if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
@@ -1247,7 +1350,8 @@
     // ===================== AGENDAR =====================
     function renderDonoAgendar() {
       const el = document.getElementById('dono-agendar');
-      if (DB.veiculos.length === 0) {
+      const meus = meusVeiculos();
+      if (meus.length === 0) {
         el.innerHTML = `<div class="page-header"><div><h2>Agendar Serviço</h2></div></div>
           <div class="card empty-state"><div class="empty-icon">📅</div><p>Cadastre um veículo primeiro.</p></div>`;
         return;
@@ -1258,7 +1362,7 @@
         return;
       }
 
-      const veiculosOpt = DB.veiculos.map(v => `<option value="${v.id}">${v.marca} ${v.modelo}</option>`).join('');
+      const veiculosOpt = meus.map(v => `<option value="${v.id}">${v.marca} ${v.modelo}</option>`).join('');
       const oficinasOpt = DB.oficinas.map(o =>
         `<option value="${o.id}">${o.nome}${o.nota != null ? ' · ' + o.nota + '★' : ''}${o.distancia ? ' (' + o.distancia + ')' : ''}</option>`
       ).join('');
@@ -1301,7 +1405,7 @@
 
       DB.agendamentos.push({
         id: uid(), veiculoId, oficinaId, data, hora, servico,
-        status: 'pendente', cliente: SESSION.nome || 'Você', notas
+        status: 'pendente', cliente: SESSION.nome || 'Você', donoId: currentDonoId(), notas
       });
       save();
       toast('Agendamento solicitado');
@@ -1311,7 +1415,8 @@
     function renderMeusAgendamentos() {
       const el = document.getElementById('meus-agendamentos');
       if (!el) return;
-      const meus = [...DB.agendamentos].reverse();
+      const meuId = currentDonoId();
+      const meus = [...DB.agendamentos].filter(a => !a.donoId || a.donoId === meuId).reverse();
       if (meus.length === 0) {
         el.innerHTML = '<div class="empty-state" style="padding:24px"><p>Nenhum agendamento.</p></div>';
         return;
@@ -1413,6 +1518,7 @@
 
     function renderMecanicaNovoServico() {
       const el = document.getElementById('mecanica-novo-servico');
+      pendingFotosServico = [];
       const ativos = DB.agendamentos.filter(a =>
         a.oficinaId === SESSION.oficinaId && ['confirmado', 'em_andamento', 'pendente'].includes(a.status)
       );
@@ -1453,13 +1559,16 @@
       `;
     }
 
-    function previewMulti(input, previewId) {
+    let pendingFotosServico = [];
+
+    async function previewMulti(input, previewId) {
       const preview = document.getElementById(previewId);
       if (!preview || !input.files || !input.files.length) return;
-      let html = '<div class="photo-thumbs">';
-      Array.from(input.files).forEach(f => { html += `<img src="${URL.createObjectURL(f)}" alt="foto">`; });
-      html += '</div>';
-      preview.innerHTML = html;
+      preview.innerHTML = 'comprimindo fotos…';
+      pendingFotosServico = await Promise.all(
+        Array.from(input.files).slice(0, 6).map(f => compressImageFile(f, 900))
+      );
+      preview.innerHTML = '<div class="photo-thumbs">' + pendingFotosServico.map(src => `<img src="${src}" alt="foto">`).join('') + '</div>';
     }
 
     function finalizarServico() {
@@ -1486,10 +1595,11 @@
 
       DB.servicos.unshift({
         id: uid(), veiculoId: ag.veiculoId, oficinaId: ag.oficinaId,
-        data: new Date().toISOString().slice(0, 10), km, itens: checks, fotos: [],
+        data: new Date().toISOString().slice(0, 10), km, itens: checks, fotos: pendingFotosServico,
         observacoes: obs, cliente: ag.cliente
       });
       ag.status = 'concluido';
+      pendingFotosServico = [];
       save();
       toast('Serviço registrado');
       renderMecanicaNovoServico();
