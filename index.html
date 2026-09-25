@@ -306,7 +306,7 @@
 
       <div id="google-btn-wrap" style="display:flex;justify-content:center;margin-bottom:8px">
         <div id="g_id_onload"
-             data-client_id="SEU_CLIENT_ID.apps.googleusercontent.com"
+             data-client_id="366921253291-a1uf7a7h0urr8aa1uqmcbdolma6j2s3b.apps.googleusercontent.com"
              data-context="signin"
              data-callback="onGoogleSignIn"
              data-auto_prompt="false">
@@ -322,7 +322,7 @@
         </div>
       </div>
       <p style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:12px">
-        Configure o Client ID no código (Google Cloud Console). Sem isso, use o login por nome + perfil.
+        Client ID configurado (projeto gestaocustos). Use em localhost:5500 ou fernandocopatti.github.io
       </p>
 
       <input type="file" id="import-backup" accept="application/json,.json" style="display:none" onchange="importarBackup(event)" />
@@ -572,6 +572,154 @@
       { nome: 'Fluido de freio', intervaloKm: 30000 },
       { nome: 'Velas de ignição', intervaloKm: 40000 },
     ];
+
+    /** Modelos de manual (intervalos típicos de fábrica — referência) */
+    const MANUAIS_MODELO = {
+      generico: {
+        titulo: 'Plano genérico (padrão)',
+        itens: PREVENTIVAS.map(p => ({ ...p }))
+      },
+      'volkswagen-golf': {
+        titulo: 'VW Golf / similares (óleo longo)',
+        itens: [
+          { nome: 'Troca de óleo e filtro', intervaloKm: 10000, intervaloMeses: 12 },
+          { nome: 'Filtro de ar', intervaloKm: 30000, intervaloMeses: 24 },
+          { nome: 'Filtro de combustível', intervaloKm: 40000 },
+          { nome: 'Pastilhas de freio', intervaloKm: 30000 },
+          { nome: 'Fluido de freio', intervaloKm: 40000, intervaloMeses: 24 },
+          { nome: 'Velas de ignição', intervaloKm: 40000 },
+          { nome: 'Correia dentada', intervaloKm: 90000, intervaloMeses: 60 },
+        ]
+      },
+      'fiat-argo': {
+        titulo: 'Fiat Argo / Uno / Mobi',
+        itens: [
+          { nome: 'Troca de óleo e filtro', intervaloKm: 10000, intervaloMeses: 12 },
+          { nome: 'Filtro de ar', intervaloKm: 20000 },
+          { nome: 'Filtro de combustível', intervaloKm: 20000 },
+          { nome: 'Pastilhas de freio', intervaloKm: 25000 },
+          { nome: 'Fluido de freio', intervaloKm: 30000, intervaloMeses: 24 },
+          { nome: 'Velas de ignição', intervaloKm: 30000 },
+          { nome: 'Correia dentada', intervaloKm: 60000, intervaloMeses: 48 },
+        ]
+      },
+      'toyota-corolla': {
+        titulo: 'Toyota Corolla / Hilux (referência)',
+        itens: [
+          { nome: 'Troca de óleo e filtro', intervaloKm: 10000, intervaloMeses: 12 },
+          { nome: 'Filtro de ar', intervaloKm: 20000 },
+          { nome: 'Filtro de combustível', intervaloKm: 40000 },
+          { nome: 'Pastilhas de freio', intervaloKm: 40000 },
+          { nome: 'Fluido de freio', intervaloKm: 40000, intervaloMeses: 24 },
+          { nome: 'Velas de ignição', intervaloKm: 100000 },
+          { nome: 'Corrente / correia (inspeção)', intervaloKm: 100000 },
+        ]
+      },
+      'chevrolet-onix': {
+        titulo: 'Chevrolet Onix / Prisma',
+        itens: [
+          { nome: 'Troca de óleo e filtro', intervaloKm: 10000, intervaloMeses: 12 },
+          { nome: 'Filtro de ar', intervaloKm: 20000 },
+          { nome: 'Filtro de combustível', intervaloKm: 20000 },
+          { nome: 'Pastilhas de freio', intervaloKm: 30000 },
+          { nome: 'Fluido de freio', intervaloKm: 30000, intervaloMeses: 24 },
+          { nome: 'Velas de ignição', intervaloKm: 40000 },
+          { nome: 'Correia dentada', intervaloKm: 50000, intervaloMeses: 48 },
+        ]
+      },
+    };
+
+    function getPreventivas(v) {
+      if (v && v.planoPreventiva && Array.isArray(v.planoPreventiva.itens) && v.planoPreventiva.itens.length) {
+        return v.planoPreventiva.itens;
+      }
+      return PREVENTIVAS;
+    }
+
+    function exemploManualJson() {
+      return {
+        fonte: 'Manual do proprietário (exemplo)',
+        marca: 'Volkswagen',
+        modelo: 'Golf',
+        ano: 2018,
+        itens: [
+          { nome: 'Troca de óleo e filtro', intervaloKm: 10000, intervaloMeses: 12 },
+          { nome: 'Filtro de ar', intervaloKm: 30000 },
+          { nome: 'Pastilhas de freio', intervaloKm: 30000 },
+          { nome: 'Fluido de freio', intervaloKm: 40000, intervaloMeses: 24 },
+          { nome: 'Correia dentada', intervaloKm: 90000, intervaloMeses: 60 }
+        ]
+      };
+    }
+
+    function baixarExemploManual() {
+      const blob = new Blob([JSON.stringify(exemploManualJson(), null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'exemplo-manual-revisoes.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('Exemplo de manual baixado');
+    }
+
+    function aplicarModeloManual(veiculoId, modeloKey) {
+      const v = DB.veiculos.find(x => x.id === veiculoId);
+      const m = MANUAIS_MODELO[modeloKey];
+      if (!v || !m) { toast('Modelo não encontrado'); return; }
+      v.planoPreventiva = {
+        fonte: m.titulo,
+        modeloKey,
+        importadoEm: new Date().toISOString().slice(0, 10),
+        itens: m.itens.map(i => ({ ...i }))
+      };
+      save();
+      toast('Plano do manual aplicado');
+      renderDonoManutencao();
+    }
+
+    function importarManualJson(veiculoId, file) {
+      const v = DB.veiculos.find(x => x.id === veiculoId);
+      if (!v || !file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          let itens = data.itens || data.revisoes || data.preventivas || data.servicos;
+          if (!Array.isArray(itens) || !itens.length) throw new Error('Sem itens');
+          itens = itens.map(it => ({
+            nome: String(it.nome || it.item || it.servico || '').trim(),
+            intervaloKm: parseInt(it.intervaloKm || it.km || it.intervalo || 0, 10),
+            intervaloMeses: it.intervaloMeses || it.meses || null
+          })).filter(it => it.nome && it.intervaloKm > 0);
+          if (!itens.length) throw new Error('Itens inválidos');
+          v.planoPreventiva = {
+            fonte: data.fonte || data.titulo || file.name,
+            marca: data.marca || v.marca,
+            modelo: data.modelo || v.modelo,
+            ano: data.ano || v.ano,
+            importadoEm: new Date().toISOString().slice(0, 10),
+            itens
+          };
+          save();
+          toast('Manual importado · ' + itens.length + ' revisões');
+          renderDonoManutencao();
+        } catch (e) {
+          console.error(e);
+          toast('JSON inválido. Use o exemplo de manual.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function limparPlanoManual(veiculoId) {
+      const v = DB.veiculos.find(x => x.id === veiculoId);
+      if (!v) return;
+      if (!confirm('Remover o plano importado e voltar ao padrão genérico?')) return;
+      delete v.planoPreventiva;
+      save();
+      toast('Plano removido');
+      renderDonoManutencao();
+    }
     const HORARIOS = ['08:00','09:00','10:00','11:00','14:00','15:00','16:00','17:00'];
 
     const PALETAS = [
@@ -1379,8 +1527,8 @@
         <div class="card">
           <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">🔑 Login Google</h3>
           <p style="font-size:13px;color:var(--text-secondary)">
-            Configure o <code>data-client_id</code> no HTML com o Client ID do Google Cloud Console
-            (origens autorizadas: localhost e domínio do app).
+            Client ID Google já configurado no app.
+            Origens: <code>http://localhost:5500</code> e <code>https://fernandocopatti.github.io</code>.
           </p>
         </div>
         <div class="card">
@@ -1563,8 +1711,11 @@
     }
 
     function calcProximaRevisao(v) {
-      const ultima = (DB.ultimaManutencao[v.id] || {})['Troca de óleo e filtro'] || 0;
-      const falta = 10000 - (v.km - ultima);
+      const plano = getPreventivas(v);
+      const oleo = plano.find(p => /óleo|oleo/i.test(p.nome)) || plano[0];
+      if (!oleo) return { texto: '—', cor: 'var(--muted)' };
+      const ultima = (DB.ultimaManutencao[v.id] || {})[oleo.nome] || 0;
+      const falta = oleo.intervaloKm - (v.km - ultima);
       if (falta <= 0) return { texto: 'Atrasada', cor: 'var(--danger)' };
       if (falta <= 2000) return { texto: `Em ${fmtKm(falta)} km`, cor: 'var(--warning)' };
       return { texto: `Em ${fmtKm(falta)} km`, cor: 'var(--success)' };
@@ -1758,8 +1909,18 @@
       const meusIds = meus.map(v => v.id);
       let html = `
         <div class="page-header">
-          <div><h2>Manutenções</h2><p>Preventivas por intervalo de km</p></div>
-          <button class="btn btn-primary btn-sm" onclick="registrarManutencaoManual()">+ Registrar manual</button>
+          <div><h2>Manutenções</h2><p>Preventivas conforme manual do veículo</p></div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="baixarExemploManual()">📄 Exemplo JSON</button>
+            <button class="btn btn-primary btn-sm" onclick="registrarManutencaoManual()">+ Registrar feita</button>
+          </div>
+        </div>
+        <div class="card" style="background:#f8fafc">
+          <p style="font-size:13px;color:var(--text-secondary);margin:0">
+            Importe o plano de revisões do manual (JSON) ou aplique um modelo por marca.
+            As preventivas passam a usar esses intervalos de km (e meses, quando informados).
+            PDF do manual ainda não é lido automaticamente neste protótipo — use o JSON ou o modelo.
+          </p>
         </div>`;
 
       if (meus.length === 0) {
@@ -1768,23 +1929,46 @@
         return;
       }
 
+      const modelosOpt = Object.keys(MANUAIS_MODELO).map(k =>
+        `<option value="${k}">${MANUAIS_MODELO[k].titulo}</option>`
+      ).join('');
+
       meus.forEach(v => {
+        const plano = getPreventivas(v);
+        const fonte = v.planoPreventiva
+          ? (v.planoPreventiva.fonte || 'Manual importado')
+          : 'Plano genérico (padrão)';
         html += `<div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-            <h3 style="font-size:16px;font-weight:600">${v.marca} ${v.modelo}</h3>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+            <div>
+              <h3 style="font-size:16px;font-weight:600">${v.marca} ${v.modelo}</h3>
+              <div style="font-size:12px;color:var(--muted);margin-top:2px">📋 ${fonte}</div>
+            </div>
             <span class="km-badge">${fmtKm(v.km)} km</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center">
+            <select id="manual-modelo-${v.id}" style="flex:1;min-width:160px;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px">
+              ${modelosOpt}
+            </select>
+            <button class="btn btn-sm btn-outline" onclick="aplicarModeloManual('${v.id}', document.getElementById('manual-modelo-${v.id}').value)">Aplicar modelo</button>
+            <button class="btn btn-sm btn-outline" onclick="document.getElementById('manual-file-${v.id}').click()">Importar JSON</button>
+            <input type="file" id="manual-file-${v.id}" accept="application/json,.json" style="display:none"
+              onchange="importarManualJson('${v.id}', this.files[0]); this.value='';" />
+            ${v.planoPreventiva ? `<button class="btn btn-sm btn-ghost" style="color:var(--danger)" onclick="limparPlanoManual('${v.id}')">Limpar plano</button>` : ''}
           </div>`;
-        PREVENTIVAS.forEach(p => {
+        plano.forEach(p => {
           const ultima = (DB.ultimaManutencao[v.id] || {})[p.nome] || 0;
           const falta = p.intervaloKm - (v.km - ultima);
           let cls = 'ok', texto = `Em ${fmtKm(Math.max(0, falta))} km`;
           if (falta <= 0) { cls = 'late'; texto = 'Verificar agora'; }
-          else if (falta <= 2000) { cls = 'warn'; }
+          else if (falta <= Math.min(2000, p.intervaloKm * 0.2)) { cls = 'warn'; }
+          const meses = p.intervaloMeses ? ` ou a cada ${p.intervaloMeses} meses` : '';
+          const ultimaTxt = ultima ? `Última: ${fmtKm(ultima)} km` : 'Ainda não registrada';
           html += `
             <div class="list-item">
               <div>
                 <strong style="font-size:14px">${p.nome}</strong>
-                <div style="font-size:12px;color:var(--muted)">A cada ${fmtKm(p.intervaloKm)} km</div>
+                <div style="font-size:12px;color:var(--muted)">A cada ${fmtKm(p.intervaloKm)} km${meses} · ${ultimaTxt}</div>
               </div>
               <span class="status ${cls}">${texto}</span>
             </div>`;
@@ -1805,7 +1989,7 @@
             <div class="list-item">
               <div>
                 <strong style="font-size:14px">${fmtDate(s.data)} · ${of ? of.nome : 'Oficina'}</strong>
-                <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${s.itens.join(', ')} · ${fmtKm(s.km)} km</div>
+                <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${(s.itens||[]).join(', ')} · ${fmtKm(s.km)} km</div>
               </div>
               ${foto}
             </div>`;
@@ -2764,8 +2948,11 @@
       if (v) {
         if (km > v.km) v.km = km;
         if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
+        const plano = getPreventivas(v);
         checks.forEach(item => {
-          const key = PREVENTIVAS.find(p => p.nome.toLowerCase().includes(item.toLowerCase().split(' ')[0]))?.nome || item;
+          const low = item.toLowerCase();
+          const match = plano.find(p => p.nome.toLowerCase().includes(low.split(' ')[0]) || low.includes(p.nome.toLowerCase().split(' ')[0]));
+          const key = match?.nome || PREVENTIVAS.find(p => p.nome.toLowerCase().includes(low.split(' ')[0]))?.nome || item;
           DB.ultimaManutencao[v.id][key] = km;
         });
       }
