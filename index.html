@@ -349,12 +349,14 @@
     </div>
     <nav class="nav" id="nav-dono">
       <button class="active" data-tela="veiculos" onclick="mostrarTela('dono','veiculos')">🚙 Veículos</button>
+      <button data-tela="oficinas" onclick="mostrarTela('dono','oficinas')">🏢 Oficinas</button>
       <button data-tela="abastecimento" onclick="mostrarTela('dono','abastecimento')">⛽ Abastecer</button>
       <button data-tela="manutencao" onclick="mostrarTela('dono','manutencao')">🛠️ Manutenções</button>
-      <button data-tela="agendar" onclick="mostrarTela('dono','agendar')">📅 Agendar</button>
+      <button data-tela="agendar" onclick="mostrarTela('dono','agendar')">📅 Meus agendamentos</button>
     </nav>
     <main>
       <div id="dono-veiculos" class="screen active"></div>
+      <div id="dono-oficinas" class="screen"></div>
       <div id="dono-abastecimento" class="screen"></div>
       <div id="dono-manutencao" class="screen"></div>
       <div id="dono-agendar" class="screen"></div>
@@ -893,6 +895,7 @@
 
       if (perfil === 'dono') {
         if (tela === 'veiculos') renderDonoVeiculos();
+        if (tela === 'oficinas') renderDonoOficinas();
         if (tela === 'abastecimento') renderDonoAbastecimento();
         if (tela === 'manutencao') renderDonoManutencao();
         if (tela === 'agendar') renderDonoAgendar();
@@ -1515,44 +1518,175 @@
       renderDonoManutencao();
     }
 
-    // ===================== AGENDAR =====================
+    // ===================== MARKETPLACE OFICINAS + AGENDAR =====================
+    let bookingOficinaId = null;
+
+    function horariosOcupados(oficinaId, data) {
+      return DB.agendamentos
+        .filter(a => a.oficinaId === oficinaId && a.data === data && a.status !== 'rejeitado' && a.status !== 'cancelado')
+        .map(a => a.hora);
+    }
+
+    function horariosLivres(oficinaId, data) {
+      const ocup = new Set(horariosOcupados(oficinaId, data));
+      return HORARIOS.filter(h => !ocup.has(h));
+    }
+
+    function renderDonoOficinas() {
+      const el = document.getElementById('dono-oficinas');
+      const lista = oficinasAprovadas();
+      const q = (document.getElementById('of-busca')?.value || '').trim().toLowerCase();
+
+      let filtradas = lista;
+      if (q) {
+        filtradas = lista.filter(o => {
+          const blob = [o.nome, o.cidade, o.uf, o.especialidades, o.endereco, o.contato].join(' ').toLowerCase();
+          return blob.includes(q);
+        });
+      }
+
+      let html = `
+        <div class="page-header">
+          <div>
+            <h2>Oficinas</h2>
+            <p>Escolha uma oficina e agende seu serviço</p>
+          </div>
+        </div>
+        <div class="card" style="padding:14px 16px;margin-bottom:16px">
+          <input type="search" id="of-busca" placeholder="Buscar por nome, cidade ou especialidade..."
+            value="${q.replace(/"/g, '&quot;')}"
+            oninput="renderDonoOficinas()"
+            style="margin:0" />
+        </div>`;
+
+      if (filtradas.length === 0) {
+        html += `<div class="card empty-state">
+          <div class="empty-icon">🏢</div>
+          <p>${lista.length === 0 ? 'Nenhuma oficina aprovada ainda.' : 'Nenhum resultado para a busca.'}</p>
+        </div>`;
+      } else {
+        filtradas.forEach(o => {
+          const local = [o.cidade, o.uf].filter(Boolean).join('/') || o.distancia || 'Local não informado';
+          const end = o.endereco || '';
+          const nota = o.nota != null && o.nota !== '' ? `<span class="status ok">${o.nota} ★</span>` : '';
+          html += `
+            <div class="card" style="cursor:pointer" onclick="abrirAgendarNaOficina('${o.id}')">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+                <div style="flex:1">
+                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <h3 style="font-size:16px;font-weight:600">${o.nome}</h3>
+                    ${nota}
+                  </div>
+                  <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">📍 ${local}${end ? ' · ' + end : ''}</div>
+                  ${o.especialidades ? `<div style="font-size:13px;color:var(--muted);margin-top:4px">🔧 ${o.especialidades}</div>` : ''}
+                  ${o.telefone ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">📞 ${o.telefone}</div>` : ''}
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();abrirAgendarNaOficina('${o.id}')">Agendar</button>
+              </div>
+            </div>`;
+        });
+      }
+      el.innerHTML = html;
+    }
+
+    function abrirAgendarNaOficina(oficinaId) {
+      bookingOficinaId = oficinaId;
+      mostrarTela('dono', 'agendar');
+      // renderDonoAgendar será chamado pelo mostrarTela; força modo booking
+      setTimeout(() => {
+        if (typeof renderFormAgendamento === 'function') renderFormAgendamento(oficinaId);
+      }, 0);
+    }
+
     function renderDonoAgendar() {
       const el = document.getElementById('dono-agendar');
-      const meus = meusVeiculos();
-      if (meus.length === 0) {
-        el.innerHTML = `<div class="page-header"><div><h2>Agendar Serviço</h2></div></div>
-          <div class="card empty-state"><div class="empty-icon">📅</div><p>Cadastre um veículo primeiro.</p></div>`;
+      // Se veio de uma oficina específica, mostra formulário; senão lista de agendamentos + atalho
+      if (bookingOficinaId) {
+        renderFormAgendamento(bookingOficinaId);
         return;
       }
-      if (oficinasAprovadas().length === 0) {
-        el.innerHTML = `<div class="page-header"><div><h2>Agendar Serviço</h2></div></div>
-          <div class="card empty-state"><div class="empty-icon">🏢</div><p>Nenhuma oficina aprovada no momento.<br>Oficinas precisam ser validadas pelo administrador.</p></div>`;
+      el.innerHTML = `
+        <div class="page-header">
+          <div>
+            <h2>Meus agendamentos</h2>
+            <p>Acompanhe solicitações e confirmações</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="mostrarTela('dono','oficinas')">+ Nova agenda</button>
+        </div>
+        <div class="card" id="meus-agendamentos"></div>
+      `;
+      renderMeusAgendamentos();
+    }
+
+    function renderFormAgendamento(oficinaId) {
+      const el = document.getElementById('dono-agendar');
+      const meus = meusVeiculos();
+      const of = DB.oficinas.find(o => o.id === oficinaId);
+      if (!of) {
+        bookingOficinaId = null;
+        renderDonoAgendar();
+        return;
+      }
+      if (meus.length === 0) {
+        el.innerHTML = `
+          <div class="page-header">
+            <div><h2>Agendar em ${of.nome}</h2></div>
+            <button class="btn btn-outline btn-sm" onclick="bookingOficinaId=null;mostrarTela('dono','oficinas')">Voltar</button>
+          </div>
+          <div class="card empty-state"><div class="empty-icon">🚙</div><p>Cadastre um veículo antes de agendar.</p></div>`;
         return;
       }
 
-      const veiculosOpt = meus.map(v => `<option value="${v.id}">${v.marca} ${v.modelo}</option>`).join('');
-      const oficinasOpt = oficinasAprovadas().map(o => {
-        const local = o.cidade ? ` (${o.cidade}${o.uf ? '/' + o.uf : ''})` : (o.distancia ? ' (' + o.distancia + ')' : '');
-        return `<option value="${o.id}">${o.nome}${o.nota != null ? ' · ' + o.nota + '★' : ''}${local}</option>`;
-      }).join('');
+      const veiculosOpt = meus.map(v => `<option value="${v.id}">${v.marca} ${v.modelo} (${fmtKm(v.km)} km)</option>`).join('');
+      const local = [of.cidade, of.uf].filter(Boolean).join('/') || '';
 
       el.innerHTML = `
-        <div class="page-header"><div><h2>Agendar Serviço</h2><p>Solicite horário em oficinas cadastradas</p></div></div>
+        <div class="page-header">
+          <div>
+            <h2>Agendar serviço</h2>
+            <p>${of.nome}${local ? ' · ' + local : ''}</p>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="bookingOficinaId=null;mostrarTela('dono','oficinas')">Trocar oficina</button>
+        </div>
         <div class="card">
-          <div class="form-group"><label>Veículo</label><select id="ag-veiculo">${veiculosOpt}</select></div>
+          <div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+            <strong style="font-size:15px">${of.nome}</strong>
+            ${of.nota != null ? ` <span class="status ok">${of.nota} ★</span>` : ''}
+            <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">
+              ${of.especialidades || 'Serviços gerais'}
+              ${of.telefone ? ' · ' + of.telefone : ''}
+            </div>
+          </div>
+          <input type="hidden" id="ag-oficina" value="${of.id}" />
           <div class="form-group">
-            <label>Tipo de serviço</label>
+            <label>Veículo *</label>
+            <select id="ag-veiculo">${veiculosOpt}</select>
+          </div>
+          <div class="form-group">
+            <label>Tipo de serviço *</label>
             <select id="ag-servico">
-              <option>Revisão preventiva</option><option>Troca de óleo</option><option>Freios</option>
-              <option>Suspensão</option><option>Diagnóstico</option><option>Outro / Corretiva</option>
+              <option>Revisão preventiva</option>
+              <option>Troca de óleo</option>
+              <option>Freios</option>
+              <option>Suspensão</option>
+              <option>Diagnóstico</option>
+              <option>Outro / Corretiva</option>
             </select>
           </div>
-          <div class="form-group"><label>Oficina</label><select id="ag-oficina">${oficinasOpt}</select></div>
-          <div class="form-row">
-            <div class="form-group"><label>Data</label><input type="date" id="ag-data" /></div>
-            <div class="form-group"><label>Horário</label><select id="ag-hora">${HORARIOS.map(h => `<option>${h}</option>`).join('')}</select></div>
+          <div class="form-group">
+            <label>Data *</label>
+            <input type="date" id="ag-data" onchange="atualizarHorariosLivres()" />
           </div>
-          <div class="form-group"><label>Observações</label><textarea id="ag-notas" rows="3" placeholder="O que precisa ser feito..."></textarea></div>
+          <div class="form-group">
+            <label>Horários disponíveis *</label>
+            <div id="ag-slots" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+            <input type="hidden" id="ag-hora" value="" />
+            <p id="ag-slots-msg" style="font-size:12px;color:var(--muted);margin-top:8px"></p>
+          </div>
+          <div class="form-group">
+            <label>Observações</label>
+            <textarea id="ag-notas" rows="3" placeholder="Descreva o problema ou o que precisa ser feito..."></textarea>
+          </div>
           <button class="btn btn-primary btn-block" onclick="solicitarAgendamento()">Solicitar agendamento</button>
         </div>
         <div class="page-header" style="margin-top:28px"><div><h2 style="font-size:18px">Meus agendamentos</h2></div></div>
@@ -1560,25 +1694,66 @@
       `;
       const hoje = new Date().toISOString().slice(0, 10);
       document.getElementById('ag-data').value = hoje;
+      atualizarHorariosLivres();
       renderMeusAgendamentos();
     }
 
+    function atualizarHorariosLivres() {
+      const oficinaId = document.getElementById('ag-oficina')?.value;
+      const data = document.getElementById('ag-data')?.value;
+      const box = document.getElementById('ag-slots');
+      const msg = document.getElementById('ag-slots-msg');
+      const hidden = document.getElementById('ag-hora');
+      if (!box || !oficinaId || !data) return;
+      hidden.value = '';
+      const livres = horariosLivres(oficinaId, data);
+      if (livres.length === 0) {
+        box.innerHTML = '';
+        msg.textContent = 'Nenhum horário livre neste dia. Escolha outra data.';
+        return;
+      }
+      msg.textContent = 'Toque em um horário para selecionar';
+      box.innerHTML = livres.map(h =>
+        `<button type="button" class="btn btn-outline btn-sm slot-btn" data-hora="${h}"
+          onclick="selecionarHorario(this)" style="min-width:72px">${h}</button>`
+      ).join('');
+    }
+
+    function selecionarHorario(btn) {
+      document.querySelectorAll('.slot-btn').forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline');
+      });
+      btn.classList.remove('btn-outline');
+      btn.classList.add('btn-primary');
+      document.getElementById('ag-hora').value = btn.dataset.hora;
+    }
+
     function solicitarAgendamento() {
-      const veiculoId = document.getElementById('ag-veiculo').value;
-      const servico = document.getElementById('ag-servico').value;
-      const oficinaId = document.getElementById('ag-oficina').value;
-      const data = document.getElementById('ag-data').value;
-      const hora = document.getElementById('ag-hora').value;
-      const notas = document.getElementById('ag-notas').value.trim();
+      const veiculoId = document.getElementById('ag-veiculo')?.value;
+      const servico = document.getElementById('ag-servico')?.value;
+      const oficinaId = document.getElementById('ag-oficina')?.value;
+      const data = document.getElementById('ag-data')?.value;
+      const hora = document.getElementById('ag-hora')?.value;
+      const notas = (document.getElementById('ag-notas')?.value || '').trim();
       if (!veiculoId || !data || !oficinaId) { toast('Preencha os campos obrigatórios'); return; }
+      if (!hora) { toast('Selecione um horário disponível'); return; }
+
+      const livres = horariosLivres(oficinaId, data);
+      if (!livres.includes(hora)) {
+        toast('Este horário acabou de ser ocupado. Escolha outro.');
+        atualizarHorariosLivres();
+        return;
+      }
 
       DB.agendamentos.push({
         id: uid(), veiculoId, oficinaId, data, hora, servico,
         status: 'pendente', cliente: SESSION.nome || 'Você', donoId: currentDonoId(), notas
       });
       save();
-      toast('Agendamento solicitado');
-      renderDonoAgendar();
+      toast('Agendamento solicitado! Aguarde confirmação da oficina.');
+      bookingOficinaId = null;
+      renderFormAgendamento(oficinaId);
     }
 
     function renderMeusAgendamentos() {
@@ -1587,10 +1762,10 @@
       const meuId = currentDonoId();
       const meus = [...DB.agendamentos].filter(a => !a.donoId || a.donoId === meuId).reverse();
       if (meus.length === 0) {
-        el.innerHTML = '<div class="empty-state" style="padding:24px"><p>Nenhum agendamento.</p></div>';
+        el.innerHTML = '<div class="empty-state" style="padding:24px"><p>Nenhum agendamento ainda.<br>Vá em Oficinas e escolha onde quer marcar.</p></div>';
         return;
       }
-      const stMap = { pendente: 'info', confirmado: 'ok', em_andamento: 'warn', concluido: 'ok' };
+      const stMap = { pendente: 'info', confirmado: 'ok', em_andamento: 'warn', concluido: 'ok', cancelado: 'late' };
       el.innerHTML = meus.map(a => {
         const v = DB.veiculos.find(x => x.id === a.veiculoId);
         const of = DB.oficinas.find(x => x.id === a.oficinaId);
@@ -1600,7 +1775,7 @@
               <strong style="font-size:14px">${fmtDate(a.data)} ${a.hora} · ${a.servico}</strong>
               <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : '—'} · ${of ? of.nome : ''}</div>
             </div>
-            <span class="status ${stMap[a.status] || 'info'}">${a.status.replace('_', ' ')}</span>
+            <span class="status ${stMap[a.status] || 'info'}">${(a.status || '').replace('_', ' ')}</span>
           </div>`;
       }).join('');
     }
