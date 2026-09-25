@@ -373,16 +373,20 @@
     <nav class="nav" id="nav-mecanica">
       <button class="active" data-tela="agenda" onclick="mostrarTela('mecanica','agenda')">📋 Agenda</button>
       <button data-tela="novo-agendamento" onclick="mostrarTela('mecanica','novo-agendamento')">📅 Agendar</button>
-      <button data-tela="servicos" onclick="mostrarTela('mecanica','servicos')">✅ Serviços</button>
+      <button data-tela="catalogo" onclick="mostrarTela('mecanica','catalogo')">🧾 Tabela de preços</button>
       <button data-tela="novo-servico" onclick="mostrarTela('mecanica','novo-servico')">➕ Registrar</button>
+      <button data-tela="servicos" onclick="mostrarTela('mecanica','servicos')">✅ Histórico</button>
+      <button data-tela="financeiro" onclick="mostrarTela('mecanica','financeiro')">💰 Financeiro</button>
       <button data-tela="minha-oficina" onclick="mostrarTela('mecanica','minha-oficina')">🏪 Oficina</button>
       <button data-tela="backup" onclick="mostrarTela('mecanica','backup')">☁️ Backup</button>
     </nav>
     <main>
       <div id="mecanica-agenda" class="screen active"></div>
       <div id="mecanica-novo-agendamento" class="screen"></div>
-      <div id="mecanica-servicos" class="screen"></div>
+      <div id="mecanica-catalogo" class="screen"></div>
       <div id="mecanica-novo-servico" class="screen"></div>
+      <div id="mecanica-servicos" class="screen"></div>
+      <div id="mecanica-financeiro" class="screen"></div>
       <div id="mecanica-minha-oficina" class="screen"></div>
       <div id="mecanica-backup" class="screen"></div>
     </main>
@@ -684,6 +688,7 @@
         oficinas: [],
         agendamentos: [],
         servicos: [],
+        catalogoServicos: [],
         ultimaManutencao: {},
         notificacoes: [],
         adminPin: null
@@ -705,6 +710,16 @@
           { id: 'o1', nome: 'Oficina Central', razaoSocial: 'Central Serviços LTDA', cnpj: '12.345.678/0001-90', email: 'contato@central.com', contato: 'Carlos', telefone: '(11) 98888-0001', nota: 4.8, endereco: 'Rua das Oficinas, 100', cidade: 'São Paulo', uf: 'SP', especialidades: 'Motor, óleo, freios', status: 'aprovada', solicitadoPor: 'Demo', solicitadoEm: '2026-01-01', lat: -23.5505, lng: -46.6333, cor: 'azul', logo: null },
           { id: 'o2', nome: 'Auto Center Silva', razaoSocial: 'Silva Auto Center ME', cnpj: '98.765.432/0001-10', email: 'silva@auto.com', contato: 'Pedro', telefone: '(11) 97777-0002', nota: 4.6, endereco: 'Av. Brasil, 500', cidade: 'São Paulo', uf: 'SP', especialidades: 'Suspensão, alinhamento', status: 'aprovada', solicitadoPor: 'Demo', solicitadoEm: '2026-01-01', lat: -23.5610, lng: -46.6550, cor: 'verde', logo: null },
           { id: 'o3', nome: 'Mecânica do João', razaoSocial: 'João Mecânica', cnpj: '', email: '', contato: 'João', telefone: '(11) 96666-0003', nota: 4.9, endereco: 'Rua A, 20', cidade: 'Guarulhos', uf: 'SP', especialidades: 'Geral', status: 'aprovada', solicitadoPor: 'Demo', solicitadoEm: '2026-01-01', lat: -23.4540, lng: -46.5330, cor: 'laranja', logo: null },
+        ],
+        catalogoServicos: [
+          { id: 'cs1', oficinaId: 'o1', nome: 'Troca de óleo', valor: 180 },
+          { id: 'cs2', oficinaId: 'o1', nome: 'Filtro de óleo', valor: 45 },
+          { id: 'cs3', oficinaId: 'o1', nome: 'Filtro de ar', valor: 55 },
+          { id: 'cs4', oficinaId: 'o1', nome: 'Pastilhas de freio', valor: 320 },
+          { id: 'cs5', oficinaId: 'o1', nome: 'Fluido de freio', valor: 90 },
+          { id: 'cs6', oficinaId: 'o1', nome: 'Correia dentada', valor: 650 },
+          { id: 'cs7', oficinaId: 'o1', nome: 'Revisão preventiva', valor: 450 },
+          { id: 'cs8', oficinaId: 'o1', nome: 'Diagnóstico', valor: 120 },
         ],
         agendamentos: [
           { id: 'ag1', veiculoId: 'v1', oficinaId: 'o1', data: '2026-09-22', hora: '09:00', servico: 'Troca de óleo', status: 'em_andamento', cliente: 'Carlos Mendes', notas: '' },
@@ -798,6 +813,7 @@
             oficinas: data.oficinas || [],
             agendamentos: data.agendamentos || [],
             servicos: data.servicos || [],
+            catalogoServicos: data.catalogoServicos || [],
             ultimaManutencao: data.ultimaManutencao || {},
             notificacoes: data.notificacoes || [],
             adminPin: data.adminPin || null
@@ -1039,8 +1055,10 @@
       } else if (perfil === 'mecanica') {
         if (tela === 'agenda') renderMecanicaAgenda();
         if (tela === 'novo-agendamento') renderMecanicaNovoAgendamento();
+        if (tela === 'catalogo') renderMecanicaCatalogo();
         if (tela === 'servicos') renderMecanicaServicos();
         if (tela === 'novo-servico') renderMecanicaNovoServico();
+        if (tela === 'financeiro') renderMecanicaFinanceiro();
         if (tela === 'minha-oficina') renderMecanicaMinhaOficina();
         if (tela === 'backup') renderBackupUsuario();
       } else if (perfil === 'admin') {
@@ -2433,22 +2451,179 @@
       `;
     }
 
+    function catalogoDaOficina(ofId) {
+      if (!DB.catalogoServicos) DB.catalogoServicos = [];
+      return DB.catalogoServicos.filter(c => c.oficinaId === (ofId || SESSION.oficinaId));
+    }
+
+    function fmtMoney(n) {
+      const v = Number(n) || 0;
+      return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function renderMecanicaCatalogo() {
+      const el = document.getElementById('mecanica-catalogo');
+      const lista = catalogoDaOficina();
+      let html = `
+        <div class="page-header">
+          <div>
+            <h2>Tabela de preços</h2>
+            <p>Cadastre os serviços que sua oficina oferece</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nome do serviço *</label>
+              <input type="text" id="cat-nome" placeholder="Ex: Troca de óleo" />
+            </div>
+            <div class="form-group">
+              <label>Valor (R$) *</label>
+              <input type="number" id="cat-valor" min="0" step="0.01" placeholder="180,00" />
+            </div>
+          </div>
+          <button class="btn btn-primary btn-block" onclick="salvarItemCatalogo()">Adicionar serviço</button>
+        </div>
+        <div class="card">`;
+      if (lista.length === 0) {
+        html += `<div class="empty-state" style="padding:24px"><p>Nenhum serviço cadastrado.<br>Adicione os tipos e valores acima.</p></div>`;
+      } else {
+        lista.forEach(c => {
+          html += `
+            <div class="list-item">
+              <div>
+                <strong style="font-size:14px">${c.nome}</strong>
+                <div style="font-size:13px;color:var(--text-secondary)">${fmtMoney(c.valor)}</div>
+              </div>
+              <div class="actions-row">
+                <button class="btn btn-sm btn-outline" onclick="editarItemCatalogo('${c.id}')">✏️</button>
+                <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="excluirItemCatalogo('${c.id}')">🗑️</button>
+              </div>
+            </div>`;
+        });
+      }
+      html += `</div>`;
+      el.innerHTML = html;
+    }
+
+    function salvarItemCatalogo() {
+      const nome = document.getElementById('cat-nome').value.trim();
+      const valor = parseFloat(document.getElementById('cat-valor').value);
+      if (!nome) { toast('Informe o nome do serviço'); return; }
+      if (isNaN(valor) || valor < 0) { toast('Informe um valor válido'); return; }
+      if (!DB.catalogoServicos) DB.catalogoServicos = [];
+      DB.catalogoServicos.push({
+        id: uid(),
+        oficinaId: SESSION.oficinaId,
+        nome,
+        valor
+      });
+      save();
+      toast('Serviço adicionado à tabela');
+      renderMecanicaCatalogo();
+    }
+
+    function editarItemCatalogo(id) {
+      const c = (DB.catalogoServicos || []).find(x => x.id === id);
+      if (!c) return;
+      const nome = prompt('Nome do serviço:', c.nome);
+      if (nome == null) return;
+      const valorStr = prompt('Valor (R$):', String(c.valor));
+      if (valorStr == null) return;
+      const valor = parseFloat(valorStr.replace(',', '.'));
+      if (!nome.trim() || isNaN(valor) || valor < 0) { toast('Dados inválidos'); return; }
+      c.nome = nome.trim();
+      c.valor = valor;
+      save();
+      toast('Serviço atualizado');
+      renderMecanicaCatalogo();
+    }
+
+    function excluirItemCatalogo(id) {
+      if (!confirm('Remover este serviço da tabela?')) return;
+      DB.catalogoServicos = (DB.catalogoServicos || []).filter(x => x.id !== id);
+      save();
+      toast('Removido');
+      renderMecanicaCatalogo();
+    }
+
     function renderMecanicaServicos() {
       const el = document.getElementById('mecanica-servicos');
       const lista = DB.servicos.filter(s => s.oficinaId === SESSION.oficinaId);
       let html = `
-        <div class="page-header"><div><h2>Serviços realizados</h2><p>${lista.length} registro${lista.length !== 1 ? 's' : ''}</p></div></div>
+        <div class="page-header"><div><h2>Histórico de serviços</h2><p>${lista.length} registro${lista.length !== 1 ? 's' : ''}</p></div></div>
         <div class="card">`;
       if (lista.length === 0) {
         html += `<div class="empty-state"><div class="empty-icon">✅</div><p>Nenhum serviço registrado nesta oficina.</p></div>`;
       } else {
         lista.forEach(s => {
           const v = DB.veiculos.find(x => x.id === s.veiculoId);
+          const pago = s.recebido
+            ? `<span class="status ok">${s.formaPagamento || 'pago'}</span>`
+            : `<span class="status warn">a receber</span>`;
+          const valor = s.valorTotal != null ? fmtMoney(s.valorTotal) : '—';
           html += `
             <div class="list-item">
               <div>
-                <strong style="font-size:14px">${v ? v.modelo : 'Veículo'} · ${s.cliente}</strong>
-                <div style="font-size:13px;color:var(--text-secondary)">${fmtDate(s.data)} · ${s.itens.join(', ')} · ${fmtKm(s.km)} km</div>
+                <strong style="font-size:14px">${v ? v.modelo : 'Veículo'} · ${s.cliente || ''}</strong>
+                <div style="font-size:13px;color:var(--text-secondary)">${fmtDate(s.data)} · ${(s.itens||[]).join(', ')} · ${fmtKm(s.km)} km</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px">${valor}</div>
+              </div>
+              ${pago}
+            </div>`;
+        });
+      }
+      html += `</div>`;
+      el.innerHTML = html;
+    }
+
+    function renderMecanicaFinanceiro() {
+      const el = document.getElementById('mecanica-financeiro');
+      const lista = DB.servicos.filter(s => s.oficinaId === SESSION.oficinaId);
+      const total = lista.reduce((s, x) => s + (Number(x.valorTotal) || 0), 0);
+      const recebido = lista.filter(x => x.recebido).reduce((s, x) => s + (Number(x.valorTotal) || 0), 0);
+      const pendente = total - recebido;
+      const porForma = {};
+      lista.filter(x => x.recebido).forEach(x => {
+        const f = x.formaPagamento || 'Outro';
+        porForma[f] = (porForma[f] || 0) + (Number(x.valorTotal) || 0);
+      });
+
+      let html = `
+        <div class="page-header">
+          <div><h2>Financeiro</h2><p>Receitas dos serviços registrados</p></div>
+        </div>
+        <div class="card">
+          <div class="list-item"><div><strong>Total faturado</strong></div><span class="km-badge">${fmtMoney(total)}</span></div>
+          <div class="list-item"><div><strong>Recebido</strong></div><span class="status ok">${fmtMoney(recebido)}</span></div>
+          <div class="list-item"><div><strong>A receber</strong></div><span class="status warn">${fmtMoney(pendente)}</span></div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">Por forma de pagamento</h3>`;
+      const formas = Object.keys(porForma);
+      if (!formas.length) {
+        html += `<p style="font-size:13px;color:var(--muted)">Nenhum pagamento registrado ainda.</p>`;
+      } else {
+        formas.forEach(f => {
+          html += `<div class="list-item"><div>${f}</div><strong>${fmtMoney(porForma[f])}</strong></div>`;
+        });
+      }
+      html += `</div>
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">Últimos lançamentos</h3>`;
+      if (!lista.length) {
+        html += `<p style="font-size:13px;color:var(--muted)">Sem lançamentos.</p>`;
+      } else {
+        lista.slice(0, 15).forEach(s => {
+          html += `
+            <div class="list-item">
+              <div>
+                <strong style="font-size:13px">${fmtDate(s.data)} · ${s.cliente || 'Cliente'}</strong>
+                <div style="font-size:12px;color:var(--muted)">${(s.itens||[]).slice(0,3).join(', ')}</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-weight:600">${fmtMoney(s.valorTotal || 0)}</div>
+                <div style="font-size:11px;color:var(--muted)">${s.recebido ? (s.formaPagamento || 'pago') : 'a receber'}</div>
               </div>
             </div>`;
         });
@@ -2460,31 +2635,73 @@
     function renderMecanicaNovoServico() {
       const el = document.getElementById('mecanica-novo-servico');
       pendingFotosServico = [];
+      const ofId = SESSION.oficinaId;
       const ativos = DB.agendamentos.filter(a =>
-        a.oficinaId === SESSION.oficinaId && ['confirmado', 'em_andamento', 'pendente'].includes(a.status)
+        a.oficinaId === ofId && ['confirmado', 'em_andamento', 'pendente'].includes(a.status)
       );
       const opts = ativos.map(a => {
         const v = DB.veiculos.find(x => x.id === a.veiculoId);
         return `<option value="${a.id}">${a.cliente} · ${v ? v.modelo : a.servico} (${fmtDate(a.data)} ${a.hora})</option>`;
       }).join('');
 
+      const catalogo = catalogoDaOficina(ofId);
+      let checksHtml = '';
+      if (catalogo.length === 0) {
+        checksHtml = `
+          <p style="font-size:13px;color:var(--warning);margin-bottom:10px">
+            Cadastre serviços em <strong>Tabela de preços</strong> para precificar automaticamente.
+            Itens padrão abaixo (sem valor).
+          </p>
+          <div class="check-list" id="sv-itens">
+            <label><input type="checkbox" data-valor="0" value="Troca de óleo" checked onchange="atualizarTotalServico()"> Troca de óleo</label>
+            <label><input type="checkbox" data-valor="0" value="Filtro de óleo" checked onchange="atualizarTotalServico()"> Filtro de óleo</label>
+            <label><input type="checkbox" data-valor="0" value="Filtro de ar" onchange="atualizarTotalServico()"> Filtro de ar</label>
+            <label><input type="checkbox" data-valor="0" value="Pastilhas de freio" onchange="atualizarTotalServico()"> Pastilhas de freio</label>
+            <label><input type="checkbox" data-valor="0" value="Fluido de freio" onchange="atualizarTotalServico()"> Fluido de freio</label>
+            <label><input type="checkbox" data-valor="0" value="Correia dentada" onchange="atualizarTotalServico()"> Correia dentada</label>
+          </div>`;
+      } else {
+        checksHtml = `<div class="check-list" id="sv-itens">` + catalogo.map(c =>
+          `<label><input type="checkbox" data-valor="${c.valor}" data-id="${c.id}" value="${c.nome.replace(/"/g,'&quot;')}" onchange="atualizarTotalServico()">
+            ${c.nome} <span style="color:var(--muted);font-size:12px">· ${fmtMoney(c.valor)}</span></label>`
+        ).join('') + `</div>`;
+      }
+
       el.innerHTML = `
-        <div class="page-header"><div><h2>Registrar Serviço</h2><p>Finalize e atualize o histórico do veículo</p></div></div>
+        <div class="page-header"><div><h2>Registrar Serviço</h2><p>Conclua o serviço, cobrado e recebido</p></div></div>
         <div class="card">
           <div class="form-group">
-            <label>Agendamento / Cliente</label>
+            <label>Agendamento / Cliente *</label>
             <select id="sv-ag">${opts || '<option value="">Nenhum agendamento ativo</option>'}</select>
           </div>
           <div class="form-group"><label>Km no momento do serviço *</label><input type="number" id="sv-km" placeholder="Ex: 87620" /></div>
           <div class="form-group">
-            <label>Itens realizados</label>
-            <div class="check-list">
-              <label><input type="checkbox" value="Troca de óleo" checked> Troca de óleo</label>
-              <label><input type="checkbox" value="Filtro de óleo" checked> Filtro de óleo</label>
-              <label><input type="checkbox" value="Filtro de ar"> Filtro de ar</label>
-              <label><input type="checkbox" value="Pastilhas de freio"> Pastilhas de freio</label>
-              <label><input type="checkbox" value="Fluido de freio"> Fluido de freio</label>
-              <label><input type="checkbox" value="Correia dentada"> Correia dentada</label>
+            <label>Serviços realizados *</label>
+            ${checksHtml}
+          </div>
+          <div class="form-group">
+            <label>Valor total (R$)</label>
+            <input type="number" id="sv-valor" min="0" step="0.01" placeholder="0,00" oninput="/* manual ok */" />
+            <p style="font-size:12px;color:var(--muted);margin-top:6px">Soma automática dos itens marcados — você pode ajustar.</p>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500">
+              <input type="checkbox" id="sv-recebido" checked style="width:18px;height:18px" onchange="togglePagamentoFields()" />
+              Serviço concluído e valor recebido
+            </label>
+          </div>
+          <div id="sv-pagamento-wrap">
+            <div class="form-group">
+              <label>Forma de pagamento</label>
+              <select id="sv-pagamento">
+                <option>Pix</option>
+                <option>Dinheiro</option>
+                <option>Cartão de crédito</option>
+                <option>Cartão de débito</option>
+                <option>Transferência</option>
+                <option>Boleto</option>
+                <option>Outro</option>
+              </select>
             </div>
           </div>
           <div class="form-group">
@@ -2495,9 +2712,24 @@
             </div>
           </div>
           <div class="form-group"><label>Observações</label><textarea id="sv-obs" rows="3" placeholder="Observações técnicas..."></textarea></div>
-          <button class="btn btn-success btn-block" onclick="finalizarServico()">Finalizar e registrar serviço</button>
+          <button class="btn btn-success btn-block" onclick="finalizarServico()">Finalizar e registrar no financeiro</button>
         </div>
       `;
+      atualizarTotalServico();
+    }
+
+    function atualizarTotalServico() {
+      const inputs = document.querySelectorAll('#sv-itens input:checked');
+      let total = 0;
+      inputs.forEach(i => { total += parseFloat(i.dataset.valor) || 0; });
+      const campo = document.getElementById('sv-valor');
+      if (campo) campo.value = total ? total.toFixed(2) : '';
+    }
+
+    function togglePagamentoFields() {
+      const wrap = document.getElementById('sv-pagamento-wrap');
+      const chk = document.getElementById('sv-recebido');
+      if (wrap && chk) wrap.style.display = chk.checked ? 'block' : 'none';
     }
 
     let pendingFotosServico = [];
@@ -2516,10 +2748,14 @@
       const agId = document.getElementById('sv-ag').value;
       const km = parseInt(document.getElementById('sv-km').value, 10);
       const obs = document.getElementById('sv-obs').value.trim();
-      const checks = [...document.querySelectorAll('.check-list input:checked')].map(c => c.value);
+      const checks = [...document.querySelectorAll('#sv-itens input:checked')].map(c => c.value);
+      const valorTotal = parseFloat(document.getElementById('sv-valor').value) || 0;
+      const recebido = !!(document.getElementById('sv-recebido') && document.getElementById('sv-recebido').checked);
+      const formaPagamento = recebido ? (document.getElementById('sv-pagamento')?.value || 'Outro') : null;
+
       if (!agId) { toast('Selecione um agendamento'); return; }
       if (isNaN(km) || km < 0) { toast('Informe o km'); return; }
-      if (checks.length === 0) { toast('Marque pelo menos um item'); return; }
+      if (checks.length === 0) { toast('Marque pelo menos um serviço'); return; }
 
       const ag = DB.agendamentos.find(a => a.id === agId);
       if (!ag) { toast('Agendamento não encontrado'); return; }
@@ -2535,14 +2771,27 @@
       }
 
       DB.servicos.unshift({
-        id: uid(), veiculoId: ag.veiculoId, oficinaId: ag.oficinaId,
-        data: new Date().toISOString().slice(0, 10), km, itens: checks, fotos: pendingFotosServico,
-        observacoes: obs, cliente: ag.cliente
+        id: uid(),
+        veiculoId: ag.veiculoId,
+        oficinaId: ag.oficinaId,
+        agendamentoId: ag.id,
+        data: new Date().toISOString().slice(0, 10),
+        km,
+        itens: checks,
+        fotos: pendingFotosServico,
+        observacoes: obs,
+        cliente: ag.cliente,
+        valorTotal,
+        recebido,
+        formaPagamento,
+        statusFinanceiro: recebido ? 'recebido' : 'a_receber'
       });
       ag.status = 'concluido';
       pendingFotosServico = [];
       save();
-      toast('Serviço registrado');
+      toast(recebido
+        ? `Serviço registrado · ${fmtMoney(valorTotal)} (${formaPagamento})`
+        : `Serviço registrado · ${fmtMoney(valorTotal)} a receber`);
       renderMecanicaNovoServico();
     }
 
