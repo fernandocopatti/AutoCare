@@ -325,14 +325,9 @@
         Configure o Client ID no código (Google Cloud Console). Sem isso, use o login por nome + perfil.
       </p>
 
+      <input type="file" id="import-backup" accept="application/json,.json" style="display:none" onchange="importarBackup(event)" />
       <div class="login-footer">
-        <button class="btn btn-ghost btn-block" onclick="exportarBackup()">☁️ Exportar backup (JSON)</button>
-        <button class="btn btn-ghost btn-block" onclick="document.getElementById('import-backup').click()">📥 Importar backup</button>
-        <input type="file" id="import-backup" accept="application/json,.json" style="display:none" onchange="importarBackup(event)" />
-        <button class="btn btn-ghost btn-block" onclick="mostrarAjudaGithub()">🔗 Backup no GitHub (como fazer)</button>
-        <button class="btn btn-ghost btn-block" onclick="carregarDemo()">📦 Carregar dados de demonstração</button>
         <button class="btn btn-ghost btn-block" onclick="location.reload()">🔄 Recarregar App</button>
-        <button class="btn btn-ghost btn-block" style="color:var(--danger)" onclick="limparBase()">🗑️ Limpar base (zerar tudo)</button>
       </div>
     </div>
   </div>
@@ -353,6 +348,7 @@
       <button data-tela="abastecimento" onclick="mostrarTela('dono','abastecimento')">⛽ Abastecer</button>
       <button data-tela="manutencao" onclick="mostrarTela('dono','manutencao')">🛠️ Manutenções</button>
       <button data-tela="agendar" onclick="mostrarTela('dono','agendar')">📅 Meus agendamentos</button>
+      <button data-tela="backup" onclick="mostrarTela('dono','backup')">☁️ Backup</button>
     </nav>
     <main>
       <div id="dono-veiculos" class="screen active"></div>
@@ -360,6 +356,7 @@
       <div id="dono-abastecimento" class="screen"></div>
       <div id="dono-manutencao" class="screen"></div>
       <div id="dono-agendar" class="screen"></div>
+      <div id="dono-backup" class="screen"></div>
     </main>
   </div>
 
@@ -375,13 +372,19 @@
     </div>
     <nav class="nav" id="nav-mecanica">
       <button class="active" data-tela="agenda" onclick="mostrarTela('mecanica','agenda')">📋 Agenda</button>
+      <button data-tela="novo-agendamento" onclick="mostrarTela('mecanica','novo-agendamento')">📅 Agendar</button>
       <button data-tela="servicos" onclick="mostrarTela('mecanica','servicos')">✅ Serviços</button>
       <button data-tela="novo-servico" onclick="mostrarTela('mecanica','novo-servico')">➕ Registrar</button>
+      <button data-tela="minha-oficina" onclick="mostrarTela('mecanica','minha-oficina')">🏪 Oficina</button>
+      <button data-tela="backup" onclick="mostrarTela('mecanica','backup')">☁️ Backup</button>
     </nav>
     <main>
       <div id="mecanica-agenda" class="screen active"></div>
+      <div id="mecanica-novo-agendamento" class="screen"></div>
       <div id="mecanica-servicos" class="screen"></div>
       <div id="mecanica-novo-servico" class="screen"></div>
+      <div id="mecanica-minha-oficina" class="screen"></div>
+      <div id="mecanica-backup" class="screen"></div>
     </main>
   </div>
 
@@ -398,10 +401,12 @@
     <nav class="nav" id="nav-admin">
       <button class="active" data-tela="oficinas" onclick="mostrarTela('admin','oficinas')">🏢 Oficinas</button>
       <button data-tela="resumo" onclick="mostrarTela('admin','resumo')">📊 Resumo</button>
+      <button data-tela="config" onclick="mostrarTela('admin','config')">⚙️ Configurações</button>
     </nav>
     <main>
       <div id="admin-oficinas" class="screen active"></div>
       <div id="admin-resumo" class="screen"></div>
+      <div id="admin-config" class="screen"></div>
     </main>
   </div>
 
@@ -552,6 +557,7 @@
         agendamentos: [],
         servicos: [],
         ultimaManutencao: {},
+        notificacoes: [],
         adminPin: null
       };
     }
@@ -579,6 +585,7 @@
         servicos: [
           { id: 's1', veiculoId: 'v1', oficinaId: 'o1', data: '2026-07-15', km: 85900, itens: ['Troca de óleo', 'Filtro de óleo'], fotos: [], observacoes: 'Óleo 5W40', cliente: 'Carlos Mendes' },
         ],
+        notificacoes: [],
         ultimaManutencao: {
           v1: { 'Troca de óleo e filtro': 85900 },
           v2: {},
@@ -664,6 +671,7 @@
             agendamentos: data.agendamentos || [],
             servicos: data.servicos || [],
             ultimaManutencao: data.ultimaManutencao || {},
+            notificacoes: data.notificacoes || [],
             adminPin: data.adminPin || null
           };
           save();
@@ -899,13 +907,18 @@
         if (tela === 'abastecimento') renderDonoAbastecimento();
         if (tela === 'manutencao') renderDonoManutencao();
         if (tela === 'agendar') renderDonoAgendar();
+        if (tela === 'backup') renderBackupUsuario();
       } else if (perfil === 'mecanica') {
         if (tela === 'agenda') renderMecanicaAgenda();
+        if (tela === 'novo-agendamento') renderMecanicaNovoAgendamento();
         if (tela === 'servicos') renderMecanicaServicos();
         if (tela === 'novo-servico') renderMecanicaNovoServico();
+        if (tela === 'minha-oficina') renderMecanicaMinhaOficina();
+        if (tela === 'backup') renderBackupUsuario();
       } else if (perfil === 'admin') {
         if (tela === 'oficinas') renderAdminOficinas();
         if (tela === 'resumo') renderAdminResumo();
+        if (tela === 'config') renderAdminConfig();
       }
     }
 
@@ -1007,8 +1020,9 @@
       const btn = document.getElementById('o-btn-salvar');
 
       const isPublic = mode === 'publico' && !id;
+      const isMec = mode === 'mecanica';
       hint.style.display = isPublic ? 'block' : 'none';
-      notaWrap.style.display = isPublic ? 'none' : 'block';
+      notaWrap.style.display = (isPublic || isMec) ? 'none' : 'block';
       btn.textContent = isPublic ? 'Enviar para aprovação' : 'Salvar';
 
       const fields = ['o-nome','o-razao','o-cnpj','o-email','o-contato','o-telefone','o-nota','o-endereco','o-cidade','o-uf','o-especialidades'];
@@ -1017,7 +1031,7 @@
       if (id) {
         const o = DB.oficinas.find(x => x.id === id);
         if (!o) return;
-        titulo.textContent = 'Editar Oficina';
+        titulo.textContent = mode === 'mecanica' ? 'Editar dados da oficina' : 'Editar Oficina';
         document.getElementById('o-nome').value = o.nome || '';
         document.getElementById('o-razao').value = o.razaoSocial || '';
         document.getElementById('o-cnpj').value = o.cnpj || '';
@@ -1029,9 +1043,10 @@
         document.getElementById('o-cidade').value = o.cidade || '';
         document.getElementById('o-uf').value = o.uf || '';
         document.getElementById('o-especialidades').value = o.especialidades || '';
-        document.getElementById('o-mode').value = 'admin';
+        // preserva mode (admin ou mecanica)
+        document.getElementById('o-mode').value = mode === 'mecanica' ? 'mecanica' : 'admin';
         hint.style.display = 'none';
-        notaWrap.style.display = 'block';
+        notaWrap.style.display = mode === 'mecanica' ? 'none' : 'block';
         btn.textContent = 'Salvar';
       } else {
         titulo.textContent = isPublic ? 'Cadastrar minha oficina' : 'Nova oficina (admin)';
@@ -1105,6 +1120,7 @@
       save();
       fecharModal('modal-oficina');
       if (SESSION.role === 'admin') renderAdminOficinas();
+      if (SESSION.role === 'mecanica') renderMecanicaMinhaOficina();
       atualizarSelectOficinasLogin();
     }
 
@@ -1155,19 +1171,148 @@
           <div class="list-item"><div><strong>Abastecimentos</strong></div><span class="km-badge">${DB.abastecimentos.length}</span></div>
           <div class="list-item"><div><strong>Agendamentos</strong></div><span class="km-badge">${DB.agendamentos.length}</span></div>
           <div class="list-item"><div><strong>Serviços registrados</strong></div><span class="km-badge">${DB.servicos.length}</span></div>
-        </div>
-        <div class="card" style="margin-top:8px">
-          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
-            Use <strong>Limpar base</strong> na tela de login para zerar tudo.
-            Backup e restauração ficam na tela de login (Exportar / Importar JSON) — mesmo padrão do caixa inteligente.
-          </p>
-          <div style="display:flex;flex-wrap:wrap;gap:8px">
-            <button class="btn btn-outline btn-sm" onclick="exportarBackup()">☁️ Exportar backup</button>
-            <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-backup').click()">📥 Importar backup</button>
-            <button class="btn btn-outline btn-sm" onclick="mostrarAjudaGithub()">🔗 GitHub</button>
-          </div>
+          <div class="list-item"><div><strong>Notificações</strong></div><span class="km-badge">${(DB.notificacoes||[]).length}</span></div>
         </div>
       `;
+    }
+
+    function renderAdminConfig() {
+      const el = document.getElementById('admin-config');
+      el.innerHTML = `
+        <div class="page-header">
+          <div><h2>Configurações do App</h2><p>Backup, dados de teste e segurança</p></div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">☁️ Backup e restauração</h3>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+            Exporte o JSON para guardar ou enviar ao GitHub. Importe para restaurar.
+          </p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="exportarBackup()">Exportar backup</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-backup').click()">Importar backup</button>
+            <button class="btn btn-outline btn-sm" onclick="mostrarAjudaGithub()">Como usar no GitHub</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">📦 Dados de demonstração</h3>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+            Carrega oficinas, veículos e exemplos para testar o fluxo completo.
+          </p>
+          <button class="btn btn-outline btn-sm" onclick="carregarDemo()">Carregar demonstração</button>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">🔐 PIN do administrador</h3>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+            ${DB.adminPin ? 'PIN já definido. Você pode alterá-lo.' : 'Nenhum PIN definido ainda.'}
+          </p>
+          <button class="btn btn-outline btn-sm" onclick="alterarAdminPin()">Alterar / definir PIN</button>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">🔑 Login Google</h3>
+          <p style="font-size:13px;color:var(--text-secondary)">
+            Configure o <code>data-client_id</code> no HTML com o Client ID do Google Cloud Console
+            (origens autorizadas: localhost e domínio do app).
+          </p>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;color:var(--danger)">Zona de perigo</h3>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+            Apaga todos os dados. A base fica vazia (sem exemplos).
+          </p>
+          <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:#fecaca" onclick="limparBase()">Limpar base (zerar tudo)</button>
+        </div>
+      `;
+    }
+
+    function alterarAdminPin() {
+      const novo = prompt('Novo PIN do administrador (mín. 4 dígitos):');
+      if (!novo || novo.trim().length < 4) { toast('PIN inválido'); return; }
+      DB.adminPin = novo.trim();
+      save();
+      toast('PIN atualizado');
+      renderAdminConfig();
+    }
+
+    
+    // ===================== BACKUP (Proprietário e Mecânica) =====================
+    function renderBackupUsuario() {
+      const el = document.getElementById(SESSION.role === 'mecanica' ? 'mecanica-backup' : 'dono-backup');
+      if (!el) return;
+      el.innerHTML = `
+        <div class="page-header">
+          <div>
+            <h2>Backup</h2>
+            <p>Salve seus dados no Google Drive ou no GitHub</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:8px">📁 Google Drive</h3>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
+            Exporte o arquivo JSON e envie para o seu Google Drive (app Drive ou drive.google.com).
+            Para restaurar, baixe o arquivo do Drive e use Importar.
+          </p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+            <button class="btn btn-primary btn-sm" onclick="exportarBackup()">⬇️ Exportar backup (JSON)</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-backup').click()">⬆️ Importar do arquivo</button>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="window.open('https://drive.google.com/drive/my-drive','_blank','noopener')">
+            Abrir Google Drive
+          </button>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:8px">🔗 GitHub</h3>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
+            1) Exporte o backup · 2) Faça upload no repositório (ou commit) ·
+            3) Para restaurar, baixe o JSON do GitHub e importe aqui.
+          </p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button class="btn btn-primary btn-sm" onclick="exportarBackup()">⬇️ Exportar backup</button>
+            <button class="btn btn-outline btn-sm" onclick="mostrarAjudaGithub()">Como fazer no GitHub</button>
+            <button class="btn btn-outline btn-sm" onclick="window.open('https://github.com','_blank','noopener')">Abrir GitHub</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <p style="font-size:12px;color:var(--muted)">
+            Em produção, o backup pode sincronizar automaticamente com a conta Google e com um repositório privado.
+            Neste protótipo o arquivo fica no seu dispositivo até você enviá-lo ao Drive ou ao GitHub.
+          </p>
+        </div>
+      `;
+    }
+
+// ===================== DONO — NOTIFICAÇÕES =====================
+    function notificacoesDoDono() {
+      const id = currentDonoId();
+      const nome = SESSION.nome || '';
+      return (DB.notificacoes || []).filter(n =>
+        (n.donoId && n.donoId === id) ||
+        (!n.donoId && n.cliente && nome && n.cliente.toLowerCase() === nome.toLowerCase())
+      );
+    }
+
+    function bannerNotificacoes() {
+      const list = notificacoesDoDono().filter(n => !n.lida).slice(0, 5);
+      if (!list.length) return '';
+      return `<div class="card" style="border-color:#bfdbfe;background:#eff6ff">
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">🔔 Notificações</h3>
+        ${list.map(n => `<div style="font-size:13px;padding:6px 0;border-bottom:1px solid #dbeafe">${n.texto}</div>`).join('')}
+        <button class="btn btn-sm btn-outline" style="margin-top:10px" onclick="marcarNotifsLidas()">Marcar como lidas</button>
+      </div>`;
+    }
+
+    function marcarNotifsLidas() {
+      const id = currentDonoId();
+      const nome = (SESSION.nome || '').toLowerCase();
+      (DB.notificacoes || []).forEach(n => {
+        if ((n.donoId && n.donoId === id) || (!n.donoId && n.cliente && n.cliente.toLowerCase() === nome)) n.lida = true;
+      });
+      save();
+      toast('Notificações lidas');
+      if (document.getElementById('dono-veiculos')?.classList.contains('active')) renderDonoVeiculos();
+      if (document.getElementById('dono-agendar')?.classList.contains('active')) renderDonoAgendar();
     }
 
     // ===================== DONO — VEÍCULOS =====================
@@ -1264,7 +1409,7 @@
     function renderDonoVeiculos() {
       const el = document.getElementById('dono-veiculos');
       const meus = meusVeiculos();
-      let html = `
+      let html = bannerNotificacoes() + `
         <div class="page-header">
           <div>
             <h2>Meus Veículos</h2>
@@ -1781,19 +1926,60 @@
     }
 
     // ===================== MECÂNICA =====================
+    function notificarDono(ag, acao) {
+      if (!DB.notificacoes) DB.notificacoes = [];
+      const of = DB.oficinas.find(o => o.id === ag.oficinaId);
+      const msg = acao === 'novo'
+        ? `A oficina ${of ? of.nome : ''} agendou: ${ag.servico} em ${fmtDate(ag.data)} às ${ag.hora}.`
+        : acao === 'confirmado'
+        ? `Seu agendamento (${ag.servico}) em ${fmtDate(ag.data)} às ${ag.hora} foi confirmado pela oficina.`
+        : acao === 'cancelado'
+        ? `Agendamento (${ag.servico}) em ${fmtDate(ag.data)} às ${ag.hora} foi cancelado.`
+        : `Atualização no agendamento de ${fmtDate(ag.data)} ${ag.hora}.`;
+      DB.notificacoes.unshift({
+        id: uid(),
+        donoId: ag.donoId || null,
+        cliente: ag.cliente,
+        texto: msg,
+        lida: false,
+        criadaEm: new Date().toISOString()
+      });
+      save();
+    }
+
+    function whatsappAgendamento(ag) {
+      const of = DB.oficinas.find(o => o.id === ag.oficinaId);
+      const v = DB.veiculos.find(x => x.id === ag.veiculoId);
+      const tel = (ag.telefoneCliente || '').replace(/\D/g, '');
+      const texto = encodeURIComponent(
+        `Olá${ag.cliente ? ' ' + ag.cliente : ''}! ` +
+        `Agendamento na ${of ? of.nome : 'oficina'}: ${ag.servico} ` +
+        `em ${fmtDate(ag.data)} às ${ag.hora}` +
+        (v ? ` — veículo ${v.marca} ${v.modelo}` : '') + '.'
+      );
+      if (tel) {
+        window.open(`https://wa.me/55${tel}?text=${texto}`, '_blank', 'noopener');
+      } else {
+        window.open(`https://wa.me/?text=${texto}`, '_blank', 'noopener');
+        toast('Informe o WhatsApp do cliente no agendamento para abrir o número certo');
+      }
+    }
+
     function renderMecanicaAgenda() {
       const el = document.getElementById('mecanica-agenda');
       const ofId = SESSION.oficinaId;
       const hoje = new Date();
       const d0 = hoje.toISOString().slice(0, 10);
       const d1 = new Date(hoje.getTime() + 86400000).toISOString().slice(0, 10);
+      const d2 = new Date(hoje.getTime() + 2 * 86400000).toISOString().slice(0, 10);
       const dias = [
         { label: 'Hoje · ' + fmtDate(d0), data: d0 },
         { label: 'Amanhã · ' + fmtDate(d1), data: d1 },
+        { label: fmtDate(d2), data: d2 },
       ];
 
       function slots(data) {
-        const ags = DB.agendamentos.filter(a => a.data === data && a.oficinaId === ofId);
+        const ags = DB.agendamentos.filter(a => a.data === data && a.oficinaId === ofId && a.status !== 'cancelado');
         return HORARIOS.map(h => {
           const ag = ags.find(a => a.hora === h);
           if (ag) {
@@ -1806,22 +1992,28 @@
                   <div class="slot-time">${h} · ${nome}</div>
                   <div class="slot-meta">${ag.cliente} · ${ag.servico}</div>
                 </div>
-                <div style="display:flex;gap:8px;align-items:center">
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
                   <span class="status ${stClass}">${ag.status.replace('_', ' ')}</span>
                   ${ag.status === 'pendente' ? `<button class="btn btn-sm btn-success" onclick="confirmarAg('${ag.id}')">Confirmar</button>` : ''}
+                  ${ag.status === 'confirmado' ? `<button class="btn btn-sm btn-outline" onclick="iniciarAg('${ag.id}')">Iniciar</button>` : ''}
+                  <button class="btn btn-sm btn-outline" title="WhatsApp" onclick="whatsappAgendamento(DB.agendamentos.find(x=>x.id==='${ag.id}'))">💬</button>
+                  <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="cancelarAg('${ag.id}')">✕</button>
                 </div>
               </div>`;
           }
           return `
             <div class="slot free">
               <div class="slot-time">${h} · Disponível</div>
-              <span class="status ok">Livre</span>
+              <button class="btn btn-sm btn-success" onclick="preencherNovoAg('${data}','${h}')">Agendar</button>
             </div>`;
         }).join('');
       }
 
       el.innerHTML = `
-        <div class="page-header"><div><h2>Agenda</h2><p>Horários da sua oficina</p></div></div>
+        <div class="page-header">
+          <div><h2>Agenda</h2><p>Edite horários e confirme serviços</p></div>
+          <button class="btn btn-primary btn-sm" onclick="mostrarTela('mecanica','novo-agendamento')">+ Novo agendamento</button>
+        </div>
         ${dias.map(d => `<div class="agenda-day"><h4>${d.label}</h4>${slots(d.data)}</div>`).join('')}
       `;
     }
@@ -1830,10 +2022,220 @@
       const ag = DB.agendamentos.find(a => a.id === id);
       if (ag) {
         ag.status = 'confirmado';
+        notificarDono(ag, 'confirmado');
         save();
-        toast('Agendamento confirmado');
+        toast('Confirmado — dono notificado no app');
         renderMecanicaAgenda();
       }
+    }
+
+    function iniciarAg(id) {
+      const ag = DB.agendamentos.find(a => a.id === id);
+      if (ag) {
+        ag.status = 'em_andamento';
+        save();
+        toast('Serviço em andamento');
+        renderMecanicaAgenda();
+      }
+    }
+
+    function cancelarAg(id) {
+      if (!confirm('Cancelar este agendamento?')) return;
+      const ag = DB.agendamentos.find(a => a.id === id);
+      if (ag) {
+        ag.status = 'cancelado';
+        notificarDono(ag, 'cancelado');
+        save();
+        toast('Cancelado — dono notificado');
+        renderMecanicaAgenda();
+      }
+    }
+
+    function preencherNovoAg(data, hora) {
+      mostrarTela('mecanica', 'novo-agendamento');
+      setTimeout(() => {
+        const d = document.getElementById('mag-data');
+        const h = document.getElementById('mag-hora');
+        if (d) d.value = data;
+        if (h) {
+          // rebuild hours if needed
+          atualizarMagHoras();
+          h.value = hora;
+        }
+      }, 50);
+    }
+
+    function renderMecanicaNovoAgendamento() {
+      const el = document.getElementById('mecanica-novo-agendamento');
+      const ofId = SESSION.oficinaId;
+      const veiculos = DB.veiculos;
+      const optV = veiculos.map(v =>
+        `<option value="${v.id}">${v.marca} ${v.modelo} · ${v.placa}${v.donoId ? '' : ''}</option>`
+      ).join('');
+
+      el.innerHTML = `
+        <div class="page-header">
+          <div><h2>Novo agendamento</h2><p>Vincula a um cliente/veículo e notifica o dono</p></div>
+        </div>
+        <div class="card">
+          <div class="form-group">
+            <label>Veículo (opcional — lista do sistema)</label>
+            <select id="mag-veiculo" onchange="onMagVeiculoChange()">
+              <option value="">— Sem veículo cadastrado —</option>
+              ${optV}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nome do cliente / proprietário *</label>
+            <input type="text" id="mag-cliente" placeholder="Ex: Maria Silva" />
+          </div>
+          <div class="form-group">
+            <label>WhatsApp do cliente (para avisar)</label>
+            <input type="tel" id="mag-tel" placeholder="11999990000" />
+          </div>
+          <div class="form-group">
+            <label>Serviço *</label>
+            <select id="mag-servico">
+              <option>Revisão preventiva</option>
+              <option>Troca de óleo</option>
+              <option>Freios</option>
+              <option>Suspensão</option>
+              <option>Diagnóstico</option>
+              <option>Outro / Corretiva</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Data *</label>
+              <input type="date" id="mag-data" onchange="atualizarMagHoras()" />
+            </div>
+            <div class="form-group">
+              <label>Horário livre *</label>
+              <select id="mag-hora"></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Observações</label>
+            <textarea id="mag-notas" rows="2" placeholder="Detalhes do serviço..."></textarea>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:14px;cursor:pointer">
+            <input type="checkbox" id="mag-whatsapp" checked style="width:18px;height:18px" />
+            Abrir WhatsApp para notificar o cliente após salvar
+          </label>
+          <button class="btn btn-primary btn-block" onclick="salvarAgendamentoMecanica()">Salvar agendamento</button>
+        </div>
+      `;
+      const hoje = new Date().toISOString().slice(0, 10);
+      document.getElementById('mag-data').value = hoje;
+      atualizarMagHoras();
+    }
+
+    function onMagVeiculoChange() {
+      const id = document.getElementById('mag-veiculo').value;
+      const v = DB.veiculos.find(x => x.id === id);
+      if (!v) return;
+      // tenta preencher cliente se houver agendamentos anteriores desse veículo
+      const ant = DB.agendamentos.find(a => a.veiculoId === id && a.cliente);
+      if (ant && document.getElementById('mag-cliente')) {
+        document.getElementById('mag-cliente').value = ant.cliente;
+        if (ant.telefoneCliente) document.getElementById('mag-tel').value = ant.telefoneCliente;
+      }
+    }
+
+    function atualizarMagHoras() {
+      const ofId = SESSION.oficinaId;
+      const data = document.getElementById('mag-data')?.value;
+      const sel = document.getElementById('mag-hora');
+      if (!sel || !data) return;
+      const livres = horariosLivres(ofId, data);
+      if (livres.length === 0) {
+        sel.innerHTML = '<option value="">Sem horários livres</option>';
+      } else {
+        sel.innerHTML = livres.map(h => `<option value="${h}">${h}</option>`).join('');
+      }
+    }
+
+    function salvarAgendamentoMecanica() {
+      const ofId = SESSION.oficinaId;
+      const veiculoId = document.getElementById('mag-veiculo').value || null;
+      const cliente = document.getElementById('mag-cliente').value.trim();
+      const telefoneCliente = document.getElementById('mag-tel').value.trim();
+      const servico = document.getElementById('mag-servico').value;
+      const data = document.getElementById('mag-data').value;
+      const hora = document.getElementById('mag-hora').value;
+      const notas = document.getElementById('mag-notas').value.trim();
+      const abrirWa = document.getElementById('mag-whatsapp').checked;
+
+      if (!cliente) { toast('Informe o nome do cliente'); return; }
+      if (!data || !hora) { toast('Escolha data e horário'); return; }
+      if (!horariosLivres(ofId, data).includes(hora)) {
+        toast('Horário indisponível'); atualizarMagHoras(); return;
+      }
+
+      let donoId = null;
+      if (veiculoId) {
+        const v = DB.veiculos.find(x => x.id === veiculoId);
+        if (v) donoId = v.donoId || null;
+      }
+
+      const ag = {
+        id: uid(),
+        veiculoId,
+        oficinaId: ofId,
+        data, hora, servico,
+        status: 'confirmado',
+        cliente,
+        telefoneCliente,
+        donoId,
+        notas,
+        criadoPor: 'oficina'
+      };
+      DB.agendamentos.push(ag);
+      notificarDono(ag, 'novo');
+      save();
+      toast('Agendamento criado — notificação registrada para o dono');
+      if (abrirWa) whatsappAgendamento(ag);
+      mostrarTela('mecanica', 'agenda');
+    }
+
+    function renderMecanicaMinhaOficina() {
+      const el = document.getElementById('mecanica-minha-oficina');
+      const o = DB.oficinas.find(x => x.id === SESSION.oficinaId);
+      if (!o) {
+        el.innerHTML = `<div class="card empty-state"><p>Oficina não encontrada.</p></div>`;
+        return;
+      }
+      const local = [o.endereco, o.cidade, o.uf].filter(Boolean).join(' · ');
+      el.innerHTML = `
+        <div class="page-header">
+          <div>
+            <h2>Minha oficina</h2>
+            <p>Dados visíveis para os proprietários</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="abrirModalOficina('${o.id}','mecanica')">Editar dados</button>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <h3 style="font-size:17px;font-weight:600">${o.nome}</h3>
+            ${statusBadge(o.status)}
+          </div>
+          ${o.razaoSocial ? `<div class="meta" style="font-size:13px;color:var(--text-secondary)">Razão social: ${o.razaoSocial}</div>` : ''}
+          ${o.cnpj ? `<div style="font-size:13px;color:var(--text-secondary)">CNPJ: ${o.cnpj}</div>` : ''}
+          <div style="font-size:13px;color:var(--text-secondary);margin-top:8px">
+            ${o.contato || '—'} · ${o.telefone || '—'}
+            ${o.email ? ' · ' + o.email : ''}
+          </div>
+          <div style="font-size:13px;color:var(--muted);margin-top:6px">${local || 'Endereço não informado'}</div>
+          ${o.especialidades ? `<div style="font-size:13px;margin-top:8px">🔧 ${o.especialidades}</div>` : ''}
+          ${o.nota != null && o.nota !== '' ? `<div style="margin-top:10px"><span class="status ok">${o.nota} ★</span></div>` : ''}
+        </div>
+        <div class="card">
+          <p style="font-size:13px;color:var(--text-secondary)">
+            Você pode atualizar telefone, endereço, especialidades e demais dados.
+            Alterações de status (aprovada/pendente) só o administrador do app controla.
+          </p>
+        </div>
+      `;
     }
 
     function renderMecanicaServicos() {
