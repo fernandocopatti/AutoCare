@@ -520,6 +520,32 @@
         <label>Especialidades</label>
         <input type="text" id="o-especialidades" placeholder="Ex: Motor, freios, suspensão" />
       </div>
+      <div class="form-group">
+        <label>Logo / imagem de identificação</label>
+        <div class="photo-area" style="padding:16px" onclick="document.getElementById('o-logo').click()">
+          <div id="o-logo-preview">📷 Toque para importar logo</div>
+          <input type="file" id="o-logo" accept="image/*" style="display:none" onchange="previewLogoOficina(this)" />
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="limparLogoOficina()">Remover logo</button>
+      </div>
+      <div class="form-group">
+        <label>Cor de identificação (paleta)</label>
+        <div id="o-paleta-grid" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+        <input type="hidden" id="o-cor" value="azul" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Latitude (opcional)</label>
+          <input type="number" id="o-lat" step="any" placeholder="-23.55" />
+        </div>
+        <div class="form-group">
+          <label>Longitude (opcional)</label>
+          <input type="number" id="o-lng" step="any" placeholder="-46.63" />
+        </div>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
+        Latitude/longitude melhoram o ordenamento por proximidade. Use o mapa ou deixe em branco.
+      </p>
       <div class="modal-actions">
         <button class="btn btn-outline btn-block" onclick="fecharModal('modal-oficina')">Cancelar</button>
         <button class="btn btn-primary btn-block" id="o-btn-salvar" onclick="salvarOficina()">Salvar</button>
@@ -543,6 +569,108 @@
       { nome: 'Velas de ignição', intervaloKm: 40000 },
     ];
     const HORARIOS = ['08:00','09:00','10:00','11:00','14:00','15:00','16:00','17:00'];
+
+    const PALETAS = [
+      { id: 'azul', nome: 'Azul', primary: '#1e40af', light: '#dbeafe' },
+      { id: 'verde', nome: 'Verde', primary: '#059669', light: '#d1fae5' },
+      { id: 'laranja', nome: 'Laranja', primary: '#d97706', light: '#fef3c7' },
+      { id: 'roxo', nome: 'Roxo', primary: '#7c3aed', light: '#ede9fe' },
+      { id: 'vermelho', nome: 'Vermelho', primary: '#dc2626', light: '#fee2e2' },
+      { id: 'teal', nome: 'Teal', primary: '#0d9488', light: '#ccfbf1' },
+      { id: 'cinza', nome: 'Cinza', primary: '#475569', light: '#e2e8f0' },
+    ];
+
+    let pendingLogoOficina = null;
+    let userGeo = null; // { lat, lng }
+
+    function getPaleta(corId) {
+      return PALETAS.find(p => p.id === (corId || 'azul')) || PALETAS[0];
+    }
+
+    function haversineKm(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const toRad = d => d * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function distanciaOficina(o) {
+      if (!userGeo || o.lat == null || o.lng == null || isNaN(o.lat) || isNaN(o.lng)) return null;
+      return haversineKm(userGeo.lat, userGeo.lng, Number(o.lat), Number(o.lng));
+    }
+
+    function solicitarLocalizacao(cb) {
+      if (!navigator.geolocation) {
+        toast('Geolocalização não disponível neste dispositivo');
+        if (cb) cb(false);
+        return;
+      }
+      toast('Obtendo localização…');
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          userGeo = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          toast('Localização atualizada');
+          if (cb) cb(true);
+        },
+        err => {
+          console.warn(err);
+          toast('Não foi possível obter a localização');
+          if (cb) cb(false);
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+      );
+    }
+
+    async function previewLogoOficina(input) {
+      const preview = document.getElementById('o-logo-preview');
+      if (!input.files || !input.files[0]) return;
+      try {
+        pendingLogoOficina = await compressImageFile(input.files[0], 400);
+        preview.innerHTML = `<img src="${pendingLogoOficina}" alt="logo" style="max-height:80px;border-radius:8px" />`;
+      } catch (e) {
+        console.error(e);
+        toast('Falha ao carregar logo');
+      }
+    }
+
+    function limparLogoOficina() {
+      pendingLogoOficina = null;
+      const preview = document.getElementById('o-logo-preview');
+      if (preview) preview.innerHTML = '📷 Toque para importar logo';
+      const inp = document.getElementById('o-logo');
+      if (inp) inp.value = '';
+    }
+
+    function montarPaletaGrid(selected) {
+      const grid = document.getElementById('o-paleta-grid');
+      if (!grid) return;
+      const sel = selected || 'azul';
+      document.getElementById('o-cor').value = sel;
+      grid.innerHTML = PALETAS.map(p => `
+        <button type="button" onclick="selecionarPaleta('${p.id}')"
+          style="width:36px;height:36px;border-radius:10px;border:3px solid ${sel===p.id?'#0f172a':'transparent'};
+          background:${p.primary};cursor:pointer;box-shadow:0 0 0 1px ${p.light}"
+          title="${p.nome}"></button>
+      `).join('');
+    }
+
+    function selecionarPaleta(id) {
+      document.getElementById('o-cor').value = id;
+      montarPaletaGrid(id);
+    }
+
+    function logoHtml(o, size) {
+      const s = size || 48;
+      const pal = getPaleta(o.cor);
+      if (o.logo) {
+        return `<img src="${o.logo}" alt="" style="width:${s}px;height:${s}px;border-radius:12px;object-fit:cover;border:2px solid ${pal.primary};flex-shrink:0" />`;
+      }
+      const letra = (o.nome || '?').charAt(0).toUpperCase();
+      return `<div style="width:${s}px;height:${s}px;border-radius:12px;background:${pal.primary};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${Math.round(s*0.4)}px;flex-shrink:0">${letra}</div>`;
+    }
+
 
     function uid() {
       return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -574,9 +702,9 @@
           { id: 'a2', veiculoId: 'v1', data: '2026-08-28', km: 86890, litros: 38.7, valor: 241.10 },
         ],
         oficinas: [
-          { id: 'o1', nome: 'Oficina Central', razaoSocial: 'Central Serviços LTDA', cnpj: '12.345.678/0001-90', email: 'contato@central.com', contato: 'Carlos', telefone: '(11) 98888-0001', nota: 4.8, endereco: 'Rua das Oficinas, 100', cidade: 'São Paulo', uf: 'SP', especialidades: 'Motor, óleo, freios', status: 'aprovada', solicitadoPor: 'Demo', solicitadoEm: '2026-01-01' },
-          { id: 'o2', nome: 'Auto Center Silva', razaoSocial: 'Silva Auto Center ME', cnpj: '98.765.432/0001-10', email: 'silva@auto.com', contato: 'Pedro', telefone: '(11) 97777-0002', nota: 4.6, endereco: 'Av. Brasil, 500', cidade: 'São Paulo', uf: 'SP', especialidades: 'Suspensão, alinhamento', status: 'aprovada', solicitadoPor: 'Demo', solicitadoEm: '2026-01-01' },
-          { id: 'o3', nome: 'Mecânica do João', razaoSocial: 'João Mecânica', cnpj: '', email: '', contato: 'João', telefone: '(11) 96666-0003', nota: 4.9, endereco: 'Rua A, 20', cidade: 'Guarulhos', uf: 'SP', especialidades: 'Geral', status: 'aprovada', solicitadoPor: 'Demo', solicitadoEm: '2026-01-01' },
+          { id: 'o1', nome: 'Oficina Central', razaoSocial: 'Central Serviços LTDA', cnpj: '12.345.678/0001-90', email: 'contato@central.com', contato: 'Carlos', telefone: '(11) 98888-0001', nota: 4.8, endereco: 'Rua das Oficinas, 100', cidade: 'São Paulo', uf: 'SP', especialidades: 'Motor, óleo, freios', status: 'aprovada', solicitadoPor: 'Demo', solicitadoEm: '2026-01-01', lat: -23.5505, lng: -46.6333, cor: 'azul', logo: null },
+          { id: 'o2', nome: 'Auto Center Silva', razaoSocial: 'Silva Auto Center ME', cnpj: '98.765.432/0001-10', email: 'silva@auto.com', contato: 'Pedro', telefone: '(11) 97777-0002', nota: 4.6, endereco: 'Av. Brasil, 500', cidade: 'São Paulo', uf: 'SP', especialidades: 'Suspensão, alinhamento', status: 'aprovada', solicitadoPor: 'Demo', solicitadoEm: '2026-01-01', lat: -23.5610, lng: -46.6550, cor: 'verde', logo: null },
+          { id: 'o3', nome: 'Mecânica do João', razaoSocial: 'João Mecânica', cnpj: '', email: '', contato: 'João', telefone: '(11) 96666-0003', nota: 4.9, endereco: 'Rua A, 20', cidade: 'Guarulhos', uf: 'SP', especialidades: 'Geral', status: 'aprovada', solicitadoPor: 'Demo', solicitadoEm: '2026-01-01', lat: -23.4540, lng: -46.5330, cor: 'laranja', logo: null },
         ],
         agendamentos: [
           { id: 'ag1', veiculoId: 'v1', oficinaId: 'o1', data: '2026-09-22', hora: '09:00', servico: 'Troca de óleo', status: 'em_andamento', cliente: 'Carlos Mendes', notas: '' },
@@ -1025,8 +1153,11 @@
       notaWrap.style.display = (isPublic || isMec) ? 'none' : 'block';
       btn.textContent = isPublic ? 'Enviar para aprovação' : 'Salvar';
 
-      const fields = ['o-nome','o-razao','o-cnpj','o-email','o-contato','o-telefone','o-nota','o-endereco','o-cidade','o-uf','o-especialidades'];
+      const fields = ['o-nome','o-razao','o-cnpj','o-email','o-contato','o-telefone','o-nota','o-endereco','o-cidade','o-uf','o-especialidades','o-lat','o-lng'];
       fields.forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
+      pendingLogoOficina = null;
+      limparLogoOficina();
+      montarPaletaGrid('azul');
 
       if (id) {
         const o = DB.oficinas.find(x => x.id === id);
@@ -1043,6 +1174,16 @@
         document.getElementById('o-cidade').value = o.cidade || '';
         document.getElementById('o-uf').value = o.uf || '';
         document.getElementById('o-especialidades').value = o.especialidades || '';
+        document.getElementById('o-lat').value = o.lat != null ? o.lat : '';
+        document.getElementById('o-lng').value = o.lng != null ? o.lng : '';
+        pendingLogoOficina = o.logo || null;
+        const prev = document.getElementById('o-logo-preview');
+        if (prev) {
+          prev.innerHTML = o.logo
+            ? `<img src="${o.logo}" alt="logo" style="max-height:80px;border-radius:8px" />`
+            : '📷 Toque para importar logo';
+        }
+        montarPaletaGrid(o.cor || 'azul');
         // preserva mode (admin ou mecanica)
         document.getElementById('o-mode').value = mode === 'mecanica' ? 'mecanica' : 'admin';
         hint.style.display = 'none';
@@ -1050,11 +1191,14 @@
         btn.textContent = 'Salvar';
       } else {
         titulo.textContent = isPublic ? 'Cadastrar minha oficina' : 'Nova oficina (admin)';
+        montarPaletaGrid('azul');
       }
       document.getElementById('modal-oficina').classList.add('show');
     }
 
     function lerFormOficina() {
+      const latRaw = document.getElementById('o-lat').value;
+      const lngRaw = document.getElementById('o-lng').value;
       return {
         nome: document.getElementById('o-nome').value.trim(),
         razaoSocial: document.getElementById('o-razao').value.trim(),
@@ -1067,6 +1211,10 @@
         cidade: document.getElementById('o-cidade').value.trim(),
         uf: document.getElementById('o-uf').value.trim().toUpperCase(),
         especialidades: document.getElementById('o-especialidades').value.trim(),
+        cor: document.getElementById('o-cor').value || 'azul',
+        logo: pendingLogoOficina,
+        lat: latRaw === '' ? null : parseFloat(latRaw),
+        lng: lngRaw === '' ? null : parseFloat(lngRaw),
       };
     }
 
@@ -1090,7 +1238,8 @@
         Object.assign(o, {
           nome: f.nome, razaoSocial: f.razaoSocial, cnpj: f.cnpj, email: f.email,
           contato: f.contato, telefone: f.telefone, nota,
-          endereco: f.endereco, cidade: f.cidade, uf: f.uf, especialidades: f.especialidades
+          endereco: f.endereco, cidade: f.cidade, uf: f.uf, especialidades: f.especialidades,
+          cor: f.cor, logo: f.logo, lat: f.lat, lng: f.lng
         });
         toast('Oficina atualizada');
       } else if (mode === 'publico') {
@@ -1099,6 +1248,7 @@
           nome: f.nome, razaoSocial: f.razaoSocial, cnpj: f.cnpj, email: f.email,
           contato: f.contato, telefone: f.telefone, nota: null,
           endereco: f.endereco, cidade: f.cidade, uf: f.uf, especialidades: f.especialidades,
+          cor: f.cor, logo: f.logo, lat: f.lat, lng: f.lng,
           status: 'pendente',
           solicitadoPor: f.contato || (document.getElementById('login-nome').value || 'Solicitante'),
           solicitadoEm: new Date().toISOString().slice(0, 10),
@@ -1111,6 +1261,7 @@
           nome: f.nome, razaoSocial: f.razaoSocial, cnpj: f.cnpj, email: f.email,
           contato: f.contato, telefone: f.telefone, nota,
           endereco: f.endereco, cidade: f.cidade, uf: f.uf, especialidades: f.especialidades,
+          cor: f.cor, logo: f.logo, lat: f.lat, lng: f.lng,
           status: 'aprovada',
           solicitadoPor: 'Admin',
           solicitadoEm: new Date().toISOString().slice(0, 10)
@@ -1682,13 +1833,24 @@
       const lista = oficinasAprovadas();
       const q = (document.getElementById('of-busca')?.value || '').trim().toLowerCase();
 
-      let filtradas = lista;
+      let filtradas = lista.map(o => ({ ...o, _dist: distanciaOficina(o) }));
       if (q) {
-        filtradas = lista.filter(o => {
+        filtradas = filtradas.filter(o => {
           const blob = [o.nome, o.cidade, o.uf, o.especialidades, o.endereco, o.contato].join(' ').toLowerCase();
           return blob.includes(q);
         });
       }
+      // mais próximas primeiro quando há GPS
+      filtradas.sort((a, b) => {
+        if (a._dist == null && b._dist == null) return (a.nome || '').localeCompare(b.nome || '');
+        if (a._dist == null) return 1;
+        if (b._dist == null) return -1;
+        return a._dist - b._dist;
+      });
+
+      const geoLabel = userGeo
+        ? `📍 Ordenado pela sua localização (${userGeo.lat.toFixed(3)}, ${userGeo.lng.toFixed(3)})`
+        : 'Ative a localização para ver as oficinas mais próximas';
 
       let html = `
         <div class="page-header">
@@ -1696,12 +1858,14 @@
             <h2>Oficinas</h2>
             <p>Escolha uma oficina e agende seu serviço</p>
           </div>
+          <button class="btn btn-outline btn-sm" onclick="solicitarLocalizacao(() => renderDonoOficinas())">📍 Usar minha localização</button>
         </div>
         <div class="card" style="padding:14px 16px;margin-bottom:16px">
           <input type="search" id="of-busca" placeholder="Buscar por nome, cidade ou especialidade..."
             value="${q.replace(/"/g, '&quot;')}"
             oninput="renderDonoOficinas()"
             style="margin:0" />
+          <p style="font-size:12px;color:var(--muted);margin-top:10px;margin-bottom:0">${geoLabel}</p>
         </div>`;
 
       if (filtradas.length === 0) {
@@ -1711,22 +1875,32 @@
         </div>`;
       } else {
         filtradas.forEach(o => {
+          const pal = getPaleta(o.cor);
           const local = [o.cidade, o.uf].filter(Boolean).join('/') || o.distancia || 'Local não informado';
           const end = o.endereco || '';
           const nota = o.nota != null && o.nota !== '' ? `<span class="status ok">${o.nota} ★</span>` : '';
+          const distTxt = o._dist != null
+            ? (o._dist < 1 ? `${Math.round(o._dist * 1000)} m` : `${o._dist.toFixed(1)} km`)
+            : null;
           html += `
-            <div class="card" style="cursor:pointer" onclick="abrirAgendarNaOficina('${o.id}')">
+            <div class="card" style="cursor:pointer;border-left:4px solid ${pal.primary};background:linear-gradient(90deg, ${pal.light} 0%, #fff 28%)"
+              onclick="abrirAgendarNaOficina('${o.id}')">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
-                <div style="flex:1">
-                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                    <h3 style="font-size:16px;font-weight:600">${o.nome}</h3>
-                    ${nota}
+                <div style="display:flex;gap:12px;flex:1;min-width:0">
+                  ${logoHtml(o, 52)}
+                  <div style="min-width:0">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                      <h3 style="font-size:16px;font-weight:600">${o.nome}</h3>
+                      ${nota}
+                      ${distTxt ? `<span class="status info">${distTxt}</span>` : ''}
+                    </div>
+                    <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">📍 ${local}${end ? ' · ' + end : ''}</div>
+                    ${o.especialidades ? `<div style="font-size:13px;color:var(--muted);margin-top:4px">🔧 ${o.especialidades}</div>` : ''}
+                    ${o.telefone ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">📞 ${o.telefone}</div>` : ''}
                   </div>
-                  <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">📍 ${local}${end ? ' · ' + end : ''}</div>
-                  ${o.especialidades ? `<div style="font-size:13px;color:var(--muted);margin-top:4px">🔧 ${o.especialidades}</div>` : ''}
-                  ${o.telefone ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">📞 ${o.telefone}</div>` : ''}
                 </div>
-                <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();abrirAgendarNaOficina('${o.id}')">Agendar</button>
+                <button class="btn btn-sm" style="background:${pal.primary};color:#fff"
+                  onclick="event.stopPropagation();abrirAgendarNaOficina('${o.id}')">Agendar</button>
               </div>
             </div>`;
         });
@@ -1784,22 +1958,34 @@
 
       const veiculosOpt = meus.map(v => `<option value="${v.id}">${v.marca} ${v.modelo} (${fmtKm(v.km)} km)</option>`).join('');
       const local = [of.cidade, of.uf].filter(Boolean).join('/') || '';
+      const pal = getPaleta(of.cor);
+      const dist = distanciaOficina(of);
+      const distTxt = dist != null ? (dist < 1 ? Math.round(dist*1000)+' m' : dist.toFixed(1)+' km') : null;
 
       el.innerHTML = `
         <div class="page-header">
           <div>
             <h2>Agendar serviço</h2>
-            <p>${of.nome}${local ? ' · ' + local : ''}</p>
+            <p>Você está agendando em <strong style="color:${pal.primary}">${of.nome}</strong></p>
           </div>
           <button class="btn btn-outline btn-sm" onclick="bookingOficinaId=null;mostrarTela('dono','oficinas')">Trocar oficina</button>
         </div>
-        <div class="card">
-          <div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
-            <strong style="font-size:15px">${of.nome}</strong>
-            ${of.nota != null ? ` <span class="status ok">${of.nota} ★</span>` : ''}
-            <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">
-              ${of.especialidades || 'Serviços gerais'}
-              ${of.telefone ? ' · ' + of.telefone : ''}
+        <div class="card" style="border-top:4px solid ${pal.primary};background:linear-gradient(180deg, ${pal.light} 0%, #fff 40%)">
+          <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+            ${logoHtml(of, 56)}
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <strong style="font-size:16px;color:${pal.primary}">${of.nome}</strong>
+                ${of.nota != null ? `<span class="status ok">${of.nota} ★</span>` : ''}
+                ${distTxt ? `<span class="status info">${distTxt}</span>` : ''}
+              </div>
+              <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">
+                ${local || ''}${of.endereco ? ' · ' + of.endereco : ''}
+              </div>
+              <div style="font-size:13px;color:var(--muted);margin-top:2px">
+                ${of.especialidades || 'Serviços gerais'}
+                ${of.telefone ? ' · ' + of.telefone : ''}
+              </div>
             </div>
           </div>
           <input type="hidden" id="ag-oficina" value="${of.id}" />
@@ -1832,13 +2018,15 @@
             <label>Observações</label>
             <textarea id="ag-notas" rows="3" placeholder="Descreva o problema ou o que precisa ser feito..."></textarea>
           </div>
-          <button class="btn btn-primary btn-block" onclick="solicitarAgendamento()">Solicitar agendamento</button>
+          <button class="btn btn-block" id="ag-btn-submit" style="background:var(--primary);color:#fff" onclick="solicitarAgendamento()">Solicitar agendamento</button>
         </div>
         <div class="page-header" style="margin-top:28px"><div><h2 style="font-size:18px">Meus agendamentos</h2></div></div>
         <div class="card" id="meus-agendamentos"></div>
       `;
       const hoje = new Date().toISOString().slice(0, 10);
       document.getElementById('ag-data').value = hoje;
+      const btn = document.getElementById('ag-btn-submit');
+      if (btn) btn.style.background = pal.primary;
       atualizarHorariosLivres();
       renderMeusAgendamentos();
     }
@@ -2206,18 +2394,25 @@
         return;
       }
       const local = [o.endereco, o.cidade, o.uf].filter(Boolean).join(' · ');
+      const pal = getPaleta(o.cor);
       el.innerHTML = `
         <div class="page-header">
           <div>
             <h2>Minha oficina</h2>
             <p>Dados visíveis para os proprietários</p>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="abrirModalOficina('${o.id}','mecanica')">Editar dados</button>
+          <button class="btn btn-sm" style="background:${pal.primary};color:#fff" onclick="abrirModalOficina('${o.id}','mecanica')">Editar dados</button>
         </div>
-        <div class="card">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-            <h3 style="font-size:17px;font-weight:600">${o.nome}</h3>
-            ${statusBadge(o.status)}
+        <div class="card" style="border-left:4px solid ${pal.primary}">
+          <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
+            ${logoHtml(o, 64)}
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <h3 style="font-size:17px;font-weight:600;color:${pal.primary}">${o.nome}</h3>
+                ${statusBadge(o.status)}
+              </div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">Cor: ${pal.nome}</div>
+            </div>
           </div>
           ${o.razaoSocial ? `<div class="meta" style="font-size:13px;color:var(--text-secondary)">Razão social: ${o.razaoSocial}</div>` : ''}
           ${o.cnpj ? `<div style="font-size:13px;color:var(--text-secondary)">CNPJ: ${o.cnpj}</div>` : ''}
