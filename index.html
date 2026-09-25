@@ -280,15 +280,20 @@
           <div class="role-icon">⚙️</div>
           <div>
             <div class="role-title">Administrador</div>
-            <div class="role-desc">Cadastrar e gerenciar oficinas</div>
+            <div class="role-desc">Aprovar oficinas e gerenciar o app</div>
           </div>
         </div>
       </div>
 
       <!-- Select oficina (só para perfil mecânica) -->
-      <div class="form-group" id="login-oficina-wrap" style="display:none">
-        <label>Oficina</label>
-        <select id="login-oficina"></select>
+      <div id="login-oficina-wrap" style="display:none">
+        <div class="form-group">
+          <label>Oficina aprovada</label>
+          <select id="login-oficina"></select>
+        </div>
+        <button type="button" class="btn btn-outline btn-block" style="margin-bottom:14px;border-style:dashed" onclick="abrirCadastroOficinaPublico()">
+          📝 Cadastrar minha oficina (aguardará aprovação)
+        </button>
       </div>
 
       <button class="btn btn-primary btn-block" onclick="fazerLogin()">Entrar</button>
@@ -327,6 +332,7 @@
         <button class="btn btn-ghost btn-block" onclick="mostrarAjudaGithub()">🔗 Backup no GitHub (como fazer)</button>
         <button class="btn btn-ghost btn-block" onclick="carregarDemo()">📦 Carregar dados de demonstração</button>
         <button class="btn btn-ghost btn-block" onclick="location.reload()">🔄 Recarregar App</button>
+        <button class="btn btn-ghost btn-block" style="color:var(--danger)" onclick="limparBase()">🗑️ Limpar base (zerar tudo)</button>
       </div>
     </div>
   </div>
@@ -389,14 +395,10 @@
     </div>
     <nav class="nav" id="nav-admin">
       <button class="active" data-tela="oficinas" onclick="mostrarTela('admin','oficinas')">🏢 Oficinas</button>
-      <button data-tela="tipos" onclick="mostrarTela('admin','tipos')">🧰 Tipos</button>
-      <button data-tela="config" onclick="mostrarTela('admin','config')">⚙️ Config</button>
       <button data-tela="resumo" onclick="mostrarTela('admin','resumo')">📊 Resumo</button>
     </nav>
     <main>
       <div id="admin-oficinas" class="screen active"></div>
-      <div id="admin-tipos" class="screen"></div>
-      <div id="admin-config" class="screen"></div>
       <div id="admin-resumo" class="screen"></div>
     </main>
   </div>
@@ -452,32 +454,60 @@
     </div>
   </div>
 
-  <!-- MODAL OFICINA (ADMIN) -->
+  <!-- MODAL OFICINA (admin ou auto-cadastro) -->
   <div id="modal-oficina" class="modal-bg" onclick="if(event.target===this)fecharModal('modal-oficina')">
     <div class="modal">
       <h2 id="modal-oficina-titulo">Cadastrar Oficina</h2>
+      <p id="modal-oficina-hint" style="font-size:13px;color:var(--text-secondary);margin:-12px 0 16px;display:none">
+        Preencha os dados da oficina. O cadastro fica <strong>pendente</strong> até o administrador do app aprovar.
+      </p>
       <input type="hidden" id="o-id" value="" />
+      <input type="hidden" id="o-mode" value="admin" />
       <div class="form-group">
-        <label>Nome da oficina *</label>
+        <label>Nome fantasia *</label>
         <input type="text" id="o-nome" placeholder="Ex: Oficina Central" />
       </div>
       <div class="form-group">
-        <label>Responsável / Contato</label>
+        <label>Razão social</label>
+        <input type="text" id="o-razao" placeholder="Ex: Central Serviços Automotivos LTDA" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>CNPJ / Documento</label>
+          <input type="text" id="o-cnpj" placeholder="00.000.000/0001-00" />
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="o-email" placeholder="contato@oficina.com" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Responsável *</label>
         <input type="text" id="o-contato" placeholder="Ex: João Silva" />
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Telefone</label>
+          <label>Telefone *</label>
           <input type="text" id="o-telefone" placeholder="(11) 99999-0000" />
         </div>
-        <div class="form-group">
+        <div class="form-group" id="o-nota-wrap">
           <label>Nota (0–5)</label>
           <input type="number" id="o-nota" min="0" max="5" step="0.1" placeholder="4.8" />
         </div>
       </div>
       <div class="form-group">
-        <label>Endereço / Distância</label>
-        <input type="text" id="o-distancia" placeholder="Ex: 2,1 km · Rua das Oficinas, 100" />
+        <label>Endereço completo *</label>
+        <input type="text" id="o-endereco" placeholder="Rua, número, bairro" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cidade</label>
+          <input type="text" id="o-cidade" placeholder="São Paulo" />
+        </div>
+        <div class="form-group">
+          <label>UF</label>
+          <input type="text" id="o-uf" placeholder="SP" maxlength="2" />
+        </div>
       </div>
       <div class="form-group">
         <label>Especialidades</label>
@@ -485,27 +515,7 @@
       </div>
       <div class="modal-actions">
         <button class="btn btn-outline btn-block" onclick="fecharModal('modal-oficina')">Cancelar</button>
-        <button class="btn btn-primary btn-block" onclick="salvarOficina()">Salvar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL TIPO DE MANUTENÇÃO (ADMIN) -->
-  <div id="modal-tipo" class="modal-bg" onclick="if(event.target===this)fecharModal('modal-tipo')">
-    <div class="modal">
-      <h2 id="modal-tipo-titulo">Cadastrar Tipo de Manutenção</h2>
-      <input type="hidden" id="t-id" value="" />
-      <div class="form-group">
-        <label>Nome *</label>
-        <input type="text" id="t-nome" placeholder="Ex: Troca de óleo e filtro" />
-      </div>
-      <div class="form-group">
-        <label>Intervalo recomendado (km) *</label>
-        <input type="number" id="t-intervalo" placeholder="Ex: 10000" min="0" />
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-outline btn-block" onclick="fecharModal('modal-tipo')">Cancelar</button>
-        <button class="btn btn-primary btn-block" onclick="salvarTipoManutencao()">Salvar</button>
+        <button class="btn btn-primary btn-block" id="o-btn-salvar" onclick="salvarOficina()">Salvar</button>
       </div>
     </div>
   </div>
@@ -516,14 +526,14 @@
     // ===================== STORAGE =====================
     const STORAGE_KEY = 'autocare_v3';
 
-    const TIPOS_PADRAO = [
-      { id: 'tp1', nome: 'Troca de óleo e filtro', intervaloKm: 10000 },
-      { id: 'tp2', nome: 'Filtro de ar', intervaloKm: 20000 },
-      { id: 'tp3', nome: 'Filtro de combustível', intervaloKm: 20000 },
-      { id: 'tp4', nome: 'Pastilhas de freio', intervaloKm: 20000 },
-      { id: 'tp5', nome: 'Correia dentada', intervaloKm: 60000 },
-      { id: 'tp6', nome: 'Fluido de freio', intervaloKm: 30000 },
-      { id: 'tp7', nome: 'Velas de ignição', intervaloKm: 40000 },
+    const PREVENTIVAS = [
+      { nome: 'Troca de óleo e filtro', intervaloKm: 10000 },
+      { nome: 'Filtro de ar', intervaloKm: 20000 },
+      { nome: 'Filtro de combustível', intervaloKm: 20000 },
+      { nome: 'Pastilhas de freio', intervaloKm: 20000 },
+      { nome: 'Correia dentada', intervaloKm: 60000 },
+      { nome: 'Fluido de freio', intervaloKm: 30000 },
+      { nome: 'Velas de ignição', intervaloKm: 40000 },
     ];
     const HORARIOS = ['08:00','09:00','10:00','11:00','14:00','15:00','16:00','17:00'];
 
@@ -540,9 +550,7 @@
         agendamentos: [],
         servicos: [],
         ultimaManutencao: {},
-        tiposManutencao: TIPOS_PADRAO.map(t => ({ ...t })),
-        pins: { dono: null, mecanica: null, admin: null },
-        config: { googleClientId: '', githubToken: '', githubGistId: '' }
+        adminPin: null
       };
     }
 
@@ -558,9 +566,9 @@
           { id: 'a2', veiculoId: 'v1', data: '2026-08-28', km: 86890, litros: 38.7, valor: 241.10 },
         ],
         oficinas: [
-          { id: 'o1', nome: 'Oficina Central', contato: 'Carlos', telefone: '(11) 98888-0001', nota: 4.8, distancia: '2,1 km', especialidades: 'Motor, óleo, freios' },
-          { id: 'o2', nome: 'Auto Center Silva', contato: 'Pedro', telefone: '(11) 97777-0002', nota: 4.6, distancia: '3,4 km', especialidades: 'Suspensão, alinhamento' },
-          { id: 'o3', nome: 'Mecânica do João', contato: 'João', telefone: '(11) 96666-0003', nota: 4.9, distancia: '5,0 km', especialidades: 'Geral' },
+          { id: 'o1', nome: 'Oficina Central', razaoSocial: 'Central Serviços LTDA', cnpj: '12.345.678/0001-90', email: 'contato@central.com', contato: 'Carlos', telefone: '(11) 98888-0001', nota: 4.8, endereco: 'Rua das Oficinas, 100', cidade: 'São Paulo', uf: 'SP', especialidades: 'Motor, óleo, freios', status: 'aprovada', solicitadoPor: 'Demo', solicitadoEm: '2026-01-01' },
+          { id: 'o2', nome: 'Auto Center Silva', razaoSocial: 'Silva Auto Center ME', cnpj: '98.765.432/0001-10', email: 'silva@auto.com', contato: 'Pedro', telefone: '(11) 97777-0002', nota: 4.6, endereco: 'Av. Brasil, 500', cidade: 'São Paulo', uf: 'SP', especialidades: 'Suspensão, alinhamento', status: 'aprovada', solicitadoPor: 'Demo', solicitadoEm: '2026-01-01' },
+          { id: 'o3', nome: 'Mecânica do João', razaoSocial: 'João Mecânica', cnpj: '', email: '', contato: 'João', telefone: '(11) 96666-0003', nota: 4.9, endereco: 'Rua A, 20', cidade: 'Guarulhos', uf: 'SP', especialidades: 'Geral', status: 'aprovada', solicitadoPor: 'Demo', solicitadoEm: '2026-01-01' },
         ],
         agendamentos: [
           { id: 'ag1', veiculoId: 'v1', oficinaId: 'o1', data: '2026-09-22', hora: '09:00', servico: 'Troca de óleo', status: 'em_andamento', cliente: 'Carlos Mendes', notas: '' },
@@ -572,24 +580,14 @@
         ultimaManutencao: {
           v1: { 'Troca de óleo e filtro': 85900 },
           v2: {},
-        },
-        tiposManutencao: TIPOS_PADRAO.map(t => ({ ...t })),
-        pins: { dono: null, mecanica: null, admin: null },
-        config: { googleClientId: '', githubToken: '', githubGistId: '' }
+        }
       };
     }
 
     function load() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const data = JSON.parse(raw);
-          // migração suave: garante campos novos em bases salvas antes deles existirem
-          if (!data.tiposManutencao) data.tiposManutencao = TIPOS_PADRAO.map(t => ({ ...t }));
-          if (!data.pins) data.pins = { dono: null, mecanica: null, admin: data.adminPin || null };
-          if (!data.config) data.config = { googleClientId: '', githubToken: '', githubGistId: '' };
-          return data;
-        }
+        if (raw) return JSON.parse(raw);
       } catch (e) {}
       return emptyData(); // primeira visita = vazio
     }
@@ -664,9 +662,7 @@
             agendamentos: data.agendamentos || [],
             servicos: data.servicos || [],
             ultimaManutencao: data.ultimaManutencao || {},
-            tiposManutencao: data.tiposManutencao || TIPOS_PADRAO.map(t => ({ ...t })),
-            pins: data.pins || { dono: null, mecanica: null, admin: data.adminPin || null },
-            config: data.config || { googleClientId: '', githubToken: '', githubGistId: '' }
+            adminPin: data.adminPin || null
           };
           save();
           toast('Backup importado com sucesso');
@@ -806,14 +802,19 @@
       }
     }
 
+    function oficinasAprovadas() {
+      return DB.oficinas.filter(o => (o.status || 'aprovada') === 'aprovada');
+    }
+
     function atualizarSelectOficinasLogin() {
       const sel = document.getElementById('login-oficina');
       if (!sel) return;
-      if (DB.oficinas.length === 0) {
-        sel.innerHTML = '<option value="">Nenhuma oficina cadastrada — use o Admin</option>';
+      const aprovadas = oficinasAprovadas();
+      if (aprovadas.length === 0) {
+        sel.innerHTML = '<option value="">Nenhuma oficina aprovada — cadastre a sua abaixo</option>';
       } else {
-        sel.innerHTML = DB.oficinas.map(o =>
-          `<option value="${o.id}">${o.nome}</option>`
+        sel.innerHTML = aprovadas.map(o =>
+          `<option value="${o.id}">${o.nome}${o.cidade ? ' · ' + o.cidade : ''}</option>`
         ).join('');
       }
     }
@@ -827,28 +828,30 @@
       if (selectedRole === 'mecanica') {
         const ofId = document.getElementById('login-oficina').value;
         if (!ofId) {
-          toast('Cadastre oficinas no perfil Administrador primeiro');
+          toast('Selecione uma oficina aprovada ou cadastre a sua');
+          return;
+        }
+        const of = DB.oficinas.find(o => o.id === ofId);
+        if (!of || (of.status && of.status !== 'aprovada')) {
+          toast('Esta oficina ainda não foi aprovada pelo administrador');
           return;
         }
         SESSION.oficinaId = ofId;
       }
 
       if (selectedRole === 'admin') {
-        // Admin sempre exige PIN — no primeiro acesso, cria um.
-        if (!DB.pins.admin) {
+        // Gate simples por PIN — não é segurança real (é tudo client-side),
+        // só evita que qualquer pessoa entre como admin sem querer.
+        if (!DB.adminPin) {
           const novoPin = prompt('Primeiro acesso como Administrador.\nCrie um PIN (mín. 4 dígitos) para proteger esta área:');
           if (!novoPin || novoPin.trim().length < 4) { toast('PIN precisa ter ao menos 4 dígitos'); return; }
-          DB.pins.admin = novoPin.trim();
+          DB.adminPin = novoPin.trim();
           save();
           toast('PIN de administrador criado');
         } else {
           const pin = prompt('PIN de administrador:');
-          if (pin !== DB.pins.admin) { toast('PIN incorreto'); return; }
+          if (pin !== DB.adminPin) { toast('PIN incorreto'); return; }
         }
-      } else if (DB.pins[selectedRole]) {
-        // Dono/mecânica só pedem PIN se o admin configurou um em Configurações.
-        const pin = prompt('PIN de acesso deste perfil:');
-        if (pin !== DB.pins[selectedRole]) { toast('PIN incorreto'); return; }
       }
 
       document.getElementById('login').style.display = 'none';
@@ -899,91 +902,166 @@
         if (tela === 'novo-servico') renderMecanicaNovoServico();
       } else if (perfil === 'admin') {
         if (tela === 'oficinas') renderAdminOficinas();
-        if (tela === 'tipos') renderAdminTipos();
-        if (tela === 'config') renderAdminConfig();
         if (tela === 'resumo') renderAdminResumo();
       }
     }
 
-    // ===================== ADMIN — OFICINAS =====================
+    // ===================== ADMIN — OFICINAS + APROVAÇÃO =====================
+    function statusBadge(st) {
+      const s = st || 'aprovada';
+      if (s === 'pendente') return '<span class="status warn">pendente</span>';
+      if (s === 'rejeitada') return '<span class="status late">rejeitada</span>';
+      return '<span class="status ok">aprovada</span>';
+    }
+
     function renderAdminOficinas() {
       const el = document.getElementById('admin-oficinas');
+      const pendentes = DB.oficinas.filter(o => o.status === 'pendente');
+      const outras = DB.oficinas.filter(o => o.status !== 'pendente');
       let html = `
         <div class="page-header">
           <div>
             <h2>Oficinas</h2>
-            <p>${DB.oficinas.length} oficina${DB.oficinas.length !== 1 ? 's' : ''} cadastrada${DB.oficinas.length !== 1 ? 's' : ''}</p>
+            <p>${DB.oficinas.length} no total · ${pendentes.length} aguardando aprovação</p>
           </div>
           <button class="btn btn-primary" onclick="abrirModalOficina()">+ Nova oficina</button>
         </div>`;
 
+      if (pendentes.length) {
+        html += `<div class="card" style="border-color:#fbbf24;background:#fffbeb">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">⏳ Solicitações pendentes</h3>`;
+        pendentes.forEach(o => {
+          html += cardOficinaAdmin(o, true);
+        });
+        html += `</div>`;
+      }
+
       if (DB.oficinas.length === 0) {
         html += `<div class="card empty-state">
           <div class="empty-icon">🏢</div>
-          <p>Nenhuma oficina cadastrada.<br>Cadastre a primeira para que mecânicos possam entrar.</p>
+          <p>Nenhuma oficina ainda.<br>Mecânicos podem se cadastrar pelo app; você aprova aqui.</p>
         </div>`;
-      } else {
-        DB.oficinas.forEach(o => {
-          html += `
-            <div class="card">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
-                <div>
-                  <h3 style="font-size:16px;font-weight:600">${o.nome}</h3>
-                  <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">
-                    ${o.contato ? o.contato + ' · ' : ''}${o.telefone || ''}
-                  </div>
-                  <div style="font-size:13px;color:var(--muted);margin-top:2px">
-                    ${o.distancia || '—'} ${o.especialidades ? '· ' + o.especialidades : ''}
-                  </div>
-                  ${o.nota != null && o.nota !== '' ? `<div style="margin-top:8px"><span class="status ok">${o.nota} ★</span></div>` : ''}
-                </div>
-                <div class="actions-row">
-                  <button class="btn btn-sm btn-outline btn-icon" title="Editar" onclick="abrirModalOficina('${o.id}')">✏️</button>
-                  <button class="btn btn-sm btn-outline btn-icon" title="Excluir" onclick="excluirOficina('${o.id}')">🗑️</button>
-                </div>
-              </div>
-            </div>`;
-        });
+      } else if (outras.length) {
+        html += `<div class="page-header" style="margin-top:8px;margin-bottom:12px">
+          <div><h2 style="font-size:16px">Todas as oficinas</h2></div>
+        </div>`;
+        outras.forEach(o => { html += `<div class="card">${cardOficinaAdmin(o, false)}</div>`; });
       }
       el.innerHTML = html;
     }
 
-    function abrirModalOficina(id = null) {
+    function cardOficinaAdmin(o, inline) {
+      const local = [o.endereco, o.cidade, o.uf].filter(Boolean).join(' · ') || o.distancia || '—';
+      const extra = [
+        o.razaoSocial ? 'Razão: ' + o.razaoSocial : '',
+        o.cnpj ? 'CNPJ: ' + o.cnpj : '',
+        o.email || '',
+        o.solicitadoPor ? 'Solicitado por: ' + o.solicitadoPor : '',
+        o.solicitadoEm ? 'em ' + fmtDate(o.solicitadoEm) : ''
+      ].filter(Boolean).join(' · ');
+      const acoesPend = o.status === 'pendente' ? `
+        <button class="btn btn-sm btn-success" onclick="aprovarOficina('${o.id}')">Aprovar</button>
+        <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:#fecaca" onclick="rejeitarOficina('${o.id}')">Rejeitar</button>
+      ` : '';
+      return `
+        <div style="${inline ? 'padding:12px 0;border-bottom:1px solid var(--border)' : ''}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <h3 style="font-size:16px;font-weight:600">${o.nome}</h3>
+                ${statusBadge(o.status)}
+                ${o.nota != null && o.nota !== '' ? `<span class="status ok">${o.nota} ★</span>` : ''}
+              </div>
+              <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">
+                ${o.contato ? o.contato + ' · ' : ''}${o.telefone || ''}
+              </div>
+              <div style="font-size:13px;color:var(--muted);margin-top:2px">${local}</div>
+              ${extra ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">${extra}</div>` : ''}
+              ${o.especialidades ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:4px">${o.especialidades}</div>` : ''}
+              ${o.motivoRejeicao ? `<div style="font-size:12px;color:var(--danger);margin-top:4px">Motivo: ${o.motivoRejeicao}</div>` : ''}
+            </div>
+            <div class="actions-row" style="flex-wrap:wrap">
+              ${acoesPend}
+              <button class="btn btn-sm btn-outline btn-icon" title="Editar" onclick="abrirModalOficina('${o.id}')">✏️</button>
+              <button class="btn btn-sm btn-outline btn-icon" title="Excluir" onclick="excluirOficina('${o.id}')">🗑️</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function abrirCadastroOficinaPublico() {
+      const nomeLogin = (document.getElementById('login-nome').value || '').trim();
+      abrirModalOficina(null, 'publico');
+      if (nomeLogin) document.getElementById('o-contato').value = nomeLogin;
+    }
+
+    function abrirModalOficina(id = null, mode = 'admin') {
       document.getElementById('o-id').value = id || '';
+      document.getElementById('o-mode').value = mode;
       const titulo = document.getElementById('modal-oficina-titulo');
+      const hint = document.getElementById('modal-oficina-hint');
+      const notaWrap = document.getElementById('o-nota-wrap');
+      const btn = document.getElementById('o-btn-salvar');
+
+      const isPublic = mode === 'publico' && !id;
+      hint.style.display = isPublic ? 'block' : 'none';
+      notaWrap.style.display = isPublic ? 'none' : 'block';
+      btn.textContent = isPublic ? 'Enviar para aprovação' : 'Salvar';
+
+      const fields = ['o-nome','o-razao','o-cnpj','o-email','o-contato','o-telefone','o-nota','o-endereco','o-cidade','o-uf','o-especialidades'];
+      fields.forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
+
       if (id) {
         const o = DB.oficinas.find(x => x.id === id);
         if (!o) return;
         titulo.textContent = 'Editar Oficina';
         document.getElementById('o-nome').value = o.nome || '';
+        document.getElementById('o-razao').value = o.razaoSocial || '';
+        document.getElementById('o-cnpj').value = o.cnpj || '';
+        document.getElementById('o-email').value = o.email || '';
         document.getElementById('o-contato').value = o.contato || '';
         document.getElementById('o-telefone').value = o.telefone || '';
         document.getElementById('o-nota').value = o.nota ?? '';
-        document.getElementById('o-distancia').value = o.distancia || '';
+        document.getElementById('o-endereco').value = o.endereco || o.distancia || '';
+        document.getElementById('o-cidade').value = o.cidade || '';
+        document.getElementById('o-uf').value = o.uf || '';
         document.getElementById('o-especialidades').value = o.especialidades || '';
+        document.getElementById('o-mode').value = 'admin';
+        hint.style.display = 'none';
+        notaWrap.style.display = 'block';
+        btn.textContent = 'Salvar';
       } else {
-        titulo.textContent = 'Cadastrar Oficina';
-        document.getElementById('o-nome').value = '';
-        document.getElementById('o-contato').value = '';
-        document.getElementById('o-telefone').value = '';
-        document.getElementById('o-nota').value = '';
-        document.getElementById('o-distancia').value = '';
-        document.getElementById('o-especialidades').value = '';
+        titulo.textContent = isPublic ? 'Cadastrar minha oficina' : 'Nova oficina (admin)';
       }
       document.getElementById('modal-oficina').classList.add('show');
     }
 
+    function lerFormOficina() {
+      return {
+        nome: document.getElementById('o-nome').value.trim(),
+        razaoSocial: document.getElementById('o-razao').value.trim(),
+        cnpj: document.getElementById('o-cnpj').value.trim(),
+        email: document.getElementById('o-email').value.trim(),
+        contato: document.getElementById('o-contato').value.trim(),
+        telefone: document.getElementById('o-telefone').value.trim(),
+        notaRaw: document.getElementById('o-nota').value,
+        endereco: document.getElementById('o-endereco').value.trim(),
+        cidade: document.getElementById('o-cidade').value.trim(),
+        uf: document.getElementById('o-uf').value.trim().toUpperCase(),
+        especialidades: document.getElementById('o-especialidades').value.trim(),
+      };
+    }
+
     function salvarOficina() {
       const id = document.getElementById('o-id').value;
-      const nome = document.getElementById('o-nome').value.trim();
-      const contato = document.getElementById('o-contato').value.trim();
-      const telefone = document.getElementById('o-telefone').value.trim();
-      const notaRaw = document.getElementById('o-nota').value;
-      const nota = notaRaw === '' ? null : parseFloat(notaRaw);
-      const distancia = document.getElementById('o-distancia').value.trim();
-      const especialidades = document.getElementById('o-especialidades').value.trim();
+      const mode = document.getElementById('o-mode').value;
+      const f = lerFormOficina();
+      const nota = f.notaRaw === '' ? null : parseFloat(f.notaRaw);
 
-      if (!nome) { toast('Informe o nome da oficina'); return; }
+      if (!f.nome) { toast('Informe o nome fantasia'); return; }
+      if (!f.contato) { toast('Informe o responsável'); return; }
+      if (!f.telefone) { toast('Informe o telefone'); return; }
+      if (mode === 'publico' && !f.endereco) { toast('Informe o endereço'); return; }
       if (nota != null && (isNaN(nota) || nota < 0 || nota > 5)) {
         toast('Nota deve ser entre 0 e 5'); return;
       }
@@ -991,16 +1069,61 @@
       if (id) {
         const o = DB.oficinas.find(x => x.id === id);
         if (!o) { toast('Oficina não encontrada'); return; }
-        Object.assign(o, { nome, contato, telefone, nota, distancia, especialidades });
+        Object.assign(o, {
+          nome: f.nome, razaoSocial: f.razaoSocial, cnpj: f.cnpj, email: f.email,
+          contato: f.contato, telefone: f.telefone, nota,
+          endereco: f.endereco, cidade: f.cidade, uf: f.uf, especialidades: f.especialidades
+        });
         toast('Oficina atualizada');
+      } else if (mode === 'publico') {
+        DB.oficinas.push({
+          id: uid(),
+          nome: f.nome, razaoSocial: f.razaoSocial, cnpj: f.cnpj, email: f.email,
+          contato: f.contato, telefone: f.telefone, nota: null,
+          endereco: f.endereco, cidade: f.cidade, uf: f.uf, especialidades: f.especialidades,
+          status: 'pendente',
+          solicitadoPor: f.contato || (document.getElementById('login-nome').value || 'Solicitante'),
+          solicitadoEm: new Date().toISOString().slice(0, 10),
+          motivoRejeicao: ''
+        });
+        toast('Cadastro enviado! Aguarde aprovação do administrador');
       } else {
         DB.oficinas.push({
-          id: uid(), nome, contato, telefone, nota, distancia, especialidades
+          id: uid(),
+          nome: f.nome, razaoSocial: f.razaoSocial, cnpj: f.cnpj, email: f.email,
+          contato: f.contato, telefone: f.telefone, nota,
+          endereco: f.endereco, cidade: f.cidade, uf: f.uf, especialidades: f.especialidades,
+          status: 'aprovada',
+          solicitadoPor: 'Admin',
+          solicitadoEm: new Date().toISOString().slice(0, 10)
         });
-        toast('Oficina cadastrada');
+        toast('Oficina cadastrada e aprovada');
       }
       save();
       fecharModal('modal-oficina');
+      if (SESSION.role === 'admin') renderAdminOficinas();
+      atualizarSelectOficinasLogin();
+    }
+
+    function aprovarOficina(id) {
+      const o = DB.oficinas.find(x => x.id === id);
+      if (!o) return;
+      o.status = 'aprovada';
+      o.motivoRejeicao = '';
+      save();
+      toast('Oficina aprovada — já pode entrar no app');
+      renderAdminOficinas();
+      atualizarSelectOficinasLogin();
+    }
+
+    function rejeitarOficina(id) {
+      const o = DB.oficinas.find(x => x.id === id);
+      if (!o) return;
+      const motivo = prompt('Motivo da rejeição (opcional):') || '';
+      o.status = 'rejeitada';
+      o.motivoRejeicao = motivo.trim();
+      save();
+      toast('Cadastro rejeitado');
       renderAdminOficinas();
       atualizarSelectOficinasLogin();
     }
@@ -1014,168 +1137,32 @@
       atualizarSelectOficinasLogin();
     }
 
-    // ===================== ADMIN — TIPOS DE MANUTENÇÃO =====================
-    function renderAdminTipos() {
-      const el = document.getElementById('admin-tipos');
-      let html = `
-        <div class="page-header">
-          <div><h2>Tipos de manutenção</h2><p>Base usada nos alertas do dono e no checklist da oficina</p></div>
-          <button class="btn btn-primary btn-sm" onclick="abrirModalTipo()">+ Novo tipo</button>
-        </div>`;
-      if (DB.tiposManutencao.length === 0) {
-        html += `<div class="card empty-state"><div class="empty-icon">🧰</div><p>Nenhum tipo cadastrado.<br>Cadastre o primeiro (ex: Troca de óleo).</p></div>`;
-      } else {
-        DB.tiposManutencao.forEach(t => {
-          html += `
-            <div class="card list-item">
-              <div>
-                <strong style="font-size:14px">${t.nome}</strong>
-                <div class="meta" style="font-size:12px;color:var(--muted)">a cada ${fmtKm(t.intervaloKm)} km</div>
-              </div>
-              <div class="actions-row">
-                <button class="btn btn-sm btn-outline btn-icon" onclick="abrirModalTipo('${t.id}')">✏️</button>
-                <button class="btn btn-sm btn-outline btn-icon" onclick="excluirTipoManutencao('${t.id}')">🗑️</button>
-              </div>
-            </div>`;
-        });
-      }
-      el.innerHTML = html;
-    }
-
-    function abrirModalTipo(id = null) {
-      document.getElementById('t-id').value = id || '';
-      const titulo = document.getElementById('modal-tipo-titulo');
-      if (id) {
-        const t = DB.tiposManutencao.find(x => x.id === id);
-        if (!t) return;
-        titulo.textContent = 'Editar tipo de manutenção';
-        document.getElementById('t-nome').value = t.nome;
-        document.getElementById('t-intervalo').value = t.intervaloKm;
-      } else {
-        titulo.textContent = 'Cadastrar tipo de manutenção';
-        document.getElementById('t-nome').value = '';
-        document.getElementById('t-intervalo').value = '';
-      }
-      document.getElementById('modal-tipo').classList.add('show');
-    }
-
-    function salvarTipoManutencao() {
-      const id = document.getElementById('t-id').value;
-      const nome = document.getElementById('t-nome').value.trim();
-      const intervaloKm = parseInt(document.getElementById('t-intervalo').value, 10);
-      if (!nome) { toast('Informe o nome do tipo de manutenção'); return; }
-      if (isNaN(intervaloKm) || intervaloKm <= 0) { toast('Informe um intervalo válido em km'); return; }
-
-      if (id) {
-        const t = DB.tiposManutencao.find(x => x.id === id);
-        if (!t) { toast('Tipo não encontrado'); return; }
-        const nomeAntigo = t.nome;
-        t.nome = nome; t.intervaloKm = intervaloKm;
-        if (nomeAntigo !== nome) {
-          // mantém o histórico já registrado migrando a chave pro novo nome
-          Object.values(DB.ultimaManutencao).forEach(reg => {
-            if (reg && Object.prototype.hasOwnProperty.call(reg, nomeAntigo)) {
-              reg[nome] = reg[nomeAntigo];
-              delete reg[nomeAntigo];
-            }
-          });
-        }
-        toast('Tipo atualizado');
-      } else {
-        DB.tiposManutencao.push({ id: uid(), nome, intervaloKm });
-        toast('Tipo cadastrado');
-      }
-      save();
-      fecharModal('modal-tipo');
-      renderAdminTipos();
-    }
-
-    function excluirTipoManutencao(id) {
-      const t = DB.tiposManutencao.find(x => x.id === id);
-      if (!t) return;
-      if (!confirm(`Excluir "${t.nome}"? Isso não apaga o histórico já registrado, só o alerta de próxima troca.`)) return;
-      DB.tiposManutencao = DB.tiposManutencao.filter(x => x.id !== id);
-      save();
-      toast('Tipo excluído');
-      renderAdminTipos();
-    }
-
-    // ===================== ADMIN — CONFIGURAÇÕES =====================
-    function renderAdminConfig() {
-      const el = document.getElementById('admin-config');
-      const p = DB.pins, c = DB.config;
-      el.innerHTML = `
-        <div class="page-header"><div><h2>Configurações</h2><p>PINs de acesso e integrações</p></div></div>
-
-        <div class="card">
-          <h3 style="font-size:15px;font-weight:600;margin-bottom:4px">PIN por perfil</h3>
-          <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
-            Deixe em branco pra não exigir PIN nesse perfil. É uma trava local simples — sem backend, não é segurança de verdade.
-          </p>
-          <div class="form-group"><label>PIN — Proprietário</label><input type="text" id="cfg-pin-dono" inputmode="numeric" placeholder="opcional" value="${p.dono || ''}"></div>
-          <div class="form-group"><label>PIN — Oficina / Mecânica</label><input type="text" id="cfg-pin-mecanica" inputmode="numeric" placeholder="opcional" value="${p.mecanica || ''}"></div>
-          <div class="form-group"><label>PIN — Administrador</label><input type="text" id="cfg-pin-admin" inputmode="numeric" placeholder="mín. 4 dígitos" value="${p.admin || ''}"></div>
-        </div>
-
-        <div class="card">
-          <h3 style="font-size:15px;font-weight:600;margin-bottom:4px">Login com Google</h3>
-          <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Client ID do Google Cloud Console. Requer recarregar o app depois de salvar.</p>
-          <div class="form-group"><label>Google Client ID</label><input type="text" id="cfg-google" placeholder="xxxx.apps.googleusercontent.com" value="${c.googleClientId || ''}"></div>
-        </div>
-
-        <div class="card">
-          <h3 style="font-size:15px;font-weight:600;margin-bottom:4px">Backup no GitHub</h3>
-          <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
-            Fica salvo só neste dispositivo (localStorage). Não é enviado a lugar nenhum automaticamente — use junto com "Exportar backup".
-          </p>
-          <div class="form-group"><label>Token de acesso (Gist)</label><input type="password" id="cfg-github-token" placeholder="opcional" value="${c.githubToken || ''}"></div>
-          <div class="form-group"><label>ID do Gist</label><input type="text" id="cfg-github-gist" placeholder="opcional" value="${c.githubGistId || ''}"></div>
-        </div>
-
-        <button class="btn btn-primary btn-block" onclick="salvarConfig()">Salvar configurações</button>
-      `;
-    }
-
-    function salvarConfig() {
-      const pinAdmin = document.getElementById('cfg-pin-admin').value.trim();
-      if (pinAdmin && pinAdmin.length < 4) { toast('PIN de administrador precisa ter ao menos 4 dígitos'); return; }
-      DB.pins.dono = document.getElementById('cfg-pin-dono').value.trim() || null;
-      DB.pins.mecanica = document.getElementById('cfg-pin-mecanica').value.trim() || null;
-      DB.pins.admin = pinAdmin || null;
-      DB.config.googleClientId = document.getElementById('cfg-google').value.trim();
-      DB.config.githubToken = document.getElementById('cfg-github-token').value.trim();
-      DB.config.githubGistId = document.getElementById('cfg-github-gist').value.trim();
-      save();
-      toast('Configurações salvas');
-    }
-
     function renderAdminResumo() {
       const el = document.getElementById('admin-resumo');
+      const pend = DB.oficinas.filter(o => o.status === 'pendente').length;
+      const apr = DB.oficinas.filter(o => (o.status || 'aprovada') === 'aprovada').length;
       el.innerHTML = `
         <div class="page-header">
           <div><h2>Resumo do sistema</h2><p>Visão geral da base</p></div>
         </div>
         <div class="card">
-          <div class="list-item"><div><strong>Oficinas</strong></div><span class="km-badge">${DB.oficinas.length}</span></div>
+          <div class="list-item"><div><strong>Oficinas (aprovadas)</strong></div><span class="km-badge">${apr}</span></div>
+          <div class="list-item"><div><strong>Oficinas pendentes</strong></div><span class="km-badge">${pend}</span></div>
           <div class="list-item"><div><strong>Veículos</strong></div><span class="km-badge">${DB.veiculos.length}</span></div>
           <div class="list-item"><div><strong>Abastecimentos</strong></div><span class="km-badge">${DB.abastecimentos.length}</span></div>
           <div class="list-item"><div><strong>Agendamentos</strong></div><span class="km-badge">${DB.agendamentos.length}</span></div>
           <div class="list-item"><div><strong>Serviços registrados</strong></div><span class="km-badge">${DB.servicos.length}</span></div>
-          <div class="list-item"><div><strong>Tipos de manutenção</strong></div><span class="km-badge">${DB.tiposManutencao.length}</span></div>
         </div>
         <div class="card" style="margin-top:8px">
           <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
-            Backup e restauração em JSON também ficam disponíveis na tela de login.
-            Configurações de PIN, GitHub e Google ficam na aba <strong>Config</strong>.
+            Use <strong>Limpar base</strong> na tela de login para zerar tudo.
+            Backup e restauração ficam na tela de login (Exportar / Importar JSON) — mesmo padrão do caixa inteligente.
           </p>
           <div style="display:flex;flex-wrap:wrap;gap:8px">
             <button class="btn btn-outline btn-sm" onclick="exportarBackup()">☁️ Exportar backup</button>
             <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-backup').click()">📥 Importar backup</button>
+            <button class="btn btn-outline btn-sm" onclick="mostrarAjudaGithub()">🔗 GitHub</button>
           </div>
-        </div>
-        <div class="card" style="margin-top:8px">
-          <p style="font-size:13px;color:var(--danger);margin-bottom:10px"><strong>Zona de risco</strong> — apaga todos os dados, sem volta.</p>
-          <button class="btn btn-outline btn-block" style="color:var(--danger);border-color:var(--danger)" onclick="limparBase()">🗑️ Limpar base (zerar tudo)</button>
         </div>
       `;
     }
@@ -1259,16 +1246,11 @@
     }
 
     function calcProximaRevisao(v) {
-      if (!DB.tiposManutencao.length) return { texto: '—', cor: 'var(--muted)' };
-      let pior = null;
-      DB.tiposManutencao.forEach(p => {
-        const ultima = (DB.ultimaManutencao[v.id] || {})[p.nome] || 0;
-        const falta = p.intervaloKm - (v.km - ultima);
-        if (pior === null || falta < pior.falta) pior = { falta, nome: p.nome };
-      });
-      if (pior.falta <= 0) return { texto: `${pior.nome}: atrasada`, cor: 'var(--danger)' };
-      if (pior.falta <= 2000) return { texto: `${pior.nome}: ${fmtKm(pior.falta)} km`, cor: 'var(--warning)' };
-      return { texto: `${pior.nome}: ${fmtKm(pior.falta)} km`, cor: 'var(--success)' };
+      const ultima = (DB.ultimaManutencao[v.id] || {})['Troca de óleo e filtro'] || 0;
+      const falta = 10000 - (v.km - ultima);
+      if (falta <= 0) return { texto: 'Atrasada', cor: 'var(--danger)' };
+      if (falta <= 2000) return { texto: `Em ${fmtKm(falta)} km`, cor: 'var(--warning)' };
+      return { texto: `Em ${fmtKm(falta)} km`, cor: 'var(--success)' };
     }
 
     function ultimoAbastTexto(veiculoId) {
@@ -1475,7 +1457,7 @@
             <h3 style="font-size:16px;font-weight:600">${v.marca} ${v.modelo}</h3>
             <span class="km-badge">${fmtKm(v.km)} km</span>
           </div>`;
-        DB.tiposManutencao.forEach(p => {
+        PREVENTIVAS.forEach(p => {
           const ultima = (DB.ultimaManutencao[v.id] || {})[p.nome] || 0;
           const falta = p.intervaloKm - (v.km - ultima);
           let cls = 'ok', texto = `Em ${fmtKm(Math.max(0, falta))} km`;
@@ -1490,9 +1472,6 @@
               <span class="status ${cls}">${texto}</span>
             </div>`;
         });
-        if (DB.tiposManutencao.length === 0) {
-          html += `<p style="font-size:13px;color:var(--muted)">Nenhum tipo de manutenção cadastrado ainda. Peça ao Administrador pra cadastrar em "Tipos".</p>`;
-        }
         html += `</div>`;
       });
 
@@ -1545,16 +1524,17 @@
           <div class="card empty-state"><div class="empty-icon">📅</div><p>Cadastre um veículo primeiro.</p></div>`;
         return;
       }
-      if (DB.oficinas.length === 0) {
+      if (oficinasAprovadas().length === 0) {
         el.innerHTML = `<div class="page-header"><div><h2>Agendar Serviço</h2></div></div>
-          <div class="card empty-state"><div class="empty-icon">🏢</div><p>Nenhuma oficina cadastrada.<br>Peça ao Administrador para cadastrar.</p></div>`;
+          <div class="card empty-state"><div class="empty-icon">🏢</div><p>Nenhuma oficina aprovada no momento.<br>Oficinas precisam ser validadas pelo administrador.</p></div>`;
         return;
       }
 
       const veiculosOpt = meus.map(v => `<option value="${v.id}">${v.marca} ${v.modelo}</option>`).join('');
-      const oficinasOpt = DB.oficinas.map(o =>
-        `<option value="${o.id}">${o.nome}${o.nota != null ? ' · ' + o.nota + '★' : ''}${o.distancia ? ' (' + o.distancia + ')' : ''}</option>`
-      ).join('');
+      const oficinasOpt = oficinasAprovadas().map(o => {
+        const local = o.cidade ? ` (${o.cidade}${o.uf ? '/' + o.uf : ''})` : (o.distancia ? ' (' + o.distancia + ')' : '');
+        return `<option value="${o.id}">${o.nome}${o.nota != null ? ' · ' + o.nota + '★' : ''}${local}</option>`;
+      }).join('');
 
       el.innerHTML = `
         <div class="page-header"><div><h2>Agendar Serviço</h2><p>Solicite horário em oficinas cadastradas</p></div></div>
@@ -1727,9 +1707,12 @@
           <div class="form-group">
             <label>Itens realizados</label>
             <div class="check-list">
-              ${DB.tiposManutencao.length
-                ? DB.tiposManutencao.map(p => `<label><input type="checkbox" value="${p.nome}"> ${p.nome}</label>`).join('')
-                : '<p style="font-size:13px;color:var(--muted)">Nenhum tipo cadastrado — peça ao Administrador para cadastrar em "Tipos".</p>'}
+              <label><input type="checkbox" value="Troca de óleo" checked> Troca de óleo</label>
+              <label><input type="checkbox" value="Filtro de óleo" checked> Filtro de óleo</label>
+              <label><input type="checkbox" value="Filtro de ar"> Filtro de ar</label>
+              <label><input type="checkbox" value="Pastilhas de freio"> Pastilhas de freio</label>
+              <label><input type="checkbox" value="Fluido de freio"> Fluido de freio</label>
+              <label><input type="checkbox" value="Correia dentada"> Correia dentada</label>
             </div>
           </div>
           <div class="form-group">
@@ -1774,7 +1757,8 @@
         if (km > v.km) v.km = km;
         if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
         checks.forEach(item => {
-          DB.ultimaManutencao[v.id][item] = km;
+          const key = PREVENTIVAS.find(p => p.nome.toLowerCase().includes(item.toLowerCase().split(' ')[0]))?.nome || item;
+          DB.ultimaManutencao[v.id][key] = km;
         });
       }
 
@@ -1791,10 +1775,6 @@
     }
 
     // Init
-    if (DB.config && DB.config.googleClientId) {
-      const gEl = document.getElementById('g_id_onload');
-      if (gEl) gEl.setAttribute('data-client_id', DB.config.googleClientId);
-    }
     atualizarSelectOficinasLogin();
   </script>
 </body>
