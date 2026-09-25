@@ -894,6 +894,8 @@
 
     function save() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
+      // sincroniza com GitHub se ativado (debounced)
+      if (typeof agendarSyncGithub === 'function') agendarSyncGithub();
     }
 
     let DB = load();
@@ -944,12 +946,18 @@
     }
 
     function getBackupCfgFromForm() {
+      const prev = loadBackupCfg();
+      const tokenEl = document.getElementById('cfg-gh-token');
+      // se o formulário não está na tela, mantém config salva
+      if (!tokenEl) return prev;
+      const autoEl = document.getElementById('cfg-auto-sync');
       return {
-        githubToken: (document.getElementById('cfg-gh-token')?.value || '').trim(),
+        githubToken: (tokenEl.value || '').trim(),
         githubOwner: (document.getElementById('cfg-gh-owner')?.value || '').trim(),
         githubRepo: (document.getElementById('cfg-gh-repo')?.value || '').trim(),
         githubBranch: (document.getElementById('cfg-gh-branch')?.value || 'main').trim() || 'main',
         githubPath: (document.getElementById('cfg-gh-path')?.value || 'AutoCare-backup.json').trim() || 'AutoCare-backup.json',
+        autoSync: autoEl ? !!autoEl.checked : !!prev.autoSync,
       };
     }
 
@@ -966,7 +974,7 @@
     function salvarConfigBackup() {
       const cfg = getBackupCfgFromForm();
       saveBackupCfg(cfg);
-      toast('Configurações de backup salvas neste navegador');
+      toast('Configurações salvas' + (loadBackupCfg().autoSync ? ' · sync automático ON' : ''));
     }
 
     function nomeArquivoBackup() {
@@ -1065,16 +1073,19 @@
       return res;
     }
 
-    async function enviarBackupGithub() {
+        async function enviarBackupGithub(opts = {}) {
+      const silent = !!opts.silent;
+      if (_syncInFlight) return;
+      _syncInFlight = true;
       try {
-        salvarConfigBackup();
+        if (!silent && document.getElementById('cfg-gh-token')) salvarConfigBackup();
         const cfg = loadBackupCfg();
+        if (!githubCfgOk(cfg)) throw new Error('Configure token, dono, repo e caminho');
         const path = cfg.githubPath || 'AutoCare-backup.json';
         const branch = cfg.githubBranch || 'main';
         const payload = montarPayloadBackup();
         const content = utf8ToBase64(JSON.stringify(payload, null, 2));
 
-        // busca SHA se arquivo já existe (necessário para update)
         let sha = undefined;
         const getRes = await githubRequest(path + '?ref=' + encodeURIComponent(branch), { method: 'GET' });
         if (getRes.ok) {
@@ -1099,21 +1110,25 @@
           const err = await putRes.json().catch(() => ({}));
           throw new Error(err.message || ('GitHub PUT ' + putRes.status));
         }
-        const result = await putRes.json();
-        toast('Backup enviado ao GitHub');
-        if (result.content && result.content.html_url) {
-          console.log('GitHub file:', result.content.html_url);
-        }
+        if (!silent) toast('Backup enviado ao GitHub');
+        else console.log('AutoCare: sync enviado');
       } catch (e) {
         console.error(e);
-        toast('GitHub: ' + (e.message || 'falha no envio'));
+        if (!silent) toast('GitHub: ' + (e.message || 'falha no envio'));
+        throw e;
+      } finally {
+        _syncInFlight = false;
       }
     }
 
-    async function baixarBackupGithub() {
+    async function baixarBackupGithub(opts = {}) {
+      const silent = !!opts.silent;
+      if (_syncInFlight && !opts.force) return;
+      _syncInFlight = true;
       try {
-        salvarConfigBackup();
+        if (!silent && document.getElementById('cfg-gh-token')) salvarConfigBackup();
         const cfg = loadBackupCfg();
+        if (!githubCfgOk(cfg)) throw new Error('Configure token, dono, repo e caminho');
         const path = cfg.githubPath || 'AutoCare-backup.json';
         const branch = cfg.githubBranch || 'main';
         const res = await githubRequest(path + '?ref=' + encodeURIComponent(branch), { method: 'GET' });
@@ -1125,18 +1140,75 @@
         const jsonText = base64ToUtf8(file.content.replace(/\n/g, ''));
         const parsed = JSON.parse(jsonText);
         const data = parsed.data || parsed;
+        _syncSkipNext = true; // não reenviar logo após restaurar
         aplicarDadosBackup(data);
-        toast('Backup baixado do GitHub e restaurado');
+        if (!silent) toast('Backup baixado do GitHub e restaurado');
+        else console.log('AutoCare: sync baixado');
         atualizarSelectOficinasLogin();
         if (SESSION.role === 'admin') renderAdminConfig();
         else if (SESSION.role === 'dono' || SESSION.role === 'mecanica') renderBackupUsuario();
       } catch (e) {
         console.error(e);
-        toast('GitHub: ' + (e.message || 'falha no download'));
+        if (!silent) toast('GitHub: ' + (e.message || 'falha no download'));
+        throw e;
+      } finally {
+        _syncInFlight = false;
       }
     }
 
-    function htmlCamposBackup() {
+
+    let _syncTimer = null;
+    let _syncInFlight = false;
+    let _syncSkipNext = false; // evita loop após pull
+
+    function githubCfgOk(cfg) {
+      cfg = cfg || loadBackupCfg();
+      return !!(cfg.githubToken && cfg.githubOwner && cfg.githubRepo && cfg.githubPath);
+    }
+
+    function agendarSyncGithub() {
+      const cfg = loadBackupCfg();
+      if (!cfg.autoSync || !githubCfgOk(cfg)) return;
+      if (_syncSkipNext) { _syncSkipNext = false; return; }
+      clearTimeout(_syncTimer);
+      _syncTimer = setTimeout(() => { enviarBackupGithub({ silent: true }); }, 2500);
+    }
+
+    async function sincronizarAoEntrar() {
+      const cfg = loadBackupCfg();
+      if (!cfg.autoSync || !githubCfgOk(cfg)) return;
+      try {
+        toast('Sincronizando com a nuvem…');
+        await baixarBackupGithub({ silent: true, force: true });
+      } catch (e) {
+        // se não existe arquivo ainda, envia o local
+        console.warn(e);
+        try {
+          await enviarBackupGithub({ silent: true });
+        } catch (e2) {
+          console.warn(e2);
+        }
+      }
+    }
+
+    async function sincronizarAgora() {
+      salvarConfigBackup();
+      const cfg = loadBackupCfg();
+      if (!githubCfgOk(cfg)) {
+        toast('Configure token, dono, repo e caminho do GitHub');
+        return;
+      }
+      toast('Sincronizando…');
+      try {
+        await baixarBackupGithub({ silent: true, force: true });
+        toast('Dados atualizados da nuvem');
+      } catch (e) {
+        console.warn('pull falhou, tentando enviar', e);
+        await enviarBackupGithub({ silent: false });
+      }
+    }
+
+function htmlCamposBackup() {
       const c = loadBackupCfg();
       return `
         <div class="card">
@@ -1182,10 +1254,18 @@
               <input type="text" id="cfg-gh-path" placeholder="AutoCare-backup.json" value="${(c.githubPath||'AutoCare-backup.json').replace(/"/g,'&quot;')}" />
             </div>
           </div>
+          <label style="display:flex;align-items:flex-start;gap:10px;font-size:13px;margin:12px 0;cursor:pointer">
+            <input type="checkbox" id="cfg-auto-sync" ${c.autoSync ? 'checked' : ''} style="width:18px;height:18px;margin-top:2px" />
+            <span>
+              <strong>Sincronizar automaticamente entre dispositivos</strong><br>
+              <span style="color:var(--muted)">Ao entrar no app, baixa a nuvem. Ao salvar dados, envia para o GitHub (após alguns segundos).</span>
+            </span>
+          </label>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
             <button class="btn btn-outline btn-sm" onclick="salvarConfigBackup()">Salvar configuração</button>
-            <button class="btn btn-primary btn-sm" onclick="enviarBackupGithub()">☁️ Enviar backup</button>
-            <button class="btn btn-outline btn-sm" onclick="baixarBackupGithub()">⬇️ Baixar e restaurar</button>
+            <button class="btn btn-primary btn-sm" onclick="sincronizarAgora()">🔄 Sincronizar agora</button>
+            <button class="btn btn-outline btn-sm" onclick="enviarBackupGithub()">☁️ Só enviar</button>
+            <button class="btn btn-outline btn-sm" onclick="baixarBackupGithub()">⬇️ Só baixar</button>
           </div>
         </div>
       `;
@@ -1383,6 +1463,9 @@
         document.getElementById('admin-user-name').textContent = nome;
         mostrarTela('admin', 'oficinas');
       }
+
+      // multi-dispositivo: puxa nuvem se auto-sync estiver ligado
+      setTimeout(() => { sincronizarAoEntrar().catch(() => {}); }, 300);
     }
 
     function sair() {
