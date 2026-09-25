@@ -927,22 +927,97 @@
       atualizarSelectOficinasLogin();
     }
 
-    // ---------- Backup JSON (mesma lógica de export/import do caixa) ----------
-    function exportarBackup() {
-      const payload = {
-        app: 'AutoCare',
+    // ---------- Backup JSON + GitHub + Google Drive ----------
+    const BACKUP_CFG_KEY = 'autocare_backup_cfg';
+    const APP_BACKUP_NAME = 'AutoCare';
+
+    function loadBackupCfg() {
+      try {
+        return JSON.parse(localStorage.getItem(BACKUP_CFG_KEY) || '{}') || {};
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function saveBackupCfg(cfg) {
+      localStorage.setItem(BACKUP_CFG_KEY, JSON.stringify(cfg));
+    }
+
+    function getBackupCfgFromForm() {
+      return {
+        githubToken: (document.getElementById('cfg-gh-token')?.value || '').trim(),
+        githubOwner: (document.getElementById('cfg-gh-owner')?.value || '').trim(),
+        githubRepo: (document.getElementById('cfg-gh-repo')?.value || '').trim(),
+        githubBranch: (document.getElementById('cfg-gh-branch')?.value || 'main').trim() || 'main',
+        githubPath: (document.getElementById('cfg-gh-path')?.value || 'AutoCare-backup.json').trim() || 'AutoCare-backup.json',
+      };
+    }
+
+    function aplicarBackupCfgNoForm(cfg) {
+      const c = cfg || loadBackupCfg();
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+      set('cfg-gh-token', c.githubToken);
+      set('cfg-gh-owner', c.githubOwner);
+      set('cfg-gh-repo', c.githubRepo);
+      set('cfg-gh-branch', c.githubBranch || 'main');
+      set('cfg-gh-path', c.githubPath || 'AutoCare-backup.json');
+    }
+
+    function salvarConfigBackup() {
+      const cfg = getBackupCfgFromForm();
+      saveBackupCfg(cfg);
+      toast('Configurações de backup salvas neste navegador');
+    }
+
+    function nomeArquivoBackup() {
+      const dia = new Date().toISOString().slice(0, 10);
+      return `${APP_BACKUP_NAME}-backup-${dia}.json`;
+    }
+
+    function montarPayloadBackup() {
+      return {
+        app: APP_BACKUP_NAME,
         version: 3,
         exportedAt: new Date().toISOString(),
         data: DB
       };
+    }
+
+    function aplicarDadosBackup(data) {
+      if (!data || typeof data !== 'object') throw new Error('Formato inválido');
+      DB = {
+        veiculos: data.veiculos || [],
+        abastecimentos: data.abastecimentos || [],
+        oficinas: data.oficinas || [],
+        agendamentos: data.agendamentos || [],
+        servicos: data.servicos || [],
+        catalogoServicos: data.catalogoServicos || [],
+        ultimaManutencao: data.ultimaManutencao || {},
+        notificacoes: data.notificacoes || [],
+        adminPin: data.adminPin || null
+      };
+      save();
+    }
+
+    function exportarBackup() {
+      const payload = montarPayloadBackup();
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
-      const dia = new Date().toISOString().slice(0, 10);
+      const nome = nomeArquivoBackup();
       a.href = URL.createObjectURL(blob);
-      a.download = `autocare-backup-${dia}.json`;
+      a.download = nome;
       a.click();
       URL.revokeObjectURL(a.href);
-      toast('Backup baixado');
+      toast('Baixado: ' + nome);
+    }
+
+    /** Exporta com nome AutoCare e abre o Google Drive para você enviar o arquivo */
+    function exportarParaGoogleDrive() {
+      exportarBackup();
+      setTimeout(() => {
+        window.open('https://drive.google.com/drive/my-drive', '_blank', 'noopener');
+        toast('Envie o arquivo AutoCare-backup-….json para o Drive');
+      }, 400);
     }
 
     function importarBackup(ev) {
@@ -953,20 +1028,7 @@
         try {
           const parsed = JSON.parse(reader.result);
           const data = parsed.data || parsed;
-          if (!data || typeof data !== 'object') throw new Error('Formato inválido');
-          // garante chaves mínimas
-          DB = {
-            veiculos: data.veiculos || [],
-            abastecimentos: data.abastecimentos || [],
-            oficinas: data.oficinas || [],
-            agendamentos: data.agendamentos || [],
-            servicos: data.servicos || [],
-            catalogoServicos: data.catalogoServicos || [],
-            ultimaManutencao: data.ultimaManutencao || {},
-            notificacoes: data.notificacoes || [],
-            adminPin: data.adminPin || null
-          };
-          save();
+          aplicarDadosBackup(data);
           toast('Backup importado com sucesso');
           atualizarSelectOficinasLogin();
         } catch (e) {
@@ -978,21 +1040,169 @@
       reader.readAsText(file);
     }
 
+    function utf8ToBase64(str) {
+      return btoa(unescape(encodeURIComponent(str)));
+    }
+
+    function base64ToUtf8(b64) {
+      return decodeURIComponent(escape(atob(b64)));
+    }
+
+    async function githubRequest(path, opts = {}) {
+      const cfg = { ...loadBackupCfg(), ...getBackupCfgFromForm() };
+      if (!cfg.githubToken) throw new Error('Informe o token do GitHub');
+      if (!cfg.githubOwner || !cfg.githubRepo) throw new Error('Informe dono e repositório');
+      const url = `https://api.github.com/repos/${cfg.githubOwner}/${cfg.githubRepo}/contents/${path.replace(/^\//, '')}`;
+      const res = await fetch(url, {
+        ...opts,
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': 'Bearer ' + cfg.githubToken,
+          'X-GitHub-Api-Version': '2022-11-28',
+          ...(opts.headers || {})
+        }
+      });
+      return res;
+    }
+
+    async function enviarBackupGithub() {
+      try {
+        salvarConfigBackup();
+        const cfg = loadBackupCfg();
+        const path = cfg.githubPath || 'AutoCare-backup.json';
+        const branch = cfg.githubBranch || 'main';
+        const payload = montarPayloadBackup();
+        const content = utf8ToBase64(JSON.stringify(payload, null, 2));
+
+        // busca SHA se arquivo já existe (necessário para update)
+        let sha = undefined;
+        const getRes = await githubRequest(path + '?ref=' + encodeURIComponent(branch), { method: 'GET' });
+        if (getRes.ok) {
+          const existing = await getRes.json();
+          sha = existing.sha;
+        } else if (getRes.status !== 404) {
+          const err = await getRes.json().catch(() => ({}));
+          throw new Error(err.message || ('GitHub GET ' + getRes.status));
+        }
+
+        const putRes = await githubRequest(path, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: `AutoCare backup ${new Date().toISOString()}`,
+            content,
+            branch,
+            ...(sha ? { sha } : {})
+          })
+        });
+        if (!putRes.ok) {
+          const err = await putRes.json().catch(() => ({}));
+          throw new Error(err.message || ('GitHub PUT ' + putRes.status));
+        }
+        const result = await putRes.json();
+        toast('Backup enviado ao GitHub');
+        if (result.content && result.content.html_url) {
+          console.log('GitHub file:', result.content.html_url);
+        }
+      } catch (e) {
+        console.error(e);
+        toast('GitHub: ' + (e.message || 'falha no envio'));
+      }
+    }
+
+    async function baixarBackupGithub() {
+      try {
+        salvarConfigBackup();
+        const cfg = loadBackupCfg();
+        const path = cfg.githubPath || 'AutoCare-backup.json';
+        const branch = cfg.githubBranch || 'main';
+        const res = await githubRequest(path + '?ref=' + encodeURIComponent(branch), { method: 'GET' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || ('Arquivo não encontrado (' + res.status + ')'));
+        }
+        const file = await res.json();
+        const jsonText = base64ToUtf8(file.content.replace(/\n/g, ''));
+        const parsed = JSON.parse(jsonText);
+        const data = parsed.data || parsed;
+        aplicarDadosBackup(data);
+        toast('Backup baixado do GitHub e restaurado');
+        atualizarSelectOficinasLogin();
+        if (SESSION.role === 'admin') renderAdminConfig();
+        else if (SESSION.role === 'dono' || SESSION.role === 'mecanica') renderBackupUsuario();
+      } catch (e) {
+        console.error(e);
+        toast('GitHub: ' + (e.message || 'falha no download'));
+      }
+    }
+
+    function htmlCamposBackup() {
+      const c = loadBackupCfg();
+      return `
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:8px">📁 Google Drive</h3>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+            O arquivo é baixado como <strong>${APP_BACKUP_NAME}-backup-AAAA-MM-DD.json</strong>.
+            Em seguida o Drive abre para você enviar esse arquivo (ou arrastar para a pasta).
+          </p>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button class="btn btn-primary btn-sm" onclick="exportarParaGoogleDrive()">⬇️ Baixar e abrir Drive</button>
+            <button class="btn btn-outline btn-sm" onclick="exportarBackup()">Só baixar JSON</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-backup').click()">⬆️ Importar arquivo</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:8px">🔗 GitHub — configuração</h3>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+            Crie um Personal Access Token (classic) com permissão <code>repo</code> (ou Contents em fine-grained).
+            O token fica só neste navegador (localStorage), não no código do app.
+          </p>
+          <div class="form-group">
+            <label>Token (PAT)</label>
+            <input type="password" id="cfg-gh-token" placeholder="ghp_…" autocomplete="off" value="${(c.githubToken||'').replace(/"/g,'&quot;')}" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Dono (usuário ou org)</label>
+              <input type="text" id="cfg-gh-owner" placeholder="fernandocopatti" value="${(c.githubOwner||'').replace(/"/g,'&quot;')}" />
+            </div>
+            <div class="form-group">
+              <label>Repositório</label>
+              <input type="text" id="cfg-gh-repo" placeholder="AutoCare" value="${(c.githubRepo||'').replace(/"/g,'&quot;')}" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Branch</label>
+              <input type="text" id="cfg-gh-branch" placeholder="main" value="${(c.githubBranch||'main').replace(/"/g,'&quot;')}" />
+            </div>
+            <div class="form-group">
+              <label>Caminho do arquivo</label>
+              <input type="text" id="cfg-gh-path" placeholder="AutoCare-backup.json" value="${(c.githubPath||'AutoCare-backup.json').replace(/"/g,'&quot;')}" />
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+            <button class="btn btn-outline btn-sm" onclick="salvarConfigBackup()">Salvar configuração</button>
+            <button class="btn btn-primary btn-sm" onclick="enviarBackupGithub()">☁️ Enviar backup</button>
+            <button class="btn btn-outline btn-sm" onclick="baixarBackupGithub()">⬇️ Baixar e restaurar</button>
+          </div>
+        </div>
+      `;
+    }
+
     function mostrarAjudaGithub() {
-      const msg = [
-        'Backup no GitHub (igual à ideia do caixa inteligente):',
+      alert([
+        'Backup GitHub no AutoCare:',
         '',
-        '1) Clique em “Exportar backup” e salve o JSON.',
-        '2) No repositório do projeto no GitHub, faça upload do arquivo',
-        '   (ou commit pela interface / GitHub Desktop).',
-        '3) Para restaurar: baixe o JSON do GitHub e use “Importar backup”.',
+        '1) Preencha token, dono, repositório e caminho (ex: AutoCare-backup.json).',
+        '2) Salvar configuração.',
+        '3) Enviar backup — grava/atualiza o arquivo no repo.',
+        '4) Baixar e restaurar — lê o arquivo do repo e aplica no app.',
         '',
-        'Produção: o ideal é backend (API) gravando no repo ou em Gist',
-        'com token — não coloque Personal Access Token no HTML público.',
-        '',
-        'Quer que eu prepare o fluxo com GitHub Gist (token no localStorage)?',
-      ].join('\n');
-      alert(msg);
+        'Token: GitHub → Settings → Developer settings → Personal access tokens.',
+        'Não compartilhe o token. Em site público, preferira backend.'
+      ].join('\\n'));
     }
 
     // ---------- Google Sign-In ----------
@@ -1499,17 +1709,7 @@
         <div class="page-header">
           <div><h2>Configurações do App</h2><p>Backup, dados de teste e segurança</p></div>
         </div>
-        <div class="card">
-          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">☁️ Backup e restauração</h3>
-          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
-            Exporte o JSON para guardar ou enviar ao GitHub. Importe para restaurar.
-          </p>
-          <div style="display:flex;flex-wrap:wrap;gap:8px">
-            <button class="btn btn-outline btn-sm" onclick="exportarBackup()">Exportar backup</button>
-            <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-backup').click()">Importar backup</button>
-            <button class="btn btn-outline btn-sm" onclick="mostrarAjudaGithub()">Como usar no GitHub</button>
-          </div>
-        </div>
+        ${htmlCamposBackup()}
         <div class="card">
           <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">📦 Dados de demonstração</h3>
           <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
@@ -1559,42 +1759,14 @@
         <div class="page-header">
           <div>
             <h2>Backup</h2>
-            <p>Salve seus dados no Google Drive ou no GitHub</p>
+            <p>Google Drive e GitHub — arquivo com nome AutoCare</p>
           </div>
         </div>
-
+        ${htmlCamposBackup()}
         <div class="card">
-          <h3 style="font-size:15px;font-weight:600;margin-bottom:8px">📁 Google Drive</h3>
-          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
-            Exporte o arquivo JSON e envie para o seu Google Drive (app Drive ou drive.google.com).
-            Para restaurar, baixe o arquivo do Drive e use Importar.
-          </p>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-            <button class="btn btn-primary btn-sm" onclick="exportarBackup()">⬇️ Exportar backup (JSON)</button>
-            <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-backup').click()">⬆️ Importar do arquivo</button>
-          </div>
-          <button class="btn btn-outline btn-sm" onclick="window.open('https://drive.google.com/drive/my-drive','_blank','noopener')">
-            Abrir Google Drive
-          </button>
-        </div>
-
-        <div class="card">
-          <h3 style="font-size:15px;font-weight:600;margin-bottom:8px">🔗 GitHub</h3>
-          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
-            1) Exporte o backup · 2) Faça upload no repositório (ou commit) ·
-            3) Para restaurar, baixe o JSON do GitHub e importe aqui.
-          </p>
-          <div style="display:flex;flex-wrap:wrap;gap:8px">
-            <button class="btn btn-primary btn-sm" onclick="exportarBackup()">⬇️ Exportar backup</button>
-            <button class="btn btn-outline btn-sm" onclick="mostrarAjudaGithub()">Como fazer no GitHub</button>
-            <button class="btn btn-outline btn-sm" onclick="window.open('https://github.com','_blank','noopener')">Abrir GitHub</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <p style="font-size:12px;color:var(--muted)">
-            Em produção, o backup pode sincronizar automaticamente com a conta Google e com um repositório privado.
-            Neste protótipo o arquivo fica no seu dispositivo até você enviá-lo ao Drive ou ao GitHub.
+          <p style="font-size:12px;color:var(--muted);margin:0">
+            Configurações ficam neste navegador. Token do GitHub não é enviado a servidores do AutoCare —
+            só para a API do GitHub quando você clica em Enviar/Baixar.
           </p>
         </div>
       `;
