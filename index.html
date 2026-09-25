@@ -2610,19 +2610,81 @@
           </div>`;
         plano.forEach(p => {
           const ultima = (DB.ultimaManutencao[v.id] || {})[p.nome] || 0;
-          const falta = p.intervaloKm - (v.km - ultima);
-          let cls = 'ok', texto = `Em ${fmtKm(Math.max(0, falta))} km`;
-          if (falta <= 0) { cls = 'late'; texto = 'Verificar agora'; }
-          else if (falta <= Math.min(2000, p.intervaloKm * 0.2)) { cls = 'warn'; }
+          const intv = p.intervaloKm || 0;
+          // km em que a manutenção atual venceu / vence
+          let devidaEm;
+          if (ultima > 0) {
+            devidaEm = ultima + intv;
+          } else if (intv > 0) {
+            // sem registro: último marco do plano até o km atual
+            devidaEm = Math.floor(v.km / intv) * intv;
+            if (devidaEm < intv) devidaEm = intv; // primeira do plano
+          } else {
+            devidaEm = v.km;
+          }
+          const proximaKm = devidaEm + (ultima > 0 || v.km >= devidaEm ? (v.km >= devidaEm ? intv : 0) : 0);
+          // simplifica: próxima prevista = devidaEm se ainda não passou; senão próximo ciclo
+          let alvoKm = devidaEm;
+          if (v.km >= devidaEm && intv > 0) {
+            // quantos ciclos atrasados
+            const ciclos = Math.floor((v.km - (ultima || 0)) / intv);
+            alvoKm = (ultima || 0) + Math.max(1, ciclos) * intv;
+            // se exatamente no marco, mostra este; se passou, o último vencido
+            if (alvoKm > v.km) alvoKm = alvoKm - intv;
+            if (alvoKm < intv && !ultima) alvoKm = intv;
+          }
+
+          const falta = alvoKm - v.km; // negativo = atrasada
+          // próxima a fazer (olhando para frente)
+          let proximaFazer = ultima > 0 ? ultima + intv : (Math.floor(v.km / intv) + 1) * intv;
+          if (proximaFazer <= v.km) proximaFazer = v.km + (intv - (v.km % intv)) % intv || (v.km + intv);
+          if (ultima > 0) proximaFazer = ultima + intv;
+          else {
+            const resto = v.km % intv;
+            proximaFazer = resto === 0 ? v.km + intv : v.km + (intv - resto);
+          }
+
+          const atrasada = proximaFazer <= v.km || (ultima === 0 && v.km >= intv);
+          // km que "deveria ter feito" = último vencimento
+          let deveriaKm;
+          if (ultima > 0) {
+            deveriaKm = ultima + intv;
+            if (deveriaKm > v.km) deveriaKm = null; // ainda não venceu
+          } else {
+            deveriaKm = Math.floor(v.km / intv) * intv;
+            if (deveriaKm < intv) deveriaKm = null; // nem chegou na 1ª
+          }
+
+          let cls = 'ok';
+          let texto;
+          if (atrasada && deveriaKm) {
+            cls = 'late';
+            texto = `Deveria aos ${fmtKm(deveriaKm)} km`;
+          } else if (proximaFazer - v.km <= Math.min(2000, intv * 0.2)) {
+            cls = 'warn';
+            texto = `Fazer aos ${fmtKm(proximaFazer)} km`;
+          } else {
+            texto = `Fazer aos ${fmtKm(proximaFazer)} km`;
+          }
+
           const meses = p.intervaloMeses ? ` ou a cada ${p.intervaloMeses} meses` : '';
-          const ultimaTxt = ultima ? `Última: ${fmtKm(ultima)} km` : 'Ainda não registrada';
+          let detalhe = `A cada ${fmtKm(intv)} km${meses}`;
+          if (ultima) detalhe += ` · Última: ${fmtKm(ultima)} km`;
+          else detalhe += ' · Ainda não registrada';
+          if (deveriaKm && v.km >= deveriaKm) {
+            detalhe += ` · Venceu em ${fmtKm(deveriaKm)} km`;
+          } else {
+            detalhe += ` · Próxima: ${fmtKm(proximaFazer)} km`;
+          }
+
           html += `
             <div class="list-item">
               <div>
                 <strong style="font-size:14px">${p.nome}</strong>
-                <div style="font-size:12px;color:var(--muted)">A cada ${fmtKm(p.intervaloKm)} km${meses} · ${ultimaTxt}</div>
+                <div style="font-size:12px;color:var(--muted)">${detalhe}</div>
               </div>
-              <span class="status ${cls}">${texto}</span>
+              <span class="status ${cls}" title="Marcar como feita no km atual" style="cursor:pointer"
+                onclick="marcarPreventivaFeita('${v.id}', ${JSON.stringify(p.nome)})">${texto}</span>
             </div>`;
         });
         html += `</div>`;
@@ -2649,6 +2711,25 @@
       }
       html += `</div>`;
       el.innerHTML = html;
+    }
+
+    
+    function marcarPreventivaFeita(veiculoId, nome) {
+      const v = DB.veiculos.find(x => x.id === veiculoId);
+      if (!v) return;
+      const kmStr = prompt(
+        'Registrar “‘ + nome + '” como feita.\n\nKm em que foi feita (atual: ' + v.km + '):',
+        String(v.km)
+      );
+      if (kmStr == null) return;
+      const km = parseInt(String(kmStr).replace(/\D/g, ''), 10);
+      if (isNaN(km) || km < 0) { toast('Km inválido'); return; }
+      if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
+      DB.ultimaManutencao[v.id][nome] = km;
+      if (km > v.km) v.km = km;
+      save();
+      toast('Registrado: ' + nome + ' aos ' + fmtKm(km) + ' km');
+      renderDonoManutencao();
     }
 
     function registrarManutencaoManual() {
