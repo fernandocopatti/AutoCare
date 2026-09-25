@@ -245,6 +245,12 @@
   </style>
   <!-- Google Identity Services - substitua SEU_CLIENT_ID pelo Client ID do Google Cloud -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
 </head>
 <body>
 
@@ -692,17 +698,7 @@
             intervaloMeses: it.intervaloMeses || it.meses || null
           })).filter(it => it.nome && it.intervaloKm > 0);
           if (!itens.length) throw new Error('Itens inválidos');
-          v.planoPreventiva = {
-            fonte: data.fonte || data.titulo || file.name,
-            marca: data.marca || v.marca,
-            modelo: data.modelo || v.modelo,
-            ano: data.ano || v.ano,
-            importadoEm: new Date().toISOString().slice(0, 10),
-            itens
-          };
-          save();
-          toast('Manual importado · ' + itens.length + ' revisões');
-          renderDonoManutencao();
+          aplicarItensManual(veiculoId, itens, data.fonte || data.titulo || file.name);
         } catch (e) {
           console.error(e);
           toast('JSON inválido. Use o exemplo de manual.');
@@ -719,6 +715,161 @@
       save();
       toast('Plano removido');
       renderDonoManutencao();
+    }
+
+    function aplicarItensManual(veiculoId, itens, fonte) {
+      const v = DB.veiculos.find(x => x.id === veiculoId);
+      if (!v) return;
+      itens = (itens || []).map(it => ({
+        nome: String(it.nome || '').trim(),
+        intervaloKm: parseInt(it.intervaloKm || it.km || 0, 10),
+        intervaloMeses: it.intervaloMeses || it.meses || null
+      })).filter(it => it.nome && it.intervaloKm > 0);
+      if (!itens.length) { toast('Nenhum item válido'); return; }
+      v.planoPreventiva = {
+        fonte: fonte || 'Manual',
+        marca: v.marca,
+        modelo: v.modelo,
+        ano: v.ano,
+        importadoEm: new Date().toISOString().slice(0, 10),
+        itens
+      };
+      save();
+      toast('Plano aplicado · ' + itens.length + ' revisões');
+      renderDonoManutencao();
+    }
+
+    /** Extrai candidatos a intervalo (km) do texto do manual */
+    function extrairItensDoTextoManual(texto) {
+      const t = String(texto || '');
+      const encontrados = [];
+      const vistos = new Set();
+
+      const nomes = [
+        { re: /troca\s+de\s+[oó]leo|oil\s+change|motor\s+oil/i, nome: 'Troca de óleo e filtro', kmDefault: 10000 },
+        { re: /filtro\s+de\s+ar|air\s+filter/i, nome: 'Filtro de ar', kmDefault: 20000 },
+        { re: /filtro\s+de\s+combust[ií]vel|fuel\s+filter/i, nome: 'Filtro de combustível', kmDefault: 20000 },
+        { re: /pastilha|brake\s+pad/i, nome: 'Pastilhas de freio', kmDefault: 30000 },
+        { re: /fluido\s+de\s+freio|brake\s+fluid/i, nome: 'Fluido de freio', kmDefault: 30000 },
+        { re: /correia\s+dentada|timing\s+belt/i, nome: 'Correia dentada', kmDefault: 60000 },
+        { re: /vela\s+de\s+igni[cç][aã]o|spark\s+plug/i, nome: 'Velas de ignição', kmDefault: 40000 },
+        { re: /filtro\s+de\s+[oó]leo|oil\s+filter/i, nome: 'Filtro de óleo', kmDefault: 10000 },
+        { re: /revis[aã]o|scheduled\s+maintenance/i, nome: 'Revisão periódica', kmDefault: 10000 },
+      ];
+
+      // padrões de km: 10.000 / 10000 / 10 000 km
+      function parseKmNear(idx) {
+        const window = t.slice(Math.max(0, idx - 80), idx + 120);
+        const m = window.match(/(\d{1,3}(?:[.\s]\d{3})+|\d{4,6})\s*(?:km|quil[oô]metros)?/i);
+        if (!m) return null;
+        const n = parseInt(String(m[1]).replace(/[.\s]/g, ''), 10);
+        if (!n || n < 1000 || n > 300000) return null;
+        return n;
+      }
+
+      nomes.forEach(def => {
+        const m = t.match(def.re);
+        if (!m) return;
+        if (vistos.has(def.nome)) return;
+        const km = parseKmNear(m.index) || def.kmDefault;
+        vistos.add(def.nome);
+        encontrados.push({ nome: def.nome, intervaloKm: km });
+      });
+
+      // genérico: "a cada X km" com palavra próxima
+      const reCada = /a\s+cada\s+(\d{1,3}(?:[.\s]\d{3})+|\d{4,6})\s*km/gi;
+      let mm;
+      while ((mm = reCada.exec(t)) !== null) {
+        const km = parseInt(String(mm[1]).replace(/[.\s]/g, ''), 10);
+        if (!km || km < 5000) continue;
+        const trecho = t.slice(Math.max(0, mm.index - 60), mm.index).toLowerCase();
+        let nome = 'Item do manual';
+        if (/[oó]leo/.test(trecho)) nome = 'Troca de óleo e filtro';
+        else if (/freio/.test(trecho)) nome = 'Sistema de freios';
+        else if (/correia/.test(trecho)) nome = 'Correia dentada';
+        else if (/filtro/.test(trecho)) nome = 'Filtro';
+        if (vistos.has(nome + km)) continue;
+        vistos.add(nome + km);
+        if (!encontrados.some(e => e.nome === nome)) {
+          encontrados.push({ nome, intervaloKm: km });
+        }
+      }
+
+      if (!encontrados.length) {
+        // fallback: plano genérico como sugestão
+        return PREVENTIVAS.map(p => ({ ...p }));
+      }
+      return encontrados;
+    }
+
+    async function importarManualPdf(veiculoId, file) {
+      const v = DB.veiculos.find(x => x.id === veiculoId);
+      if (!v || !file) return;
+      if (!window.pdfjsLib) {
+        toast('Leitor de PDF não carregou. Use JSON ou tente de novo.');
+        return;
+      }
+      toast('Lendo PDF…');
+      try {
+        const buf = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+        const maxPages = Math.min(pdf.numPages, 40); // limita para não travar
+        let texto = '';
+        for (let i = 1; i <= maxPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          texto += content.items.map(it => it.str).join(' ') + '\n';
+        }
+        if (!texto.trim()) {
+          toast('PDF sem texto legível (pode ser só imagem/scan). Use JSON ou modelo.');
+          return;
+        }
+        const itens = extrairItensDoTextoManual(texto);
+        const resumo = itens.map(i => `• ${i.nome}: ${i.intervaloKm} km`).join('\n');
+        const ok = confirm(
+          'Sugestão a partir do PDF (“' + file.name + '”):\n\n' +
+          resumo +
+          '\n\nConfirma aplicar este plano?\n(Você pode ajustar depois com JSON ou modelo.)'
+        );
+        if (!ok) { toast('Importação cancelada'); return; }
+        aplicarItensManual(veiculoId, itens, 'PDF: ' + file.name);
+      } catch (e) {
+        console.error(e);
+        toast('Não foi possível ler o PDF. Tente JSON ou modelo por marca.');
+      }
+    }
+
+    function abrirEditorManualJson(veiculoId) {
+      const v = DB.veiculos.find(x => x.id === veiculoId);
+      if (!v) return;
+      const base = v.planoPreventiva && v.planoPreventiva.itens
+        ? {
+            fonte: v.planoPreventiva.fonte || 'Manual editado',
+            marca: v.marca,
+            modelo: v.modelo,
+            ano: v.ano,
+            itens: v.planoPreventiva.itens
+          }
+        : {
+            fonte: 'Manual do proprietário',
+            marca: v.marca,
+            modelo: v.modelo,
+            ano: v.ano,
+            itens: exemploManualJson().itens
+          };
+      const txt = prompt(
+        'Cole ou edite o JSON do plano de revisões e confirme:',
+        JSON.stringify(base, null, 2)
+      );
+      if (txt == null) return;
+      try {
+        const data = JSON.parse(txt);
+        let itens = data.itens || data.revisoes || data.preventivas || data.servicos;
+        if (!Array.isArray(itens)) throw new Error('sem itens');
+        aplicarItensManual(veiculoId, itens, data.fonte || data.titulo || 'JSON editado');
+      } catch (e) {
+        toast('JSON inválido');
+      }
     }
     const HORARIOS = ['08:00','09:00','10:00','11:00','14:00','15:00','16:00','17:00'];
 
@@ -2371,9 +2522,11 @@
         </div>
         <div class="card" style="background:#f8fafc">
           <p style="font-size:13px;color:var(--text-secondary);margin:0">
-            Importe o plano de revisões do manual (JSON) ou aplique um modelo por marca.
-            As preventivas passam a usar esses intervalos de km (e meses, quando informados).
-            PDF do manual ainda não é lido automaticamente neste protótipo — use o JSON ou o modelo.
+            <strong>Como obter o plano:</strong><br>
+            1) <strong>Exemplo JSON</strong> — baixa um arquivo modelo, edite os km conforme o manual e use <strong>Importar JSON</strong>.<br>
+            2) <strong>Aplicar modelo</strong> — planos típicos por marca (não é o manual oficial).<br>
+            3) <strong>Importar PDF</strong> — lê o texto do manual (se não for só imagem), sugere intervalos; você confirma.<br>
+            4) <strong>Editar JSON</strong> — cola o plano direto, sem arquivo.
           </p>
         </div>`;
 
@@ -2408,6 +2561,10 @@
             <button class="btn btn-sm btn-outline" onclick="document.getElementById('manual-file-${v.id}').click()">Importar JSON</button>
             <input type="file" id="manual-file-${v.id}" accept="application/json,.json" style="display:none"
               onchange="importarManualJson('${v.id}', this.files[0]); this.value='';" />
+            <button class="btn btn-sm btn-outline" onclick="document.getElementById('manual-pdf-${v.id}').click()">Importar PDF</button>
+            <input type="file" id="manual-pdf-${v.id}" accept="application/pdf,.pdf" style="display:none"
+              onchange="importarManualPdf('${v.id}', this.files[0]); this.value='';" />
+            <button class="btn btn-sm btn-outline" onclick="abrirEditorManualJson('${v.id}')">Editar JSON</button>
             ${v.planoPreventiva ? `<button class="btn btn-sm btn-ghost" style="color:var(--danger)" onclick="limparPlanoManual('${v.id}')">Limpar plano</button>` : ''}
           </div>`;
         plano.forEach(p => {
