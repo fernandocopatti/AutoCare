@@ -929,7 +929,7 @@
       atualizarSelectOficinasLogin();
     }
 
-    // ---------- Backup JSON + GitHub + Google Drive ----------
+    // ---------- Backup JSON + GitHub Gist + Google Drive ----------
     const BACKUP_CFG_KEY = 'autocare_backup_cfg';
     const APP_BACKUP_NAME = 'AutoCare';
 
@@ -948,33 +948,21 @@
     function getBackupCfgFromForm() {
       const prev = loadBackupCfg();
       const tokenEl = document.getElementById('cfg-gh-token');
-      // se o formulário não está na tela, mantém config salva
       if (!tokenEl) return prev;
       const autoEl = document.getElementById('cfg-auto-sync');
       return {
         githubToken: (tokenEl.value || '').trim(),
-        githubOwner: (document.getElementById('cfg-gh-owner')?.value || '').trim(),
-        githubRepo: (document.getElementById('cfg-gh-repo')?.value || '').trim(),
-        githubBranch: (document.getElementById('cfg-gh-branch')?.value || 'main').trim() || 'main',
-        githubPath: (document.getElementById('cfg-gh-path')?.value || 'AutoCare-backup.json').trim() || 'AutoCare-backup.json',
+        gistId: (document.getElementById('cfg-gist-id')?.value || '').trim(),
+        deviceName: (document.getElementById('cfg-device-name')?.value || '').trim() || 'aparelho',
         autoSync: autoEl ? !!autoEl.checked : !!prev.autoSync,
       };
     }
 
-    function aplicarBackupCfgNoForm(cfg) {
-      const c = cfg || loadBackupCfg();
-      const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-      set('cfg-gh-token', c.githubToken);
-      set('cfg-gh-owner', c.githubOwner);
-      set('cfg-gh-repo', c.githubRepo);
-      set('cfg-gh-branch', c.githubBranch || 'main');
-      set('cfg-gh-path', c.githubPath || 'AutoCare-backup.json');
-    }
-
     function salvarConfigBackup() {
       const cfg = getBackupCfgFromForm();
+      if (!cfg.deviceName) cfg.deviceName = 'aparelho';
       saveBackupCfg(cfg);
-      toast('Configurações salvas' + (loadBackupCfg().autoSync ? ' · sync automático ON' : ''));
+      toast('Token / Gist / aparelho salvos' + (cfg.autoSync ? ' · sync ON' : ''));
     }
 
     function nomeArquivoBackup() {
@@ -982,11 +970,41 @@
       return `${APP_BACKUP_NAME}-backup-${dia}.json`;
     }
 
-    function montarPayloadBackup() {
+    function sanitizarNomeArquivo(nome) {
+      return String(nome || 'aparelho')
+        .trim()
+        .replace(/[^\w\-À-ú]+/g, '_')
+        .replace(/_+/g, '_')
+        .slice(0, 40) || 'aparelho';
+    }
+
+    function nomeArquivoGistDispositivo(deviceName) {
+      return `${APP_BACKUP_NAME}-${sanitizarNomeArquivo(deviceName)}.json`;
+    }
+
+    function nomeArquivoGistPrincipal() {
+      return `${APP_BACKUP_NAME}-principal.json`;
+    }
+
+    function contagemResumoDB(data) {
+      data = data || DB;
+      const n =
+        (data.veiculos || []).length +
+        (data.agendamentos || []).length +
+        (data.servicos || []).length +
+        (data.abastecimentos || []).length;
+      return n;
+    }
+
+    function montarPayloadBackup(deviceName) {
+      const cfg = loadBackupCfg();
+      const device = deviceName || cfg.deviceName || 'aparelho';
       return {
         app: APP_BACKUP_NAME,
         version: 3,
         exportedAt: new Date().toISOString(),
+        deviceName: device,
+        summary: contagemResumoDB(DB),
         data: DB
       };
     }
@@ -1004,7 +1022,9 @@
         notificacoes: data.notificacoes || [],
         adminPin: data.adminPin || null
       };
-      save();
+      // evita reenviar logo após restaurar
+      _syncSkipNext = true;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DB));
     }
 
     function exportarBackup() {
@@ -1019,7 +1039,6 @@
       toast('Baixado: ' + nome);
     }
 
-    /** Exporta com nome AutoCare e abre o Google Drive para você enviar o arquivo */
     function exportarParaGoogleDrive() {
       exportarBackup();
       setTimeout(() => {
@@ -1048,73 +1067,212 @@
       reader.readAsText(file);
     }
 
-    function utf8ToBase64(str) {
-      return btoa(unescape(encodeURIComponent(str)));
+    let _syncTimer = null;
+    let _syncInFlight = false;
+    let _syncSkipNext = false;
+    let _gistListaCache = [];
+
+    function gistCfgOk(cfg) {
+      cfg = cfg || loadBackupCfg();
+      return !!(cfg.githubToken && cfg.gistId);
     }
 
-    function base64ToUtf8(b64) {
-      return decodeURIComponent(escape(atob(b64)));
-    }
-
-    async function githubRequest(path, opts = {}) {
+    async function gistFetch(method, body) {
       const cfg = { ...loadBackupCfg(), ...getBackupCfgFromForm() };
       if (!cfg.githubToken) throw new Error('Informe o token do GitHub');
-      if (!cfg.githubOwner || !cfg.githubRepo) throw new Error('Informe dono e repositório');
-      const url = `https://api.github.com/repos/${cfg.githubOwner}/${cfg.githubRepo}/contents/${path.replace(/^\//, '')}`;
+      if (!cfg.gistId) throw new Error('Informe o Gist ID');
+      const url = 'https://api.github.com/gists/' + encodeURIComponent(cfg.gistId);
       const res = await fetch(url, {
-        ...opts,
+        method,
         headers: {
           'Accept': 'application/vnd.github+json',
           'Authorization': 'Bearer ' + cfg.githubToken,
           'X-GitHub-Api-Version': '2022-11-28',
-          ...(opts.headers || {})
-        }
+          ...(body ? { 'Content-Type': 'application/json' } : {})
+        },
+        body: body ? JSON.stringify(body) : undefined
       });
       return res;
     }
 
-        async function enviarBackupGithub(opts = {}) {
+    async function testarConexaoGist() {
+      try {
+        salvarConfigBackup();
+        const res = await gistFetch('GET');
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || ('HTTP ' + res.status));
+        }
+        const gist = await res.json();
+        const n = Object.keys(gist.files || {}).length;
+        toast('Conexão OK · Gist com ' + n + ' arquivo(s)');
+        await listarBackupsGist();
+      } catch (e) {
+        console.error(e);
+        toast('Falha: ' + (e.message || 'conexão'));
+      }
+    }
+
+    function parseGistFileContent(file) {
+      if (!file) return null;
+      let raw = file.content;
+      if (raw == null && file.truncated) {
+        // arquivo grande — precisaria fetch da raw_url; tenta raw_url
+        return { needsRaw: file.raw_url };
+      }
+      try {
+        return JSON.parse(raw);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async function fetchRawJson(url) {
+      const cfg = loadBackupCfg();
+      const res = await fetch(url, {
+        headers: cfg.githubToken ? { Authorization: 'Bearer ' + cfg.githubToken } : {}
+      });
+      if (!res.ok) throw new Error('Falha ao ler arquivo do Gist');
+      return res.json();
+    }
+
+    function fmtDataHoraIso(iso) {
+      if (!iso) return '—';
+      try {
+        const d = new Date(iso);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mi = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        return `${dd}/${mm}/${yyyy}, ${hh}:${mi}:${ss}`;
+      } catch (_) {
+        return iso;
+      }
+    }
+
+    async function listarBackupsGist() {
+      const box = document.getElementById('gist-lista-backups');
+      if (box) box.innerHTML = '<p style="font-size:13px;color:var(--muted)">Carregando backups do Gist…</p>';
+      try {
+        const res = await gistFetch('GET');
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || ('HTTP ' + res.status));
+        }
+        const gist = await res.json();
+        const files = gist.files || {};
+        const cfg = loadBackupCfg();
+        const meuArquivo = nomeArquivoGistDispositivo(cfg.deviceName);
+        const itens = [];
+
+        for (const [fname, meta] of Object.entries(files)) {
+          if (!/\.json$/i.test(fname)) continue;
+          if (!/^AutoCare/i.test(fname) && !/autocare/i.test(fname)) {
+            // ainda lista se parecer backup
+            if (!/backup|principal/i.test(fname)) continue;
+          }
+          let parsed = parseGistFileContent(meta);
+          if (parsed && parsed.needsRaw) {
+            try { parsed = await fetchRawJson(parsed.needsRaw); } catch (_) { parsed = null; }
+          }
+          const device = (parsed && parsed.deviceName) || fname.replace(/^AutoCare-/i, '').replace(/\.json$/i, '');
+          const exportedAt = (parsed && parsed.exportedAt) || meta.filename;
+          const summary = (parsed && (parsed.summary != null ? parsed.summary : contagemResumoDB(parsed.data || {}))) || 0;
+          const isMine = fname === meuArquivo;
+          const isPrincipal = fname === nomeArquivoGistPrincipal() || /principal/i.test(fname);
+          itens.push({
+            filename: fname,
+            device,
+            exportedAt: typeof exportedAt === 'string' && exportedAt.includes('T') ? exportedAt : null,
+            summary,
+            isMine,
+            isPrincipal,
+            parsed
+          });
+        }
+
+        itens.sort((a, b) => String(b.exportedAt || '').localeCompare(String(a.exportedAt || '')));
+        _gistListaCache = itens;
+
+        if (!box) return itens;
+
+        const localSummary = contagemResumoDB(DB);
+        const localDevice = cfg.deviceName || 'aparelho';
+        let html = `
+          <div style="padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:8px">
+            <strong style="font-size:13px">Agora neste aparelho: ${localDevice}</strong>
+            <div style="font-size:12px;color:var(--muted)">${localSummary} reg. · ${fmtDataHoraIso(new Date().toISOString())}</div>
+          </div>`;
+
+        if (!itens.length) {
+          html += `<p style="font-size:13px;color:var(--muted)">Nenhum backup AutoCare neste Gist ainda. Use “Enviar este aparelho”.</p>`;
+        } else {
+          itens.forEach((it, idx) => {
+            const tags = [];
+            if (it.isMine) tags.push('este');
+            if (it.isPrincipal) tags.push('arquivo principal');
+            const tagStr = tags.length ? ` <span style="color:var(--muted)">(${tags.join(' · ')})</span>` : '';
+            html += `
+              <div class="list-item" style="align-items:center">
+                <div>
+                  <strong style="font-size:13px">${it.device}${tagStr}</strong>
+                  <div style="font-size:12px;color:var(--muted)">${it.summary} reg. · ${it.exportedAt ? fmtDataHoraIso(it.exportedAt) : it.filename}</div>
+                </div>
+                <button class="btn btn-sm btn-outline" onclick="trazerBackupGist(${idx})">Trazer este</button>
+              </div>`;
+          });
+        }
+        html += `
+          <div style="margin-top:12px">
+            <button class="btn btn-primary btn-sm" onclick="enviarBackupGithub()">Enviar este aparelho → GitHub</button>
+          </div>`;
+        box.innerHTML = html;
+        return itens;
+      } catch (e) {
+        console.error(e);
+        if (box) box.innerHTML = `<p style="font-size:13px;color:var(--danger)">Erro: ${e.message || 'falha'}</p>`;
+        throw e;
+      }
+    }
+
+    async function enviarBackupGithub(opts = {}) {
       const silent = !!opts.silent;
       if (_syncInFlight) return;
       _syncInFlight = true;
       try {
         if (!silent && document.getElementById('cfg-gh-token')) salvarConfigBackup();
         const cfg = loadBackupCfg();
-        if (!githubCfgOk(cfg)) throw new Error('Configure token, dono, repo e caminho');
-        const path = cfg.githubPath || 'AutoCare-backup.json';
-        const branch = cfg.githubBranch || 'main';
-        const payload = montarPayloadBackup();
-        const content = utf8ToBase64(JSON.stringify(payload, null, 2));
+        if (!gistCfgOk(cfg)) throw new Error('Configure token e Gist ID');
+        const device = cfg.deviceName || 'aparelho';
+        const fileDevice = nomeArquivoGistDispositivo(device);
+        const filePrincipal = nomeArquivoGistPrincipal();
+        const payload = montarPayloadBackup(device);
+        const content = JSON.stringify(payload, null, 2);
 
-        let sha = undefined;
-        const getRes = await githubRequest(path + '?ref=' + encodeURIComponent(branch), { method: 'GET' });
-        if (getRes.ok) {
-          const existing = await getRes.json();
-          sha = existing.sha;
-        } else if (getRes.status !== 404) {
-          const err = await getRes.json().catch(() => ({}));
-          throw new Error(err.message || ('GitHub GET ' + getRes.status));
-        }
+        const body = {
+          description: 'AutoCare backups (Gist secreto)',
+          files: {
+            [fileDevice]: { content },
+            [filePrincipal]: { content }
+          }
+        };
 
-        const putRes = await githubRequest(path, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: `AutoCare backup ${new Date().toISOString()}`,
-            content,
-            branch,
-            ...(sha ? { sha } : {})
-          })
-        });
-        if (!putRes.ok) {
-          const err = await putRes.json().catch(() => ({}));
-          throw new Error(err.message || ('GitHub PUT ' + putRes.status));
+        const res = await gistFetch('PATCH', body);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || ('HTTP ' + res.status));
         }
-        if (!silent) toast('Backup enviado ao GitHub');
-        else console.log('AutoCare: sync enviado');
+        if (!silent) {
+          toast('Backup enviado ao Gist (' + device + ')');
+          await listarBackupsGist().catch(() => {});
+        } else {
+          console.log('AutoCare: gist sync enviado', device);
+        }
       } catch (e) {
         console.error(e);
-        if (!silent) toast('GitHub: ' + (e.message || 'falha no envio'));
+        if (!silent) toast('Gist: ' + (e.message || 'falha no envio'));
         throw e;
       } finally {
         _syncInFlight = false;
@@ -1122,53 +1280,80 @@
     }
 
     async function baixarBackupGithub(opts = {}) {
+      // restaura o arquivo deste aparelho, ou o principal
       const silent = !!opts.silent;
       if (_syncInFlight && !opts.force) return;
       _syncInFlight = true;
       try {
         if (!silent && document.getElementById('cfg-gh-token')) salvarConfigBackup();
         const cfg = loadBackupCfg();
-        if (!githubCfgOk(cfg)) throw new Error('Configure token, dono, repo e caminho');
-        const path = cfg.githubPath || 'AutoCare-backup.json';
-        const branch = cfg.githubBranch || 'main';
-        const res = await githubRequest(path + '?ref=' + encodeURIComponent(branch), { method: 'GET' });
+        if (!gistCfgOk(cfg)) throw new Error('Configure token e Gist ID');
+        const res = await gistFetch('GET');
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          throw new Error(err.message || ('Arquivo não encontrado (' + res.status + ')'));
+          throw new Error(err.message || ('HTTP ' + res.status));
         }
-        const file = await res.json();
-        const jsonText = base64ToUtf8(file.content.replace(/\n/g, ''));
-        const parsed = JSON.parse(jsonText);
+        const gist = await res.json();
+        const files = gist.files || {};
+        const prefer = [
+          nomeArquivoGistDispositivo(cfg.deviceName),
+          nomeArquivoGistPrincipal(),
+          ...Object.keys(files).filter(f => /\.json$/i.test(f))
+        ];
+        let chosen = null;
+        let fname = null;
+        for (const f of prefer) {
+          if (files[f]) { fname = f; break; }
+        }
+        if (!fname) throw new Error('Nenhum backup AutoCare no Gist');
+        let parsed = parseGistFileContent(files[fname]);
+        if (parsed && parsed.needsRaw) parsed = await fetchRawJson(parsed.needsRaw);
+        if (!parsed) throw new Error('Arquivo inválido: ' + fname);
         const data = parsed.data || parsed;
-        _syncSkipNext = true; // não reenviar logo após restaurar
         aplicarDadosBackup(data);
-        if (!silent) toast('Backup baixado do GitHub e restaurado');
-        else console.log('AutoCare: sync baixado');
+        if (!silent) toast('Restaurado de: ' + (parsed.deviceName || fname));
+        else console.log('AutoCare: gist baixado', fname);
         atualizarSelectOficinasLogin();
         if (SESSION.role === 'admin') renderAdminConfig();
         else if (SESSION.role === 'dono' || SESSION.role === 'mecanica') renderBackupUsuario();
       } catch (e) {
         console.error(e);
-        if (!silent) toast('GitHub: ' + (e.message || 'falha no download'));
+        if (!silent) toast('Gist: ' + (e.message || 'falha no download'));
         throw e;
       } finally {
         _syncInFlight = false;
       }
     }
 
-
-    let _syncTimer = null;
-    let _syncInFlight = false;
-    let _syncSkipNext = false; // evita loop após pull
-
-    function githubCfgOk(cfg) {
-      cfg = cfg || loadBackupCfg();
-      return !!(cfg.githubToken && cfg.githubOwner && cfg.githubRepo && cfg.githubPath);
+    async function trazerBackupGist(idx) {
+      const it = _gistListaCache[idx];
+      if (!it) { toast('Item não encontrado — atualize a lista'); return; }
+      if (!confirm('Restaurar o backup de “' + it.device + '” neste aparelho?\nOs dados locais serão substituídos.')) return;
+      try {
+        let parsed = it.parsed;
+        if (!parsed || !parsed.data) {
+          const res = await gistFetch('GET');
+          const gist = await res.json();
+          const meta = (gist.files || {})[it.filename];
+          parsed = parseGistFileContent(meta);
+          if (parsed && parsed.needsRaw) parsed = await fetchRawJson(parsed.needsRaw);
+        }
+        if (!parsed) throw new Error('Não foi possível ler o arquivo');
+        aplicarDadosBackup(parsed.data || parsed);
+        toast('Trazido: ' + it.device);
+        atualizarSelectOficinasLogin();
+        if (SESSION.role === 'admin') renderAdminConfig();
+        else if (SESSION.role === 'dono' || SESSION.role === 'mecanica') renderBackupUsuario();
+        else await listarBackupsGist();
+      } catch (e) {
+        console.error(e);
+        toast('Erro: ' + (e.message || 'falha'));
+      }
     }
 
     function agendarSyncGithub() {
       const cfg = loadBackupCfg();
-      if (!cfg.autoSync || !githubCfgOk(cfg)) return;
+      if (!cfg.autoSync || !gistCfgOk(cfg)) return;
       if (_syncSkipNext) { _syncSkipNext = false; return; }
       clearTimeout(_syncTimer);
       _syncTimer = setTimeout(() => { enviarBackupGithub({ silent: true }); }, 2500);
@@ -1176,46 +1361,39 @@
 
     async function sincronizarAoEntrar() {
       const cfg = loadBackupCfg();
-      if (!cfg.autoSync || !githubCfgOk(cfg)) return;
+      if (!cfg.autoSync || !gistCfgOk(cfg)) return;
       try {
-        toast('Sincronizando com a nuvem…');
+        toast('Sincronizando com o Gist…');
         await baixarBackupGithub({ silent: true, force: true });
       } catch (e) {
-        // se não existe arquivo ainda, envia o local
         console.warn(e);
-        try {
-          await enviarBackupGithub({ silent: true });
-        } catch (e2) {
-          console.warn(e2);
-        }
+        try { await enviarBackupGithub({ silent: true }); } catch (e2) { console.warn(e2); }
       }
     }
 
     async function sincronizarAgora() {
       salvarConfigBackup();
-      const cfg = loadBackupCfg();
-      if (!githubCfgOk(cfg)) {
-        toast('Configure token, dono, repo e caminho do GitHub');
+      if (!gistCfgOk()) {
+        toast('Configure token e Gist ID');
         return;
       }
-      toast('Sincronizando…');
+      toast('Comparando com o Gist…');
       try {
-        await baixarBackupGithub({ silent: true, force: true });
-        toast('Dados atualizados da nuvem');
+        await listarBackupsGist();
+        toast('Lista atualizada — use “Trazer este” ou envie este aparelho');
       } catch (e) {
-        console.warn('pull falhou, tentando enviar', e);
-        await enviarBackupGithub({ silent: false });
+        toast('Falha: ' + (e.message || 'sync'));
       }
     }
 
-function htmlCamposBackup() {
+    function htmlCamposBackup() {
       const c = loadBackupCfg();
+      const esc = (s) => String(s || '').replace(/"/g, '&quot;');
       return `
         <div class="card">
           <h3 style="font-size:15px;font-weight:600;margin-bottom:8px">📁 Google Drive</h3>
           <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
-            O arquivo é baixado como <strong>${APP_BACKUP_NAME}-backup-AAAA-MM-DD.json</strong>.
-            Em seguida o Drive abre para você enviar esse arquivo (ou arrastar para a pasta).
+            Arquivo: <strong>${APP_BACKUP_NAME}-backup-AAAA-MM-DD.json</strong>. Baixe e envie ao Drive, ou importe de volta.
           </p>
           <div style="display:flex;flex-wrap:wrap;gap:8px">
             <button class="btn btn-primary btn-sm" onclick="exportarParaGoogleDrive()">⬇️ Baixar e abrir Drive</button>
@@ -1225,47 +1403,48 @@ function htmlCamposBackup() {
         </div>
 
         <div class="card">
-          <h3 style="font-size:15px;font-weight:600;margin-bottom:8px">🔗 GitHub — configuração</h3>
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:8px">☁️ Nuvem GitHub (Gist)</h3>
           <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
-            Crie um Personal Access Token (classic) com permissão <code>repo</code> (ou Contents em fine-grained).
-            O token fica só neste navegador (localStorage), não no código do app.
+            Backup em um <strong>Gist secreto</strong>. Use o <strong>mesmo token e Gist ID</strong> nos aparelhos;
+            cada um com um nome (ex.: iPhone, Notebook). Token: GitHub → Settings → Developer settings →
+            Personal access tokens (permissão <code>gist</code>).
           </p>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Token (começa com ghp_ ou github_pat_)</label>
+              <input type="password" id="cfg-gh-token" placeholder="ghp_…" autocomplete="off" value="${esc(c.githubToken)}" />
+            </div>
+            <div class="form-group">
+              <label>Gist ID (código do Gist — não é o token)</label>
+              <input type="text" id="cfg-gist-id" placeholder="ex: fe8874a4b9ac…" value="${esc(c.gistId)}" />
+            </div>
+          </div>
           <div class="form-group">
-            <label>Token (PAT)</label>
-            <input type="password" id="cfg-gh-token" placeholder="ghp_…" autocomplete="off" value="${(c.githubToken||'').replace(/"/g,'&quot;')}" />
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Dono (usuário ou org)</label>
-              <input type="text" id="cfg-gh-owner" placeholder="fernandocopatti" value="${(c.githubOwner||'').replace(/"/g,'&quot;')}" />
-            </div>
-            <div class="form-group">
-              <label>Repositório</label>
-              <input type="text" id="cfg-gh-repo" placeholder="AutoCare" value="${(c.githubRepo||'').replace(/"/g,'&quot;')}" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Branch</label>
-              <input type="text" id="cfg-gh-branch" placeholder="main" value="${(c.githubBranch||'main').replace(/"/g,'&quot;')}" />
-            </div>
-            <div class="form-group">
-              <label>Caminho do arquivo</label>
-              <input type="text" id="cfg-gh-path" placeholder="AutoCare-backup.json" value="${(c.githubPath||'AutoCare-backup.json').replace(/"/g,'&quot;')}" />
-            </div>
+            <label>Nome deste aparelho</label>
+            <input type="text" id="cfg-device-name" placeholder="ex: note_dell, iPhone" value="${esc(c.deviceName || '')}" />
+            <p style="font-size:11px;color:var(--muted);margin-top:6px">
+              Nos dois aparelhos: mesmo token + mesmo Gist ID. O nome aparece no backup para saber de qual dispositivo veio.
+            </p>
           </div>
           <label style="display:flex;align-items:flex-start;gap:10px;font-size:13px;margin:12px 0;cursor:pointer">
             <input type="checkbox" id="cfg-auto-sync" ${c.autoSync ? 'checked' : ''} style="width:18px;height:18px;margin-top:2px" />
             <span>
-              <strong>Sincronizar automaticamente entre dispositivos</strong><br>
-              <span style="color:var(--muted)">Ao entrar no app, baixa a nuvem. Ao salvar dados, envia para o GitHub (após alguns segundos).</span>
+              <strong>Sincronizar ao entrar / ao salvar</strong><br>
+              <span style="color:var(--muted)">Ao login baixa o backup deste aparelho (ou o principal). Ao salvar dados, envia para o Gist.</span>
             </span>
           </label>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
-            <button class="btn btn-outline btn-sm" onclick="salvarConfigBackup()">Salvar configuração</button>
-            <button class="btn btn-primary btn-sm" onclick="sincronizarAgora()">🔄 Sincronizar agora</button>
-            <button class="btn btn-outline btn-sm" onclick="enviarBackupGithub()">☁️ Só enviar</button>
-            <button class="btn btn-outline btn-sm" onclick="baixarBackupGithub()">⬇️ Só baixar</button>
+            <button class="btn btn-outline btn-sm" onclick="salvarConfigBackup()">Salvar token / ID / aparelho</button>
+            <button class="btn btn-primary btn-sm" onclick="sincronizarAgora()">Sincronizar (comparar)</button>
+            <button class="btn btn-outline btn-sm" onclick="testarConexaoGist()">Testar conexão</button>
+            <button class="btn btn-outline btn-sm" onclick="enviarBackupGithub()">Enviar backup ao GitHub</button>
+            <button class="btn btn-outline btn-sm" onclick="baixarBackupGithub()">Baixar do GitHub e restaurar</button>
+          </div>
+          <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+            <h4 style="font-size:13px;font-weight:600;margin-bottom:8px">Backups no GitHub — cada aparelho tem um arquivo. Escolha qual restaurar neste dispositivo.</h4>
+            <div id="gist-lista-backups">
+              <p style="font-size:13px;color:var(--muted)">Clique em “Sincronizar (comparar)” ou “Testar conexão” para listar.</p>
+            </div>
           </div>
         </div>
       `;
@@ -1273,16 +1452,15 @@ function htmlCamposBackup() {
 
     function mostrarAjudaGithub() {
       alert([
-        'Backup GitHub no AutoCare:',
+        'AutoCare — Gist (igual ao Caixa Inteligente):',
         '',
-        '1) Preencha token, dono, repositório e caminho (ex: AutoCare-backup.json).',
-        '2) Salvar configuração.',
-        '3) Enviar backup — grava/atualiza o arquivo no repo.',
-        '4) Baixar e restaurar — lê o arquivo do repo e aplica no app.',
-        '',
-        'Token: GitHub → Settings → Developer settings → Personal access tokens.',
-        'Não compartilhe o token. Em site público, preferira backend.'
-      ].join('\\n'));
+        '1) Crie um Gist secreto no GitHub (pode ser um arquivo qualquer).',
+        '2) Copie o ID do Gist (código na URL).',
+        '3) Token com permissão gist.',
+        '4) Mesmo token + mesmo Gist ID em todos os aparelhos.',
+        '5) Nome diferente por aparelho (iPhone, note_dell…).',
+        '6) Enviar este aparelho / Trazer este para restaurar.'
+      ].join(String.fromCharCode(10)));
     }
 
     // ---------- Google Sign-In ----------
