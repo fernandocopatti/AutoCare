@@ -497,6 +497,37 @@
     </div>
   </div>
 
+  <!-- MODAL REGISTRAR PREVENTIVA FEITA -->
+  <div id="modal-preventiva" class="modal-bg" onclick="if(event.target===this)fecharModal('modal-preventiva')">
+    <div class="modal">
+      <h2>Registrar manutenção feita</h2>
+      <p style="font-size:13px;color:var(--text-secondary);margin:-8px 0 16px">
+        Atualiza o histórico e recalcula a próxima km do plano.
+      </p>
+      <div class="form-group">
+        <label>Veículo *</label>
+        <select id="pf-veiculo" onchange="atualizarOpcoesPreventiva()"></select>
+      </div>
+      <div class="form-group">
+        <label>Item do plano / serviço *</label>
+        <select id="pf-item"></select>
+      </div>
+      <div class="form-group">
+        <label>Ou outro nome (opcional)</label>
+        <input type="text" id="pf-outro" placeholder="Ex: Alinhamento e balanceamento" />
+      </div>
+      <div class="form-group">
+        <label>Km em que foi feita *</label>
+        <input type="number" id="pf-km" min="0" placeholder="Ex: 72000" />
+        <p style="font-size:12px;color:var(--muted);margin-top:6px">Sugestão: km atual do veículo. Pode informar a km da oficina.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline btn-block" onclick="fecharModal('modal-preventiva')">Cancelar</button>
+        <button class="btn btn-primary btn-block" onclick="confirmarPreventivaFeita()">Salvar registro</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL OFICINA (admin ou auto-cadastro) -->
   <div id="modal-oficina" class="modal-bg" onclick="if(event.target===this)fecharModal('modal-oficina')">
     <div class="modal">
@@ -2727,40 +2758,70 @@
     }
 
     
+    function abrirModalPreventivaFeita(veiculoId, nomeItem) {
+      const meus = meusVeiculos();
+      if (meus.length === 0) { toast('Cadastre um veículo primeiro'); return; }
+      const selV = document.getElementById('pf-veiculo');
+      selV.innerHTML = meus.map(v =>
+        `<option value="${v.id}">${v.marca} ${v.modelo}${v.versao ? ' ' + v.versao : ''} · ${fmtKm(v.km)} km</option>`
+      ).join('');
+      if (veiculoId && meus.some(v => v.id === veiculoId)) selV.value = veiculoId;
+      atualizarOpcoesPreventiva(nomeItem || '');
+      const v = DB.veiculos.find(x => x.id === selV.value) || meus[0];
+      document.getElementById('pf-km').value = v ? v.km : '';
+      document.getElementById('pf-outro').value = '';
+      document.getElementById('modal-preventiva').classList.add('show');
+    }
+
+    function atualizarOpcoesPreventiva(preselect) {
+      const vid = document.getElementById('pf-veiculo').value;
+      const v = DB.veiculos.find(x => x.id === vid);
+      const sel = document.getElementById('pf-item');
+      if (!v) { sel.innerHTML = '<option value="">—</option>'; return; }
+      const plano = getPreventivas(v);
+      sel.innerHTML = plano.map(p =>
+        `<option value="${String(p.nome).replace(/"/g, '&quot;')}">${p.nome} (a cada ${fmtKm(p.intervaloKm)} km)</option>`
+      ).join('') + '<option value="__outro__">Outro (preencher abaixo)</option>';
+      if (preselect) {
+        const opt = [...sel.options].find(o => o.value === preselect);
+        if (opt) sel.value = preselect;
+        else {
+          sel.value = '__outro__';
+          document.getElementById('pf-outro').value = preselect;
+        }
+      }
+      document.getElementById('pf-km').value = v.km;
+    }
+
     function marcarPreventivaFeita(veiculoId, nome) {
-      const v = DB.veiculos.find(x => x.id === veiculoId);
-      if (!v) return;
-      const kmStr = prompt(
-        'Registrar "' + nome + '" como feita.\n\nKm em que foi feita (atual: ' + v.km + '):',
-        String(v.km)
-      );
-      if (kmStr == null) return;
-      const km = parseInt(String(kmStr).replace(/\D/g, ''), 10);
-      if (isNaN(km) || km < 0) { toast('Km inválido'); return; }
+      abrirModalPreventivaFeita(veiculoId, nome);
+    }
+
+    function registrarManutencaoManual() {
+      abrirModalPreventivaFeita(null, null);
+    }
+
+    function confirmarPreventivaFeita() {
+      const vid = document.getElementById('pf-veiculo').value;
+      const v = DB.veiculos.find(x => x.id === vid);
+      if (!v) { toast('Selecione o veículo'); return; }
+      let nome = document.getElementById('pf-item').value;
+      if (nome === '__outro__') {
+        nome = (document.getElementById('pf-outro').value || '').trim();
+        if (!nome) { toast('Informe o nome do serviço'); return; }
+      }
+      const km = parseInt(document.getElementById('pf-km').value, 10);
+      if (isNaN(km) || km < 0) { toast('Informe a km válida'); return; }
       if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
       DB.ultimaManutencao[v.id][nome] = km;
       if (km > v.km) v.km = km;
       save();
+      fecharModal('modal-preventiva');
       toast('Registrado: ' + nome + ' aos ' + fmtKm(km) + ' km');
       renderDonoManutencao();
     }
 
-    function registrarManutencaoManual() {
-      const meus = meusVeiculos();
-      if (meus.length === 0) { toast('Cadastre um veículo primeiro'); return; }
-      const nomes = meus.map((v, i) => `${i + 1}. ${v.marca} ${v.modelo}`).join('\n');
-      const idx = prompt(`Qual veículo?\n${nomes}\n\nDigite o número:`);
-      const i = parseInt(idx, 10) - 1;
-      if (isNaN(i) || i < 0 || i >= meus.length) return;
-      const v = meus[i];
-      const nome = prompt('Nome da manutenção (ex: Troca de óleo e filtro):');
-      if (!nome || !nome.trim()) return;
-      if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
-      DB.ultimaManutencao[v.id][nome.trim()] = v.km;
-      save();
-      toast('Manutenção registrada');
-      renderDonoManutencao();
-    }
+
 
     // ===================== MARKETPLACE OFICINAS + AGENDAR =====================
     let bookingOficinaId = null;
