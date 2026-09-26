@@ -3150,15 +3150,15 @@
             <select id="ag-veiculo">${veiculosOpt}</select>
           </div>
           <div class="form-group">
-            <label>Tipo de serviço *</label>
-            <select id="ag-servico">
-              <option>Revisão preventiva</option>
-              <option>Troca de óleo</option>
-              <option>Freios</option>
-              <option>Suspensão</option>
-              <option>Diagnóstico</option>
-              <option>Outro / Corretiva</option>
-            </select>
+            <label>Serviços desejados * <span style="font-weight:400;color:var(--muted)">(pode marcar mais de um)</span></label>
+            <div id="ag-servicos-lista" style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:#fff;max-height:220px;overflow:auto">
+              <!-- preenchido em JS -->
+            </div>
+            <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="agServicosToggleAll(true)">Marcar todos</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="agServicosToggleAll(false)">Limpar</button>
+            </div>
+            <p id="ag-servicos-resumo" style="font-size:12px;color:var(--muted);margin-top:6px">Nenhum selecionado</p>
           </div>
           <div class="form-group">
             <label>Data *</label>
@@ -3183,8 +3183,58 @@
       document.getElementById('ag-data').value = hoje;
       const btn = document.getElementById('ag-btn-submit');
       if (btn) btn.style.background = pal.primary;
+      preencherServicosAgendamento(of.id);
       atualizarHorariosLivres();
       renderMeusAgendamentos();
+    }
+
+    function opcoesServicosAgendamento(oficinaId) {
+      const cat = (typeof catalogoDaOficina === 'function' ? catalogoDaOficina(oficinaId) : null) ||
+        (DB.catalogoServicos || []).filter(c => c.oficinaId === oficinaId);
+      if (cat.length) {
+        return cat.map(c => ({
+          nome: c.nome,
+          label: c.valor != null ? (c.nome + ' · ' + fmtMoney(c.valor)) : c.nome
+        }));
+      }
+      // fallback + itens do plano do veículo selecionado (se houver)
+      const padrao = [
+        'Revisão preventiva', 'Troca de óleo e filtro', 'Filtro de ar', 'Filtro de combustível',
+        'Freios', 'Suspensão', 'Diagnóstico', 'Alinhamento e balanceamento', 'Outro / Corretiva'
+      ];
+      return padrao.map(n => ({ nome: n, label: n }));
+    }
+
+    function preencherServicosAgendamento(oficinaId) {
+      const box = document.getElementById('ag-servicos-lista');
+      if (!box) return;
+      const opts = opcoesServicosAgendamento(oficinaId);
+      box.innerHTML = opts.map((o, i) => `
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;padding:4px 0">
+          <input type="checkbox" class="ag-servico-chk" value="${String(o.nome).replace(/"/g, '&quot;')}"
+            onchange="atualizarResumoServicosAg()" style="width:18px;height:18px;flex-shrink:0" />
+          <span>${o.label}</span>
+        </label>
+      `).join('');
+      atualizarResumoServicosAg();
+    }
+
+    function agServicosSelecionados() {
+      return [...document.querySelectorAll('.ag-servico-chk:checked')].map(c => c.value);
+    }
+
+    function agServicosToggleAll(on) {
+      document.querySelectorAll('.ag-servico-chk').forEach(c => { c.checked = !!on; });
+      atualizarResumoServicosAg();
+    }
+
+    function atualizarResumoServicosAg() {
+      const el = document.getElementById('ag-servicos-resumo');
+      if (!el) return;
+      const list = agServicosSelecionados();
+      if (!list.length) el.textContent = 'Nenhum selecionado';
+      else if (list.length === 1) el.textContent = '1 serviço: ' + list[0];
+      else el.textContent = list.length + ' serviços: ' + list.join(' · ');
     }
 
     function atualizarHorariosLivres() {
@@ -3220,12 +3270,14 @@
 
     function solicitarAgendamento() {
       const veiculoId = document.getElementById('ag-veiculo')?.value;
-      const servico = document.getElementById('ag-servico')?.value;
+      const servicos = typeof agServicosSelecionados === 'function' ? agServicosSelecionados() : [];
+      const servico = servicos.length ? servicos.join(' · ') : '';
       const oficinaId = document.getElementById('ag-oficina')?.value;
       const data = document.getElementById('ag-data')?.value;
       const hora = document.getElementById('ag-hora')?.value;
       const notas = (document.getElementById('ag-notas')?.value || '').trim();
       if (!veiculoId || !data || !oficinaId) { toast('Preencha os campos obrigatórios'); return; }
+      if (!servicos.length) { toast('Selecione pelo menos um serviço'); return; }
       if (!hora) { toast('Selecione um horário disponível'); return; }
 
       const livres = horariosLivres(oficinaId, data);
@@ -3236,11 +3288,13 @@
       }
 
       DB.agendamentos.push({
-        id: uid(), veiculoId, oficinaId, data, hora, servico,
+        id: uid(), veiculoId, oficinaId, data, hora,
+        servico,
+        servicos,
         status: 'pendente', cliente: SESSION.nome || 'Você', donoId: currentDonoId(), notas
       });
       save();
-      toast('Agendamento solicitado! Aguarde confirmação da oficina.');
+      toast('Agendamento solicitado (' + servicos.length + ' serviço' + (servicos.length > 1 ? 's' : '') + ')!');
       bookingOficinaId = null;
       renderFormAgendamento(oficinaId);
     }
