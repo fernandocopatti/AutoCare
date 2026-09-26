@@ -500,30 +500,40 @@
   <!-- MODAL REGISTRAR PREVENTIVA FEITA -->
   <div id="modal-preventiva" class="modal-bg" onclick="if(event.target===this)fecharModal('modal-preventiva')">
     <div class="modal">
-      <h2>Registrar manutenção feita</h2>
-      <p style="font-size:13px;color:var(--text-secondary);margin:-8px 0 16px">
-        Atualiza o histórico e recalcula a próxima km do plano.
+      <h2 id="pf-titulo">Lançar manutenção</h2>
+      <p id="pf-subtitulo" style="font-size:13px;color:var(--text-secondary);margin:-8px 0 16px">
+        Preencha os dados do serviço realizado. O plano será atualizado.
       </p>
       <div class="form-group">
         <label>Veículo *</label>
         <select id="pf-veiculo" onchange="atualizarOpcoesPreventiva()"></select>
       </div>
       <div class="form-group">
-        <label>Item do plano / serviço *</label>
-        <select id="pf-item"></select>
+        <label>Serviço / item do plano *</label>
+        <select id="pf-item" onchange="onPfItemChange()"></select>
       </div>
-      <div class="form-group">
-        <label>Ou outro nome (opcional)</label>
+      <div class="form-group" id="pf-outro-wrap" style="display:none">
+        <label>Nome do serviço *</label>
         <input type="text" id="pf-outro" placeholder="Ex: Alinhamento e balanceamento" />
       </div>
-      <div class="form-group">
-        <label>Km em que foi feita *</label>
-        <input type="number" id="pf-km" min="0" placeholder="Ex: 72000" />
-        <p style="font-size:12px;color:var(--muted);margin-top:6px">Sugestão: km atual do veículo. Pode informar a km da oficina.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Km em que foi feita *</label>
+          <input type="number" id="pf-km" min="0" placeholder="Ex: 72000" />
+        </div>
+        <div class="form-group">
+          <label>Data *</label>
+          <input type="date" id="pf-data" />
+        </div>
       </div>
+      <div class="form-group">
+        <label>Observações</label>
+        <textarea id="pf-obs" rows="2" placeholder="Oficina, nota fiscal, detalhes…"></textarea>
+      </div>
+      <p id="pf-dica" style="font-size:12px;color:var(--muted);margin:0 0 12px"></p>
       <div class="modal-actions">
         <button class="btn btn-outline btn-block" onclick="fecharModal('modal-preventiva')">Cancelar</button>
-        <button class="btn btn-primary btn-block" onclick="confirmarPreventivaFeita()">Salvar registro</button>
+        <button class="btn btn-primary btn-block" onclick="confirmarPreventivaFeita()">Salvar lançamento</button>
       </div>
     </div>
   </div>
@@ -2721,14 +2731,15 @@
             detalhe += ` · Próxima: ${fmtKm(proximaFazer)} km`;
           }
 
+          const nomeEsc = String(p.nome).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
           html += `
-            <div class="list-item">
-              <div>
+            <div class="list-item" style="cursor:pointer" title="Toque para lançar este serviço"
+              onclick="abrirModalPreventivaFeita('${v.id}', '${nomeEsc}')">
+              <div style="flex:1;min-width:0">
                 <strong style="font-size:14px">${p.nome}</strong>
                 <div style="font-size:12px;color:var(--muted)">${detalhe}</div>
               </div>
-              <span class="status ${cls}" title="Marcar como feita no km atual" style="cursor:pointer"
-                onclick="marcarPreventivaFeita('${v.id}', ${JSON.stringify(p.nome)})">${texto}</span>
+              <span class="status ${cls}">${texto}</span>
             </div>`;
         });
         html += `</div>`;
@@ -2768,9 +2779,52 @@
       if (veiculoId && meus.some(v => v.id === veiculoId)) selV.value = veiculoId;
       atualizarOpcoesPreventiva(nomeItem || '');
       const v = DB.veiculos.find(x => x.id === selV.value) || meus[0];
+      const hoje = new Date().toISOString().slice(0, 10);
+      document.getElementById('pf-data').value = hoje;
+      document.getElementById('pf-obs').value = '';
       document.getElementById('pf-km').value = v ? v.km : '';
       document.getElementById('pf-outro').value = '';
+      document.getElementById('pf-outro-wrap').style.display = 'none';
+
+      const titulo = document.getElementById('pf-titulo');
+      const sub = document.getElementById('pf-subtitulo');
+      const dica = document.getElementById('pf-dica');
+      if (nomeItem) {
+        titulo.textContent = 'Lançar: ' + nomeItem;
+        sub.textContent = 'Confirme a km e a data em que o serviço foi feito.';
+        // sugere km: se houver vencimento no plano, usa o maior entre vencimento e km atual? prefer km atual
+        if (v) {
+          const plano = getPreventivas(v);
+          const item = plano.find(p => p.nome === nomeItem);
+          const ultima = (DB.ultimaManutencao[v.id] || {})[nomeItem] || 0;
+          const intv = item ? item.intervaloKm : 0;
+          let msg = 'Km atual do veículo: ' + fmtKm(v.km) + '.';
+          if (ultima) msg += ' Última registrada: ' + fmtKm(ultima) + ' km.';
+          if (intv) {
+            const devida = ultima ? ultima + intv : Math.floor(v.km / intv) * intv;
+            if (devida && devida <= v.km) msg += ' Segundo o plano, venceu em ' + fmtKm(devida) + ' km.';
+          }
+          dica.textContent = msg;
+        } else {
+          dica.textContent = '';
+        }
+      } else {
+        titulo.textContent = 'Lançar manutenção';
+        sub.textContent = 'Escolha o veículo, o serviço, a km e a data.';
+        dica.textContent = v ? ('Km atual: ' + fmtKm(v.km)) : '';
+      }
       document.getElementById('modal-preventiva').classList.add('show');
+    }
+
+    function onPfItemChange() {
+      const sel = document.getElementById('pf-item');
+      const wrap = document.getElementById('pf-outro-wrap');
+      if (sel.value === '__outro__') {
+        wrap.style.display = 'block';
+      } else {
+        wrap.style.display = 'none';
+        document.getElementById('pf-outro').value = '';
+      }
     }
 
     function atualizarOpcoesPreventiva(preselect) {
@@ -2790,6 +2844,7 @@
           document.getElementById('pf-outro').value = preselect;
         }
       }
+      onPfItemChange();
       document.getElementById('pf-km').value = v.km;
     }
 
@@ -2812,14 +2867,36 @@
       }
       const km = parseInt(document.getElementById('pf-km').value, 10);
       if (isNaN(km) || km < 0) { toast('Informe a km válida'); return; }
+      const data = document.getElementById('pf-data').value || new Date().toISOString().slice(0, 10);
+      const obs = (document.getElementById('pf-obs').value || '').trim();
+
       if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
       DB.ultimaManutencao[v.id][nome] = km;
       if (km > v.km) v.km = km;
+
+      // também registra no histórico de serviços do dono
+      DB.servicos.unshift({
+        id: uid(),
+        veiculoId: v.id,
+        oficinaId: null,
+        data,
+        km,
+        itens: [nome],
+        fotos: [],
+        observacoes: obs,
+        cliente: SESSION.nome || '',
+        valorTotal: 0,
+        recebido: false,
+        formaPagamento: null,
+        origem: 'dono'
+      });
+
       save();
       fecharModal('modal-preventiva');
-      toast('Registrado: ' + nome + ' aos ' + fmtKm(km) + ' km');
+      toast('Lançamento salvo: ' + nome + ' · ' + fmtKm(km) + ' km');
       renderDonoManutencao();
     }
+
 
 
 
