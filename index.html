@@ -1626,7 +1626,7 @@
             <input type="checkbox" id="cfg-auto-sync" ${c.autoSync ? 'checked' : ''} style="width:18px;height:18px;margin-top:2px" />
             <span>
               <strong>Sincronizar ao entrar / ao salvar</strong><br>
-              <span style="color:var(--muted)">Ao login baixa o backup deste aparelho (ou o principal). Ao salvar dados, envia para o Gist.</span>
+              <span style="color:var(--muted)">Ao login baixa o backup. Ao salvar dados e ao clicar em Sair, envia para o Gist.</span>
             </span>
           </label>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
@@ -1842,7 +1842,20 @@
       setTimeout(() => { sincronizarAoEntrar().catch(() => {}); }, 300);
     }
 
-    function sair() {
+    async function sair() {
+      // backup no Gist ao sair (se estiver configurado) para não esquecer
+      const cfg = loadBackupCfg();
+      if (gistCfgOk(cfg)) {
+        try {
+          toast('Salvando backup no GitHub…');
+          await enviarBackupGithub({ silent: true });
+          toast('Backup no GitHub ok · até logo');
+        } catch (e) {
+          console.warn(e);
+          toast('Saída ok · backup no GitHub falhou (confira token/Gist)');
+        }
+      }
+
       document.getElementById('app-dono').classList.remove('active');
       document.getElementById('app-mecanica').classList.remove('active');
       document.getElementById('app-admin').classList.remove('active');
@@ -2718,7 +2731,7 @@
       const v = DB.veiculos.find(x => x.id === veiculoId);
       if (!v) return;
       const kmStr = prompt(
-        'Registrar “‘ + nome + '” como feita.\n\nKm em que foi feita (atual: ' + v.km + '):',
+        'Registrar "' + nome + '" como feita.\n\nKm em que foi feita (atual: ' + v.km + '):',
         String(v.km)
       );
       if (kmStr == null) return;
