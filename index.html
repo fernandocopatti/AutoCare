@@ -343,7 +343,7 @@
     <div class="topbar">
       <div class="topbar-brand"><div class="icon">🚗</div> AutoCare</div>
       <div class="topbar-right">
-        <span class="user-chip" id="dono-user-name"></span>
+        <span class="user-chip" id="dono-user-name" style="cursor:pointer" title="Editar meu cadastro" onclick="mostrarTela('dono','perfil')"></span>
         <span class="badge badge-owner">👤 Proprietário</span>
         <button class="btn btn-sm btn-outline" onclick="sair()">Sair</button>
       </div>
@@ -354,6 +354,7 @@
       <button data-tela="abastecimento" onclick="mostrarTela('dono','abastecimento')">⛽ Abastecer</button>
       <button data-tela="manutencao" onclick="mostrarTela('dono','manutencao')">🛠️ Manutenções</button>
       <button data-tela="agendar" onclick="mostrarTela('dono','agendar')">📅 Meus agendamentos</button>
+      <button data-tela="perfil" onclick="mostrarTela('dono','perfil')">👤 Meu cadastro</button>
       <button data-tela="backup" onclick="mostrarTela('dono','backup')">☁️ Backup</button>
     </nav>
     <main>
@@ -362,6 +363,7 @@
       <div id="dono-abastecimento" class="screen"></div>
       <div id="dono-manutencao" class="screen"></div>
       <div id="dono-agendar" class="screen"></div>
+      <div id="dono-perfil" class="screen"></div>
       <div id="dono-backup" class="screen"></div>
     </main>
   </div>
@@ -1058,6 +1060,7 @@
         catalogoServicos: [],
         ultimaManutencao: {},
         notificacoes: [],
+        proprietarios: {},
         adminPin: null
       };
     }
@@ -1096,6 +1099,7 @@
           { id: 's1', veiculoId: 'v1', oficinaId: 'o1', data: '2026-07-15', km: 85900, itens: ['Troca de óleo', 'Filtro de óleo'], fotos: [], observacoes: 'Óleo 5W40', cliente: 'Carlos Mendes' },
         ],
         notificacoes: [],
+        proprietarios: {},
         ultimaManutencao: {
           v1: { 'Troca de óleo e filtro': 85900 },
           v2: {},
@@ -1258,6 +1262,7 @@
         catalogoServicos: data.catalogoServicos || [],
         ultimaManutencao: data.ultimaManutencao || {},
         notificacoes: data.notificacoes || [],
+        proprietarios: data.proprietarios || {},
         adminPin: data.adminPin || null
       };
       // evita reenviar logo após restaurar
@@ -1741,6 +1746,141 @@
       if (SESSION.google && SESSION.google.email) return 'g:' + SESSION.google.email.toLowerCase();
       return 'n:' + (SESSION.nome || '').trim().toLowerCase();
     }
+
+    function garantirProprietarios() {
+      if (!DB.proprietarios || typeof DB.proprietarios !== 'object') DB.proprietarios = {};
+    }
+
+    function perfilDonoAtual() {
+      garantirProprietarios();
+      const id = currentDonoId();
+      if (!DB.proprietarios[id]) {
+        DB.proprietarios[id] = {
+          id,
+          nome: SESSION.nome || '',
+          telefone: '',
+          email: (SESSION.google && SESSION.google.email) || '',
+          cidade: '',
+          uf: '',
+          endereco: '',
+          cpf: '',
+          criadoEm: new Date().toISOString().slice(0, 10),
+          atualizadoEm: null
+        };
+      }
+      return DB.proprietarios[id];
+    }
+
+    function atualizarChipDono() {
+      const el = document.getElementById('dono-user-name');
+      if (el) el.textContent = SESSION.nome || 'Proprietário';
+    }
+
+    function renderDonoPerfil() {
+      const el = document.getElementById('dono-perfil');
+      if (!el) return;
+      const p = perfilDonoAtual();
+      const google = SESSION.google
+        ? `<div class="card" style="background:#f8fafc;margin-bottom:12px">
+            <div style="font-size:13px;color:var(--text-secondary)">
+              Conta Google: <strong>${SESSION.google.email || '—'}</strong>
+              ${SESSION.google.picture ? `<img src="${SESSION.google.picture}" alt="" style="width:28px;height:28px;border-radius:50%;vertical-align:middle;margin-left:8px">` : ''}
+            </div>
+          </div>`
+        : '';
+      el.innerHTML = `
+        <div class="page-header">
+          <div>
+            <h2>Meu cadastro</h2>
+            <p>Seus dados de contato como proprietário</p>
+          </div>
+        </div>
+        ${google}
+        <div class="card">
+          <div class="form-group">
+            <label>Nome completo *</label>
+            <input type="text" id="pf-nome" value="${(p.nome || '').replace(/"/g, '&quot;')}" placeholder="Como aparece nos agendamentos" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Telefone / WhatsApp *</label>
+              <input type="tel" id="pf-telefone" value="${(p.telefone || '').replace(/"/g, '&quot;')}" placeholder="(00) 90000-0000" />
+            </div>
+            <div class="form-group">
+              <label>E-mail</label>
+              <input type="email" id="pf-email" value="${(p.email || '').replace(/"/g, '&quot;')}" placeholder="seu@email.com" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>CPF (opcional)</label>
+            <input type="text" id="pf-cpf" value="${(p.cpf || '').replace(/"/g, '&quot;')}" placeholder="000.000.000-00" maxlength="14" />
+          </div>
+          <div class="form-group">
+            <label>Endereço</label>
+            <input type="text" id="pf-endereco" value="${(p.endereco || '').replace(/"/g, '&quot;')}" placeholder="Rua, número, bairro" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Cidade</label>
+              <input type="text" id="pf-cidade" value="${(p.cidade || '').replace(/"/g, '&quot;')}" placeholder="Sua cidade" />
+            </div>
+            <div class="form-group">
+              <label>UF</label>
+              <input type="text" id="pf-uf" value="${(p.uf || '').replace(/"/g, '&quot;')}" placeholder="RS" maxlength="2" style="text-transform:uppercase" />
+            </div>
+          </div>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 14px">
+            Esses dados são usados nos agendamentos e para a oficina entrar em contato.
+            ${p.atualizadoEm ? 'Última atualização: ' + p.atualizadoEm.replace('T', ' ').slice(0, 16) : 'Ainda não salvo nesta conta.'}
+          </p>
+          <button class="btn btn-primary btn-block" onclick="salvarPerfilDono()">Salvar meu cadastro</button>
+        </div>`;
+    }
+
+    function salvarPerfilDono() {
+      const nome = (document.getElementById('pf-nome')?.value || '').trim();
+      const telefone = (document.getElementById('pf-telefone')?.value || '').trim();
+      const email = (document.getElementById('pf-email')?.value || '').trim();
+      const cpf = (document.getElementById('pf-cpf')?.value || '').trim();
+      const endereco = (document.getElementById('pf-endereco')?.value || '').trim();
+      const cidade = (document.getElementById('pf-cidade')?.value || '').trim();
+      const uf = (document.getElementById('pf-uf')?.value || '').trim().toUpperCase();
+      if (!nome) { toast('Informe seu nome'); return; }
+      if (!telefone) { toast('Informe telefone ou WhatsApp'); return; }
+      const idAntigo = currentDonoId();
+      SESSION.nome = nome;
+      // se mudou o nome e não é login Google, a chave do perfil muda
+      const idNovo = currentDonoId();
+      garantirProprietarios();
+      let base = DB.proprietarios[idAntigo] || DB.proprietarios[idNovo] || {};
+      if (idAntigo !== idNovo && DB.proprietarios[idAntigo]) {
+        delete DB.proprietarios[idAntigo];
+      }
+      DB.proprietarios[idNovo] = {
+        ...base,
+        id: idNovo,
+        nome,
+        telefone,
+        email,
+        cpf,
+        endereco,
+        cidade,
+        uf,
+        atualizadoEm: new Date().toISOString()
+      };
+      // atualiza cliente em agendamentos pendentes deste dono
+      (DB.agendamentos || []).forEach(a => {
+        if (a.donoId === idAntigo || a.donoId === idNovo) {
+          a.donoId = idNovo;
+          a.cliente = nome;
+          if (telefone) a.telefoneCliente = telefone;
+        }
+      });
+      save();
+      atualizarChipDono();
+      toast('Cadastro atualizado');
+      renderDonoPerfil();
+    }
     function meusVeiculos() {
       const id = currentDonoId();
       // veículos sem donoId (dados antigos/demo) continuam visíveis pra não quebrar backups existentes
@@ -1866,8 +2006,18 @@
 
       if (selectedRole === 'dono') {
         document.getElementById('app-dono').classList.add('active');
-        document.getElementById('dono-user-name').textContent = nome;
-        mostrarTela('dono', 'veiculos');
+        const p = perfilDonoAtual();
+        if (p.nome) SESSION.nome = p.nome;
+        else p.nome = nome;
+        if (SESSION.google && SESSION.google.email && !p.email) p.email = SESSION.google.email;
+        atualizarChipDono();
+        // se cadastro incompleto (sem telefone), leva ao perfil
+        if (!p.telefone) {
+          toast('Complete seu cadastro (telefone)');
+          mostrarTela('dono', 'perfil');
+        } else {
+          mostrarTela('dono', 'veiculos');
+        }
       } else if (selectedRole === 'mecanica') {
         document.getElementById('app-mecanica').classList.add('active');
         document.getElementById('mec-user-name').textContent = nome;
@@ -1921,6 +2071,7 @@
         if (tela === 'abastecimento') renderDonoAbastecimento();
         if (tela === 'manutencao') renderDonoManutencao();
         if (tela === 'agendar') renderDonoAgendar();
+        if (tela === 'perfil') renderDonoPerfil();
         if (tela === 'backup') renderBackupUsuario();
       } else if (perfil === 'mecanica') {
         if (tela === 'agenda') renderMecanicaAgenda();
@@ -3174,6 +3325,10 @@
             <label>Observações</label>
             <textarea id="ag-notas" rows="3" placeholder="Descreva o problema ou o que precisa ser feito..."></textarea>
           </div>
+          <label style="display:flex;align-items:flex-start;gap:10px;margin:14px 0 8px;cursor:pointer;font-size:14px">
+            <input type="checkbox" id="ag-whatsapp" checked style="width:18px;height:18px;margin-top:2px;flex-shrink:0" />
+            <span>Abrir WhatsApp da oficina com os dados do agendamento (recomendado)</span>
+          </label>
           <button class="btn btn-block" id="ag-btn-submit" style="background:var(--primary);color:#fff" onclick="solicitarAgendamento()">Solicitar agendamento</button>
         </div>
         <div class="page-header" style="margin-top:28px"><div><h2 style="font-size:18px">Meus agendamentos</h2></div></div>
@@ -3287,16 +3442,61 @@
         return;
       }
 
-      DB.agendamentos.push({
+      const perfil = perfilDonoAtual();
+      if (!perfil.telefone) {
+        toast('Preencha seu WhatsApp em Meu cadastro antes de agendar');
+        mostrarTela('dono', 'perfil');
+        return;
+      }
+      const ag = {
         id: uid(), veiculoId, oficinaId, data, hora,
         servico,
-        servicos,
-        status: 'pendente', cliente: SESSION.nome || 'Você', donoId: currentDonoId(), notas
-      });
+        servicos: servicos.slice(),
+        status: 'pendente',
+        cliente: SESSION.nome || perfil.nome || 'Você',
+        telefoneCliente: perfil.telefone || '',
+        donoId: currentDonoId(),
+        notas
+      };
+      DB.agendamentos.push(ag);
       save();
       toast('Agendamento solicitado (' + servicos.length + ' serviço' + (servicos.length > 1 ? 's' : '') + ')!');
+      const abrirWa = document.getElementById('ag-whatsapp')?.checked;
+      if (abrirWa) whatsappOficinaAgendamento(ag);
       bookingOficinaId = null;
       renderFormAgendamento(oficinaId);
+    }
+
+    /** Abre WhatsApp da oficina com texto pronto do pedido de agendamento */
+    function whatsappOficinaAgendamento(ag) {
+      const of = DB.oficinas.find(o => o.id === ag.oficinaId);
+      const v = DB.veiculos.find(x => x.id === ag.veiculoId);
+      const telRaw = (of && (of.telefone || of.contato)) ? (of.telefone || '') : '';
+      let tel = String(telRaw).replace(/\D/g, '');
+      if (tel.length >= 12 && tel.startsWith('55')) tel = tel; // já com DDI
+      else if (tel.length >= 10) tel = '55' + tel;
+      const veiculoTxt = v
+        ? (v.marca + ' ' + v.modelo + (v.versao ? ' ' + v.versao : '') + ' · ' + fmtKm(v.km) + ' km' + (v.placa ? ' · ' + v.placa : ''))
+        : '—';
+      const lista = (ag.servicos && ag.servicos.length) ? ag.servicos : (ag.servico ? [ag.servico] : []);
+      const servTxt = lista.length ? lista.map((s, i) => (i + 1) + '. ' + s).join('\n') : (ag.servico || '—');
+      const msg =
+        'Olá! Gostaria de *solicitar um agendamento* no AutoCare.\n\n' +
+        '*Cliente:* ' + (ag.cliente || '') + '\n' +
+        '*WhatsApp:* ' + (ag.telefoneCliente || '') + '\n' +
+        '*Veículo:* ' + veiculoTxt + '\n' +
+        '*Data:* ' + fmtDate(ag.data) + ' às ' + (ag.hora || '') + '\n' +
+        '*Serviços:*\n' + servTxt +
+        (ag.notas ? '\n\n*Observações:* ' + ag.notas : '') +
+        '\n\n_Mensagem enviada pelo app AutoCare._';
+      const texto = encodeURIComponent(msg);
+      if (tel && tel.length >= 12) {
+        window.open('https://wa.me/' + tel + '?text=' + texto, '_blank', 'noopener');
+        toast('WhatsApp da oficina aberto');
+      } else {
+        window.open('https://wa.me/?text=' + texto, '_blank', 'noopener');
+        toast('Oficina sem telefone cadastrado — escolha o contato no WhatsApp');
+      }
     }
 
     function renderMeusAgendamentos() {
@@ -3313,12 +3513,14 @@
         const v = DB.veiculos.find(x => x.id === a.veiculoId);
         const of = DB.oficinas.find(x => x.id === a.oficinaId);
         return `
-          <div class="list-item">
-            <div>
+          <div class="list-item" style="flex-wrap:wrap;gap:8px">
+            <div style="flex:1;min-width:140px">
               <strong style="font-size:14px">${fmtDate(a.data)} ${a.hora} · ${a.servico}</strong>
               <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : '—'} · ${of ? of.nome : ''}</div>
             </div>
             <span class="status ${stMap[a.status] || 'info'}">${(a.status || '').replace('_', ' ')}</span>
+            <button class="btn btn-sm btn-outline" title="Enviar no WhatsApp da oficina"
+              onclick="whatsappOficinaAgendamento(DB.agendamentos.find(x=>x.id==='${a.id}'))">💬 WhatsApp</button>
           </div>`;
       }).join('');
     }
