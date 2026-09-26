@@ -485,6 +485,18 @@
         <input type="number" id="v-km" placeholder="Ex: 45000" min="0" />
       </div>
       <div class="form-group">
+        <label>Foto do veículo (miniatura)</label>
+        <div class="photo-area" style="padding:12px" onclick="document.getElementById('v-foto').click()">
+          <div id="v-foto-preview" style="min-height:60px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px">📷 Toque para enviar foto</div>
+          <input type="file" id="v-foto" accept="image/*" style="display:none" onchange="previewFotoVeiculo(this)" />
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <button type="button" class="btn btn-outline btn-sm" onclick="buscarImagemModeloVeiculo()">🔍 Buscar imagem do modelo</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="limparFotoVeiculo()">Remover foto</button>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-top:6px">A busca abre o Google Imagens; salve a foto e envie aqui (importação automática de sites é bloqueada pelo navegador).</p>
+      </div>
+      <div class="form-group">
         <button type="button" class="btn btn-outline btn-block" onclick="buscarDadosVeiculo()" style="border-style:dashed">
           🔍 Buscar dados do modelo na internet
         </button>
@@ -2445,8 +2457,42 @@
       );
     }
 
+    function gerarAlertasPreventivasKm() {
+      if (!DB.notificacoes) DB.notificacoes = [];
+      const id = currentDonoId();
+      const hoje = new Date().toISOString().slice(0, 10);
+      meusVeiculos().forEach(v => {
+        const plano = getPreventivas(v);
+        plano.forEach(p => {
+          const ultima = (DB.ultimaManutencao[v.id] || {})[p.nome] || 0;
+          const proxima = ultima > 0 ? ultima + p.intervaloKm : (Math.floor(v.km / p.intervaloKm) + 1) * p.intervaloKm;
+          const falta = proxima - v.km;
+          [500, 200].forEach(limiar => {
+            if (falta > 0 && falta <= limiar) {
+              const chave = 'prev-' + v.id + '-' + p.nome + '-' + limiar + '-' + proxima;
+              const ja = DB.notificacoes.some(n => n.chave === chave);
+              if (!ja) {
+                DB.notificacoes.unshift({
+                  id: uid(),
+                  chave,
+                  donoId: id,
+                  veiculoId: v.id,
+                  texto: '⚠️ Faltam ' + fmtKm(falta) + ' km para "' + p.nome + '" no ' + v.modelo + ' (vencimento aos ' + fmtKm(proxima) + ' km).',
+                  lida: false,
+                  criadaEm: new Date().toISOString(),
+                  tipo: 'preventiva',
+                  limiar
+                });
+              }
+            }
+          });
+        });
+      });
+    }
+
     function bannerNotificacoes() {
-      const list = notificacoesDoDono().filter(n => !n.lida).slice(0, 5);
+      gerarAlertasPreventivasKm();
+      const list = notificacoesDoDono().filter(n => !n.lida).slice(0, 8);
       if (!list.length) return '';
       return `<div class="card" style="border-color:#bfdbfe;background:#eff6ff">
         <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">🔔 Notificações</h3>
@@ -2484,6 +2530,11 @@
         set('v-combustivel', v.combustivel || '');
         set('v-placa', v.placa);
         set('v-km', v.km);
+        window._fotoVeiculoPendente = v.foto || null;
+        const prev = document.getElementById('v-foto-preview');
+        if (prev) prev.innerHTML = v.foto
+          ? '<img src="' + v.foto + '" alt="foto" style="max-height:120px;border-radius:8px">'
+          : '📷 Toque para enviar foto';
       } else {
         titulo.textContent = 'Cadastrar Veículo';
         set('v-marca', '');
@@ -2494,8 +2545,38 @@
         set('v-combustivel', '');
         set('v-placa', '');
         set('v-km', '');
+        window._fotoVeiculoPendente = null;
+        const prev = document.getElementById('v-foto-preview');
+        if (prev) prev.innerHTML = '📷 Toque para enviar foto';
       }
       document.getElementById('modal-veiculo').classList.add('show');
+    }
+
+    async function previewFotoVeiculo(input) {
+      if (!input.files || !input.files[0]) return;
+      const dataUrl = await compressImageFile(input.files[0], 600);
+      window._fotoVeiculoPendente = dataUrl;
+      const prev = document.getElementById('v-foto-preview');
+      if (prev) prev.innerHTML = '<img src="' + dataUrl + '" alt="foto" style="max-height:120px;border-radius:8px">';
+    }
+
+    function limparFotoVeiculo() {
+      window._fotoVeiculoPendente = null;
+      const prev = document.getElementById('v-foto-preview');
+      if (prev) prev.innerHTML = '📷 Toque para enviar foto';
+      const inp = document.getElementById('v-foto');
+      if (inp) inp.value = '';
+    }
+
+    function buscarImagemModeloVeiculo() {
+      const marca = document.getElementById('v-marca')?.value || '';
+      const modelo = document.getElementById('v-modelo')?.value.trim() || '';
+      const ano = document.getElementById('v-ano')?.value || '';
+      const versao = document.getElementById('v-versao')?.value.trim() || '';
+      if (!marca && !modelo) { toast('Informe marca e modelo'); return; }
+      const q = encodeURIComponent([marca, modelo, versao, ano, 'carro'].filter(Boolean).join(' '));
+      window.open('https://www.google.com/search?tbm=isch&q=' + q, '_blank', 'noopener');
+      toast('Busque a imagem, salve no aparelho e envie no campo Foto');
     }
 
     function buscarDadosVeiculo() {
@@ -2533,12 +2614,13 @@
       if (id) {
         const v = DB.veiculos.find(x => x.id === id);
         if (!v) { toast('Veículo não encontrado'); return; }
-        Object.assign(v, { marca, modelo, ano, versao, motor, combustivel, placa, km });
+        Object.assign(v, { marca, modelo, ano, versao, motor, combustivel, placa, km, foto: window._fotoVeiculoPendente || null });
         if (!v.ultimoAbastKm || km > v.ultimoAbastKm) v.ultimoAbastKm = km;
         toast('Veículo atualizado');
       } else {
         const novo = {
           id: uid(), marca, modelo, ano, versao, motor, combustivel, placa, km,
+          foto: window._fotoVeiculoPendente || null,
           ultimoAbastKm: km, donoId: currentDonoId()
         };
         DB.veiculos.push(novo);
@@ -2595,12 +2677,18 @@
       } else {
         meus.forEach(v => {
           const prox = calcProximaRevisao(v);
+          const thumb = v.foto
+            ? `<img src="${v.foto}" alt="" style="width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid var(--border);flex-shrink:0">`
+            : `<div style="width:56px;height:56px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🚗</div>`;
           html += `
             <div class="card vehicle-card">
               <div class="card-top">
-                <div>
-                  <h3>${v.marca} ${v.modelo}${v.versao ? ' ' + v.versao : ''}</h3>
-                  <div class="meta">${v.ano}${v.motor ? ' · ' + v.motor : ''}${v.combustivel ? ' · ' + v.combustivel : ''} · ${v.placa}</div>
+                <div style="display:flex;gap:12px;align-items:center;min-width:0;flex:1">
+                  ${thumb}
+                  <div style="min-width:0">
+                    <h3>${v.marca} ${v.modelo}${v.versao ? ' ' + v.versao : ''}</h3>
+                    <div class="meta">${v.ano}${v.motor ? ' · ' + v.motor : ''}${v.combustivel ? ' · ' + v.combustivel : ''} · ${v.placa}</div>
+                  </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px">
                   <span class="km-badge">${fmtKm(v.km)} km</span>
@@ -2725,6 +2813,50 @@
       renderDonoAbastecimento();
     }
 
+    function editarAbastecimento(id) {
+      const a = DB.abastecimentos.find(x => x.id === id);
+      if (!a) return;
+      const kmStr = prompt('Km:', String(a.km));
+      if (kmStr == null) return;
+      const km = parseInt(String(kmStr).replace(/\D/g, ''), 10);
+      const litrosStr = prompt('Litros:', String(a.litros));
+      if (litrosStr == null) return;
+      const litros = parseFloat(String(litrosStr).replace(',', '.'));
+      const valorStr = prompt('Valor (R$):', String(a.valor));
+      if (valorStr == null) return;
+      const valor = parseFloat(String(valorStr).replace(',', '.'));
+      if (isNaN(km) || isNaN(litros) || isNaN(valor)) { toast('Dados inválidos'); return; }
+      a.km = km;
+      a.litros = litros;
+      a.valor = valor;
+      const v = DB.veiculos.find(x => x.id === a.veiculoId);
+      if (v && km > v.km) v.km = km;
+      // recalcula ultimoAbastKm
+      if (v) {
+        const maxKm = Math.max(0, ...DB.abastecimentos.filter(x => x.veiculoId === v.id).map(x => x.km));
+        v.ultimoAbastKm = maxKm || v.km;
+      }
+      save();
+      toast('Abastecimento atualizado');
+      renderDonoAbastecimento();
+    }
+
+    function excluirAbastecimento(id) {
+      if (!confirm('Excluir este abastecimento?')) return;
+      const a = DB.abastecimentos.find(x => x.id === id);
+      DB.abastecimentos = DB.abastecimentos.filter(x => x.id !== id);
+      if (a) {
+        const v = DB.veiculos.find(x => x.id === a.veiculoId);
+        if (v) {
+          const maxKm = Math.max(0, ...DB.abastecimentos.filter(x => x.veiculoId === v.id).map(x => x.km));
+          v.ultimoAbastKm = maxKm || v.km;
+        }
+      }
+      save();
+      toast('Abastecimento excluído');
+      renderDonoAbastecimento();
+    }
+
     function renderListaAbastecimentos() {
       const lista = document.getElementById('lista-abastecimentos');
       if (!lista) return;
@@ -2744,12 +2876,16 @@
           if (dist > 0 && a.litros > 0) media = (dist / a.litros).toFixed(1) + ' km/L';
         }
         return `
-          <div class="list-item">
-            <div>
+          <div class="list-item" style="flex-wrap:wrap;gap:8px">
+            <div style="flex:1;min-width:120px">
               <strong>${fmtDate(a.data)}</strong>
-              <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${a.litros} L · R$ ${a.valor.toFixed(2)} · ${media}</div>
+              <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${fmtKm(a.km)} km · ${a.litros} L · ${fmtMoney(a.valor)}</div>
+              <div style="font-size:12px;color:var(--muted)">Média: ${media}</div>
             </div>
-            <span class="km-badge">${fmtKm(a.km)} km</span>
+            <div class="actions-row">
+              <button class="btn btn-sm btn-outline" onclick="editarAbastecimento('${a.id}')">✏️</button>
+              <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="excluirAbastecimento('${a.id}')">🗑️</button>
+            </div>
           </div>`;
       }).join('');
     }
@@ -3596,6 +3732,7 @@
                   <span class="status ${stClass}">${ag.status.replace('_', ' ')}</span>
                   ${ag.status === 'pendente' ? `<button class="btn btn-sm btn-success" onclick="confirmarAg('${ag.id}')">Confirmar</button>` : ''}
                   ${ag.status === 'confirmado' ? `<button class="btn btn-sm btn-outline" onclick="iniciarAg('${ag.id}')">Iniciar</button>` : ''}
+                  ${ag.status === 'em_andamento' || ag.status === 'confirmado' ? `<button class="btn btn-sm btn-primary" onclick="finalizarAgPendente('${ag.id}')">Finalizar</button>` : ''}
                   <button class="btn btn-sm btn-outline" title="WhatsApp" onclick="whatsappAgendamento(DB.agendamentos.find(x=>x.id==='${ag.id}'))">💬</button>
                   <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="cancelarAg('${ag.id}')">✕</button>
                 </div>
@@ -3637,6 +3774,58 @@
         toast('Serviço em andamento');
         renderMecanicaAgenda();
       }
+    }
+
+    /** Finaliza o serviço deixando pagamento pendente (a receber) */
+    function finalizarAgPendente(id) {
+      const ag = DB.agendamentos.find(a => a.id === id);
+      if (!ag) return;
+      const v = DB.veiculos.find(x => x.id === ag.veiculoId);
+      const kmSug = v ? v.km : 0;
+      const kmStr = prompt('Km do veículo ao finalizar o serviço:', String(kmSug));
+      if (kmStr == null) return;
+      const km = parseInt(String(kmStr).replace(/\D/g, ''), 10);
+      if (isNaN(km) || km < 0) { toast('Km inválida'); return; }
+      const valorStr = prompt('Valor total do serviço (R$) — pode deixar 0 e ajustar no financeiro:', '0');
+      if (valorStr == null) return;
+      const valorTotal = parseFloat(String(valorStr).replace(',', '.')) || 0;
+      const itens = (ag.servicos && ag.servicos.length) ? ag.servicos.slice() : (ag.servico ? [ag.servico] : ['Serviço']);
+
+      if (v) {
+        if (km > v.km) v.km = km;
+        if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
+        const plano = getPreventivas(v);
+        itens.forEach(item => {
+          const match = plano.find(p => includesCI(p.nome, String(item).split(' ')[0]) || includesCI(item, p.nome.split(' ')[0]));
+          const key = match ? match.nome : item;
+          DB.ultimaManutencao[v.id][key] = km;
+        });
+      }
+
+      DB.servicos.unshift({
+        id: uid(),
+        veiculoId: ag.veiculoId,
+        oficinaId: ag.oficinaId,
+        agendamentoId: ag.id,
+        data: new Date().toISOString().slice(0, 10),
+        km,
+        itens,
+        fotos: [],
+        observacoes: ag.notas || '',
+        cliente: ag.cliente,
+        donoId: ag.donoId || null,
+        valorTotal,
+        recebido: false,
+        formaPagamento: null,
+        statusFinanceiro: 'a_receber',
+        origem: 'oficina',
+        bloqueado: false
+      });
+      ag.status = 'concluido';
+      notificarDonoServico(ag, 'Serviço finalizado — pagamento pendente: ' + itens.join(', ') + ' · ' + fmtKm(km) + ' km' + (valorTotal ? ' · ' + fmtMoney(valorTotal) : '') + '.');
+      save();
+      toast('Finalizado · a receber no financeiro');
+      renderMecanicaAgenda();
     }
 
     function cancelarAg(id) {
@@ -4111,10 +4300,10 @@
       if (!lista.length) {
         html += `<p style="font-size:13px;color:var(--muted)">Sem lançamentos.</p>`;
       } else {
-        lista.slice(0, 15).forEach(s => {
+        lista.slice(0, 30).forEach(s => {
           html += `
-            <div class="list-item">
-              <div>
+            <div class="list-item" style="flex-wrap:wrap;gap:8px">
+              <div style="flex:1;min-width:120px">
                 <strong style="font-size:13px">${fmtDate(s.data)} · ${s.cliente || 'Cliente'}</strong>
                 <div style="font-size:12px;color:var(--muted)">${(s.itens||[]).slice(0,3).join(', ')}</div>
               </div>
@@ -4122,11 +4311,94 @@
                 <div style="font-weight:600">${fmtMoney(s.valorTotal || 0)}</div>
                 <div style="font-size:11px;color:var(--muted)">${s.recebido ? (s.formaPagamento || 'pago') : 'a receber'}</div>
               </div>
+              <div class="actions-row">
+                <button class="btn btn-sm btn-outline" onclick="editarLancamentoFinanceiro('${s.id}')">✏️</button>
+                ${s.recebido ? `<button class="btn btn-sm btn-outline" onclick="estornarRecebimento('${s.id}')" title="Voltar para a receber">↩ Estornar</button>` : `<button class="btn btn-sm btn-outline" onclick="marcarServicoRecebido('${s.id}')">💰</button>`}
+                <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="cancelarLancamentoServico('${s.id}')" title="Cancelar e reabrir pendência">🗑️</button>
+              </div>
             </div>`;
         });
       }
-      html += `</div>`;
+      html += `</div>
+        <p style="font-size:12px;color:var(--muted);margin-top:8px">
+          <strong>Estornar</strong> volta o valor para “a receber”. <strong>Excluir</strong> remove o lançamento e devolve a pendência de manutenção no veículo do proprietário.
+        </p>`;
       el.innerHTML = html;
+    }
+
+    function editarLancamentoFinanceiro(servicoId) {
+      const s = DB.servicos.find(x => x.id === servicoId);
+      if (!s) return;
+      const valorStr = prompt('Valor total (R$):', String(s.valorTotal != null ? s.valorTotal : 0));
+      if (valorStr == null) return;
+      const valor = parseFloat(String(valorStr).replace(',', '.'));
+      if (isNaN(valor) || valor < 0) { toast('Valor inválido'); return; }
+      const forma = prompt('Forma de pagamento (vazio = a receber):', s.formaPagamento || '');
+      if (forma == null) return;
+      s.valorTotal = valor;
+      if (forma.trim()) {
+        s.recebido = true;
+        s.formaPagamento = forma.trim();
+        s.statusFinanceiro = 'recebido';
+        s.bloqueado = true;
+      } else {
+        s.recebido = false;
+        s.formaPagamento = null;
+        s.statusFinanceiro = 'a_receber';
+        s.bloqueado = false;
+      }
+      s.editadoEm = new Date().toISOString();
+      save();
+      toast('Lançamento atualizado');
+      renderMecanicaFinanceiro();
+    }
+
+    function estornarRecebimento(servicoId) {
+      const s = DB.servicos.find(x => x.id === servicoId);
+      if (!s) return;
+      if (!s.recebido) { toast('Já está a receber'); return; }
+      if (!confirm('Estornar este recebimento? O valor volta para “a receber”.')) return;
+      s.recebido = false;
+      s.formaPagamento = null;
+      s.statusFinanceiro = 'a_receber';
+      s.bloqueado = false;
+      notificarDonoServico(s, 'Recebimento estornado pela oficina: ' + (s.itens || []).join(', ') + '. Pagamento volta a pendente.');
+      save();
+      toast('Estornado · a receber');
+      renderMecanicaFinanceiro();
+    }
+
+    /** Cancela lançamento e reabre pendência de manutenção no plano do dono */
+    function cancelarLancamentoServico(servicoId) {
+      const s = DB.servicos.find(x => x.id === servicoId);
+      if (!s) return;
+      if (!confirm('Excluir este lançamento? A pendência de manutenção do veículo será recalculada (remove o marco desta km).')) return;
+      // remove ultimaManutencao se o km bater
+      if (s.veiculoId && DB.ultimaManutencao[s.veiculoId] && s.itens) {
+        s.itens.forEach(item => {
+          const um = DB.ultimaManutencao[s.veiculoId];
+          if (!um) return;
+          // tenta achar chave igual ou similar
+          Object.keys(um).forEach(k => {
+            if (eqCI(k, item) || includesCI(k, item) || includesCI(item, k)) {
+              if (um[k] === s.km) delete um[k];
+            }
+          });
+        });
+      }
+      // reabre agendamento se existir
+      if (s.agendamentoId) {
+        const ag = DB.agendamentos.find(a => a.id === s.agendamentoId);
+        if (ag && ag.status === 'concluido') {
+          ag.status = 'confirmado';
+        }
+      }
+      notificarDonoServico(s, 'Lançamento cancelado pela oficina: ' + (s.itens || []).join(', ') + '. A pendência de manutenção do veículo foi reaberta no app.');
+      DB.servicos = DB.servicos.filter(x => x.id !== servicoId);
+      save();
+      toast('Lançamento cancelado · pendência reaberta');
+      renderMecanicaFinanceiro();
+      if (document.getElementById('mecanica-servicos')?.classList.contains('active')) renderMecanicaServicos();
     }
 
     function renderMecanicaNovoServico() {
