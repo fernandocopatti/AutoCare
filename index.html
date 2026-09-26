@@ -504,6 +504,7 @@
       <p id="pf-subtitulo" style="font-size:13px;color:var(--text-secondary);margin:-8px 0 16px">
         Preencha os dados do serviço realizado. O plano será atualizado.
       </p>
+      <input type="hidden" id="pf-edit-id" value="" />
       <div class="form-group">
         <label>Veículo *</label>
         <select id="pf-veiculo" onchange="atualizarOpcoesPreventiva()"></select>
@@ -2754,18 +2755,71 @@
           const v = DB.veiculos.find(x => x.id === s.veiculoId);
           const of = DB.oficinas.find(x => x.id === s.oficinaId);
           const foto = (s.fotos && s.fotos[0]) ? `<img src="${s.fotos[0]}" style="width:40px;height:40px;border-radius:6px;object-fit:cover;margin-left:10px">` : '';
+          const doDono = s.origem === 'dono' || !s.oficinaId;
+          const origemTxt = doDono ? 'Você lançou' : (of ? of.nome : 'Oficina');
+          let acoes = '';
+          if (doDono) {
+            acoes = `<div class="actions-row">
+              <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();editarServicoDono('${s.id}')">✏️ Editar</button>
+              <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="event.stopPropagation();excluirServicoDono('${s.id}')">🗑️</button>
+            </div>`;
+          } else {
+            acoes = `<span class="status ok" style="font-size:11px">oficina</span>`;
+          }
           html += `
             <div class="list-item">
-              <div>
-                <strong style="font-size:14px">${fmtDate(s.data)} · ${of ? of.nome : 'Oficina'}</strong>
+              <div style="flex:1;min-width:0">
+                <strong style="font-size:14px">${fmtDate(s.data)} · ${origemTxt}</strong>
                 <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${(s.itens||[]).join(', ')} · ${fmtKm(s.km)} km</div>
+                ${s.observacoes ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${s.observacoes}</div>` : ''}
               </div>
               ${foto}
+              ${acoes}
             </div>`;
         });
       }
       html += `</div>`;
       el.innerHTML = html;
+    }
+
+    function editarServicoDono(servicoId) {
+      const s = DB.servicos.find(x => x.id === servicoId);
+      if (!s) return;
+      if (s.origem !== 'dono' && s.oficinaId) {
+        toast('Lançamento da oficina: só a oficina pode alterar (e notificar você se já estiver pago)');
+        return;
+      }
+      abrirModalPreventivaFeita(s.veiculoId, (s.itens && s.itens[0]) || '');
+      document.getElementById('pf-edit-id').value = s.id;
+      document.getElementById('pf-titulo').textContent = 'Editar lançamento';
+      document.getElementById('pf-subtitulo').textContent = 'Altere os dados e salve. O plano de preventivas será recalculado.';
+      document.getElementById('pf-km').value = s.km;
+      document.getElementById('pf-data').value = s.data || '';
+      document.getElementById('pf-obs').value = s.observacoes || '';
+      if (s.itens && s.itens[0]) {
+        const sel = document.getElementById('pf-item');
+        const opt = [...sel.options].find(o => o.value === s.itens[0]);
+        if (opt) sel.value = s.itens[0];
+        else {
+          sel.value = '__outro__';
+          document.getElementById('pf-outro').value = s.itens[0];
+          onPfItemChange();
+        }
+      }
+    }
+
+    function excluirServicoDono(servicoId) {
+      const s = DB.servicos.find(x => x.id === servicoId);
+      if (!s) return;
+      if (s.origem !== 'dono' && s.oficinaId) {
+        toast('Não é possível excluir lançamento da oficina por aqui');
+        return;
+      }
+      if (!confirm('Excluir este lançamento? O marco de preventiva pode precisar ser ajustado manualmente.')) return;
+      DB.servicos = DB.servicos.filter(x => x.id !== servicoId);
+      save();
+      toast('Lançamento excluído');
+      renderDonoManutencao();
     }
 
     
@@ -2785,6 +2839,7 @@
       document.getElementById('pf-km').value = v ? v.km : '';
       document.getElementById('pf-outro').value = '';
       document.getElementById('pf-outro-wrap').style.display = 'none';
+      document.getElementById('pf-edit-id').value = '';
 
       const titulo = document.getElementById('pf-titulo');
       const sub = document.getElementById('pf-subtitulo');
@@ -2874,26 +2929,41 @@
       DB.ultimaManutencao[v.id][nome] = km;
       if (km > v.km) v.km = km;
 
-      // também registra no histórico de serviços do dono
-      DB.servicos.unshift({
-        id: uid(),
-        veiculoId: v.id,
-        oficinaId: null,
-        data,
-        km,
-        itens: [nome],
-        fotos: [],
-        observacoes: obs,
-        cliente: SESSION.nome || '',
-        valorTotal: 0,
-        recebido: false,
-        formaPagamento: null,
-        origem: 'dono'
-      });
+      const editId = (document.getElementById('pf-edit-id')?.value || '').trim();
+      if (editId) {
+        const s = DB.servicos.find(x => x.id === editId);
+        if (s && (s.origem === 'dono' || !s.oficinaId)) {
+          s.veiculoId = v.id;
+          s.data = data;
+          s.km = km;
+          s.itens = [nome];
+          s.observacoes = obs;
+          s.editadoEm = new Date().toISOString();
+          toast('Lançamento atualizado: ' + nome + ' · ' + fmtKm(km) + ' km');
+        } else {
+          toast('Não foi possível editar este registro');
+        }
+      } else {
+        DB.servicos.unshift({
+          id: uid(),
+          veiculoId: v.id,
+          oficinaId: null,
+          data,
+          km,
+          itens: [nome],
+          fotos: [],
+          observacoes: obs,
+          cliente: SESSION.nome || '',
+          valorTotal: 0,
+          recebido: false,
+          formaPagamento: null,
+          origem: 'dono'
+        });
+        toast('Lançamento salvo: ' + nome + ' · ' + fmtKm(km) + ' km');
+      }
 
       save();
       fecharModal('modal-preventiva');
-      toast('Lançamento salvo: ' + nome + ' · ' + fmtKm(km) + ' km');
       renderDonoManutencao();
     }
 
@@ -3617,6 +3687,93 @@
       renderMecanicaCatalogo();
     }
 
+    function notificarDonoServico(ref, texto) {
+      if (!DB.notificacoes) DB.notificacoes = [];
+      const of = ref.oficinaId ? DB.oficinas.find(o => o.id === ref.oficinaId) : null;
+      DB.notificacoes.unshift({
+        id: uid(),
+        donoId: ref.donoId || null,
+        cliente: ref.cliente || '',
+        veiculoId: ref.veiculoId || null,
+        texto: (of ? '[' + of.nome + '] ' : '') + texto,
+        lida: false,
+        criadaEm: new Date().toISOString(),
+        tipo: 'servico'
+      });
+      save();
+    }
+
+    function servicoBloqueado(s) {
+      return !!(s && s.recebido && s.origem !== 'dono');
+    }
+
+    function marcarServicoRecebido(servicoId) {
+      const s = DB.servicos.find(x => x.id === servicoId);
+      if (!s) return;
+      if (servicoBloqueado(s)) {
+        toast('Serviço já finalizado e pago — solicite alteração ao proprietário');
+        return;
+      }
+      const forma = prompt('Forma de pagamento:', s.formaPagamento || 'Pix');
+      if (forma == null) return;
+      s.recebido = true;
+      s.formaPagamento = forma.trim() || 'Outro';
+      s.statusFinanceiro = 'recebido';
+      s.bloqueado = true;
+      notificarDonoServico(s, 'Pagamento registrado (' + s.formaPagamento + ') no serviço: ' + (s.itens || []).join(', ') + '.');
+      save();
+      toast('Marcado como recebido · dono notificado');
+      renderMecanicaServicos();
+      if (document.getElementById('mecanica-financeiro')?.classList.contains('active')) renderMecanicaFinanceiro();
+    }
+
+    function solicitarAlteracaoServico(servicoId) {
+      const s = DB.servicos.find(x => x.id === servicoId);
+      if (!s) return;
+      const motivo = prompt('Descreva a alteração necessária (o proprietário será notificado):');
+      if (motivo == null || !motivo.trim()) return;
+      notificarDonoServico(s,
+        'A oficina solicita alteração no serviço de ' + fmtDate(s.data) +
+        ' (' + (s.itens || []).join(', ') + ' · ' + fmtKm(s.km) + ' km). Motivo: ' + motivo.trim()
+      );
+      // libera edição após notificar
+      s.bloqueado = false;
+      s.solicitacaoAlteracao = motivo.trim();
+      s.solicitacaoEm = new Date().toISOString();
+      save();
+      toast('Proprietário notificado · registro liberado para ajuste');
+      renderMecanicaServicos();
+    }
+
+    function editarServicoOficina(servicoId) {
+      const s = DB.servicos.find(x => x.id === servicoId);
+      if (!s) return;
+      if (servicoBloqueado(s) && s.bloqueado !== false) {
+        toast('Finalizado e pago. Use "Solicitar alteração" para avisar o dono.');
+        return;
+      }
+      const kmStr = prompt('Km do serviço:', String(s.km));
+      if (kmStr == null) return;
+      const km = parseInt(String(kmStr).replace(/\D/g, ''), 10);
+      if (isNaN(km) || km < 0) { toast('Km inválida'); return; }
+      const obs = prompt('Observações:', s.observacoes || '');
+      if (obs == null) return;
+      const valorStr = prompt('Valor total (R$):', String(s.valorTotal != null ? s.valorTotal : 0));
+      if (valorStr == null) return;
+      const valor = parseFloat(String(valorStr).replace(',', '.')) || 0;
+      s.km = km;
+      s.observacoes = obs.trim();
+      s.valorTotal = valor;
+      s.editadoEm = new Date().toISOString();
+      if (s.solicitacaoAlteracao) {
+        notificarDonoServico(s, 'Oficina atualizou o serviço após solicitação: ' + (s.itens || []).join(', ') + ' · ' + fmtKm(km) + ' km · ' + fmtMoney(valor) + '.');
+        s.solicitacaoAlteracao = null;
+      }
+      save();
+      toast('Serviço atualizado');
+      renderMecanicaServicos();
+    }
+
     function renderMecanicaServicos() {
       const el = document.getElementById('mecanica-servicos');
       const lista = DB.servicos.filter(s => s.oficinaId === SESSION.oficinaId);
@@ -3628,22 +3785,36 @@
       } else {
         lista.forEach(s => {
           const v = DB.veiculos.find(x => x.id === s.veiculoId);
+          const bloqueado = servicoBloqueado(s) && s.bloqueado !== false;
           const pago = s.recebido
-            ? `<span class="status ok">${s.formaPagamento || 'pago'}</span>`
+            ? `<span class="status ok">${s.formaPagamento || 'pago'}${bloqueado ? ' · 🔒' : ''}</span>`
             : `<span class="status warn">a receber</span>`;
           const valor = s.valorTotal != null ? fmtMoney(s.valorTotal) : '—';
+          let acoes = '';
+          if (bloqueado) {
+            acoes = `<button class="btn btn-sm btn-outline" onclick="solicitarAlteracaoServico('${s.id}')">🔔 Solicitar alteração</button>`;
+          } else {
+            acoes = `<div class="actions-row">
+              <button class="btn btn-sm btn-outline" onclick="editarServicoOficina('${s.id}')">✏️ Editar</button>
+              ${!s.recebido ? `<button class="btn btn-sm btn-outline" onclick="marcarServicoRecebido('${s.id}')">💰 Marcar pago</button>` : ''}
+            </div>`;
+          }
           html += `
-            <div class="list-item">
-              <div>
+            <div class="list-item" style="flex-wrap:wrap;gap:8px">
+              <div style="flex:1;min-width:140px">
                 <strong style="font-size:14px">${v ? v.modelo : 'Veículo'} · ${s.cliente || ''}</strong>
                 <div style="font-size:13px;color:var(--text-secondary)">${fmtDate(s.data)} · ${(s.itens||[]).join(', ')} · ${fmtKm(s.km)} km</div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px">${valor}</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px">${valor}${s.solicitacaoAlteracao ? ' · alteração solicitada' : ''}</div>
               </div>
               ${pago}
+              ${acoes}
             </div>`;
         });
       }
-      html += `</div>`;
+      html += `</div>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px">
+          Após finalizado e pago, o lançamento fica bloqueado. Para corrigir, use “Solicitar alteração” — o proprietário é notificado e o registro é liberado.
+        </p>`;
       el.innerHTML = html;
     }
 
@@ -3856,9 +4027,15 @@
         valorTotal,
         recebido,
         formaPagamento,
-        statusFinanceiro: recebido ? 'recebido' : 'a_receber'
+        statusFinanceiro: recebido ? 'recebido' : 'a_receber',
+        origem: 'oficina',
+        bloqueado: !!recebido
       });
       ag.status = 'concluido';
+      // notifica dono que o serviço foi concluído
+      notificarDonoServico(ag, recebido
+        ? `Serviço concluído e pago (${formaPagamento || 'pago'}): ${(checks||[]).join(', ')} · ${fmtKm(km)} km.`
+        : `Serviço concluído (a receber): ${(checks||[]).join(', ')} · ${fmtKm(km)} km.`);
       pendingFotosServico = [];
       save();
       toast(recebido
