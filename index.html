@@ -2956,9 +2956,12 @@
           </div>
           <div class="form-group">
             <label>Foto do odômetro (opcional — tenta ler o km automaticamente)</label>
-            <div class="photo-area" onclick="document.getElementById('ab-foto').click()">
-              <div id="ab-preview">📷 Toque para fotografar o odômetro</div>
-              <input type="file" id="ab-foto" accept="image/*" capture="environment" style="display:none" onchange="previewFoto(this,'ab-preview')" />
+            <div class="photo-area" id="ab-preview" style="cursor:default">📷 Nenhuma foto ainda</div>
+            <input type="file" id="ab-foto-galeria" accept="image/*" style="display:none" onchange="previewFoto(this,'ab-preview')" />
+            <input type="file" id="ab-foto-camera" accept="image/*" capture="environment" style="display:none" onchange="previewFoto(this,'ab-preview')" />
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+              <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('ab-foto-galeria').click()">🖼️ Galeria</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('ab-foto-camera').click()">📷 Câmera</button>
             </div>
             <p id="ab-ocr-status" style="font-size:12px;color:var(--info);margin-top:6px;display:none"></p>
           </div>
@@ -4798,11 +4801,15 @@
             </div>
           </div>
           <div class="form-group">
-            <label>Fotos</label>
-            <div class="photo-area" onclick="document.getElementById('sv-fotos').click()">
-              <div id="sv-preview">📷 Adicionar fotos</div>
-              <input type="file" id="sv-fotos" accept="image/*" multiple capture="environment" style="display:none" onchange="previewMulti(this,'sv-preview')" />
+            <label>Fotos dos itens / serviço</label>
+            <div class="photo-area" id="sv-preview" style="cursor:default">📷 Nenhuma foto ainda</div>
+            <input type="file" id="sv-fotos-galeria" accept="image/*" multiple style="display:none" onchange="previewMulti(this,'sv-preview')" />
+            <input type="file" id="sv-fotos-camera" accept="image/*" capture="environment" style="display:none" onchange="previewMulti(this,'sv-preview')" />
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+              <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('sv-fotos-galeria').click()">🖼️ Galeria</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('sv-fotos-camera').click()">📷 Câmera</button>
             </div>
+            <p style="font-size:12px;color:var(--muted);margin-top:6px">Galeria: várias fotos. Câmera: uma por vez.</p>
           </div>
           <div class="form-group"><label>Observações</label><textarea id="sv-obs" rows="3" placeholder="Observações técnicas..."></textarea></div>
           <button class="btn btn-success btn-block" onclick="finalizarServico()">Finalizar e registrar no financeiro</button>
