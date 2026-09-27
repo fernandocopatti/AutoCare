@@ -476,13 +476,35 @@
           </select>
         </div>
         <div class="form-group">
+          <label>Cor do veículo</label>
+          <select id="v-cor">
+            <option value="">Selecione</option>
+            <option>Branco</option>
+            <option>Preto</option>
+            <option>Prata</option>
+            <option>Cinza</option>
+            <option>Vermelho</option>
+            <option>Azul</option>
+            <option>Verde</option>
+            <option>Amarelo</option>
+            <option>Laranja</option>
+            <option>Marrom</option>
+            <option>Bege</option>
+            <option>Dourado</option>
+            <option>Bordô</option>
+            <option>Outra</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
           <label>Placa *</label>
           <input type="text" id="v-placa" placeholder="ABC1D23" maxlength="8" />
         </div>
-      </div>
-      <div class="form-group">
-        <label>Km atual *</label>
-        <input type="number" id="v-km" placeholder="Ex: 45000" min="0" />
+        <div class="form-group">
+          <label>Km atual *</label>
+          <input type="number" id="v-km" placeholder="Ex: 45000" min="0" />
+        </div>
       </div>
       <div class="form-group">
         <label>Foto do veículo (miniatura)</label>
@@ -494,7 +516,7 @@
           <button type="button" class="btn btn-outline btn-sm" onclick="buscarImagemModeloVeiculo()">🔍 Buscar imagem do modelo</button>
           <button type="button" class="btn btn-ghost btn-sm" onclick="limparFotoVeiculo()">Remover foto</button>
         </div>
-        <p style="font-size:12px;color:var(--muted);margin-top:6px">A busca abre o Google Imagens; salve a foto e envie aqui (importação automática de sites é bloqueada pelo navegador).</p>
+        <p style="font-size:12px;color:var(--muted);margin-top:6px">Busca automática na Wikipedia/Wikimedia. Se não achar, abre o Google Imagens para você escolher.</p>
       </div>
       <div class="form-group">
         <button type="button" class="btn btn-outline btn-block" onclick="buscarDadosVeiculo()" style="border-style:dashed">
@@ -2528,6 +2550,7 @@
         set('v-versao', v.versao || '');
         set('v-motor', v.motor || '');
         set('v-combustivel', v.combustivel || '');
+        set('v-cor', v.cor || '');
         set('v-placa', v.placa);
         set('v-km', v.km);
         window._fotoVeiculoPendente = v.foto || null;
@@ -2543,6 +2566,7 @@
         set('v-versao', '');
         set('v-motor', '');
         set('v-combustivel', '');
+        set('v-cor', '');
         set('v-placa', '');
         set('v-km', '');
         window._fotoVeiculoPendente = null;
@@ -2568,15 +2592,122 @@
       if (inp) inp.value = '';
     }
 
-    function buscarImagemModeloVeiculo() {
+    async function urlParaDataUrl(url) {
+      const resp = await fetch(url, { mode: 'cors' });
+      if (!resp.ok) throw new Error('http ' + resp.status);
+      const blob = await resp.blob();
+      return await new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(fr.result);
+        fr.onerror = reject;
+        fr.readAsDataURL(blob);
+      });
+    }
+
+    async function buscarThumbWikipedia(titulo, lang) {
+      const url = 'https://' + lang + '.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(titulo.replace(/ /g, '_'));
+      const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!r.ok) return null;
+      const j = await r.json();
+      if (j.thumbnail && j.thumbnail.source) return j.thumbnail.source.replace(/\/\d+px-/, '/640px-');
+      if (j.originalimage && j.originalimage.source) return j.originalimage.source;
+      return null;
+    }
+
+    async function buscarThumbCommons(query) {
+      const api = 'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=' +
+        encodeURIComponent(query) +
+        '&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|mime|size&iiurlwidth=640&format=json&origin=*';
+      const r = await fetch(api);
+      if (!r.ok) return null;
+      const j = await r.json();
+      const pages = j.query && j.query.pages ? Object.values(j.query.pages) : [];
+      // prefer image/jpeg or png, skip svg when possible
+      pages.sort((a, b) => {
+        const ma = (a.imageinfo && a.imageinfo[0] && a.imageinfo[0].mime) || '';
+        const mb = (b.imageinfo && b.imageinfo[0] && b.imageinfo[0].mime) || '';
+        const score = (m) => m.includes('jpeg') || m.includes('jpg') ? 0 : (m.includes('png') ? 1 : 2);
+        return score(ma) - score(mb);
+      });
+      for (const p of pages) {
+        const info = p.imageinfo && p.imageinfo[0];
+        if (!info) continue;
+        const mime = info.mime || '';
+        if (mime.includes('svg')) continue;
+        return info.thumburl || info.url;
+      }
+      return null;
+    }
+
+    async function buscarImagemModeloVeiculo() {
       const marca = document.getElementById('v-marca')?.value || '';
       const modelo = document.getElementById('v-modelo')?.value.trim() || '';
       const ano = document.getElementById('v-ano')?.value || '';
       const versao = document.getElementById('v-versao')?.value.trim() || '';
+      const cor = document.getElementById('v-cor')?.value || '';
       if (!marca && !modelo) { toast('Informe marca e modelo'); return; }
-      const q = encodeURIComponent([marca, modelo, versao, ano, 'carro'].filter(Boolean).join(' '));
+
+      const prev = document.getElementById('v-foto-preview');
+      if (prev) prev.innerHTML = '<span style="color:var(--info)">🔍 buscando imagem do modelo…</span>';
+      toast('Buscando imagem automática…');
+
+      const titulos = [
+        [marca, modelo].filter(Boolean).join(' '),
+        [marca, modelo, ano].filter(Boolean).join(' '),
+        [marca, modelo, versao].filter(Boolean).join(' ')
+      ].filter((t, i, arr) => t && arr.indexOf(t) === i);
+
+      let imgUrl = null;
+      // 1) Wikipedia PT / EN
+      for (const t of titulos) {
+        if (imgUrl) break;
+        try { imgUrl = await buscarThumbWikipedia(t, 'pt'); } catch (e) {}
+        if (!imgUrl) {
+          try { imgUrl = await buscarThumbWikipedia(t, 'en'); } catch (e) {}
+        }
+      }
+      // 2) Wikimedia Commons
+      if (!imgUrl) {
+        const qCommons = [marca, modelo, ano, 'car'].filter(Boolean).join(' ');
+        try { imgUrl = await buscarThumbCommons(qCommons); } catch (e) {}
+      }
+
+      if (imgUrl) {
+        try {
+          const dataUrl = await urlParaDataUrl(imgUrl);
+          // comprime via canvas se for grande
+          let finalUrl = dataUrl;
+          try {
+            const img = new Image();
+            await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataUrl; });
+            const max = 600;
+            let w = img.width, h = img.height;
+            if (w > max || h > max) {
+              const ratio = Math.min(max / w, max / h);
+              w = Math.round(w * ratio); h = Math.round(h * ratio);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            finalUrl = canvas.toDataURL('image/jpeg', 0.82);
+          } catch (e) {}
+          window._fotoVeiculoPendente = finalUrl;
+          if (prev) prev.innerHTML = '<img src="' + finalUrl + '" alt="foto" style="max-height:120px;border-radius:8px">';
+          toast('Imagem importada automaticamente — confira e salve');
+          return;
+        } catch (e) {
+          // CORS no binário: ainda mostra a URL remota como preview (pode não persistir offline)
+          window._fotoVeiculoPendente = imgUrl;
+          if (prev) prev.innerHTML = '<img src="' + imgUrl + '" alt="foto" style="max-height:120px;border-radius:8px" crossorigin="anonymous">';
+          toast('Imagem encontrada (link). Preferível salvar e enviar arquivo se sumir.');
+          return;
+        }
+      }
+
+      if (prev) prev.innerHTML = '📷 Toque para enviar foto';
+      const q = encodeURIComponent([marca, modelo, cor, versao, ano, 'carro'].filter(Boolean).join(' '));
       window.open('https://www.google.com/search?tbm=isch&q=' + q, '_blank', 'noopener');
-      toast('Busque a imagem, salve no aparelho e envie no campo Foto');
+      toast('Não achei automática — abri o Google Imagens');
     }
 
     function buscarDadosVeiculo() {
@@ -2600,6 +2731,7 @@
       const versao = (document.getElementById('v-versao')?.value || '').trim();
       const motor = (document.getElementById('v-motor')?.value || '').trim();
       const combustivel = (document.getElementById('v-combustivel')?.value || '').trim();
+      const cor = (document.getElementById('v-cor')?.value || '').trim();
       const placa = document.getElementById('v-placa').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
       const km = parseInt(document.getElementById('v-km').value, 10);
 
@@ -2614,12 +2746,12 @@
       if (id) {
         const v = DB.veiculos.find(x => x.id === id);
         if (!v) { toast('Veículo não encontrado'); return; }
-        Object.assign(v, { marca, modelo, ano, versao, motor, combustivel, placa, km, foto: window._fotoVeiculoPendente || null });
+        Object.assign(v, { marca, modelo, ano, versao, motor, combustivel, cor, placa, km, foto: window._fotoVeiculoPendente || null });
         if (!v.ultimoAbastKm || km > v.ultimoAbastKm) v.ultimoAbastKm = km;
         toast('Veículo atualizado');
       } else {
         const novo = {
-          id: uid(), marca, modelo, ano, versao, motor, combustivel, placa, km,
+          id: uid(), marca, modelo, ano, versao, motor, combustivel, cor, placa, km,
           foto: window._fotoVeiculoPendente || null,
           ultimoAbastKm: km, donoId: currentDonoId()
         };
@@ -2687,7 +2819,7 @@
                   ${thumb}
                   <div style="min-width:0">
                     <h3>${v.marca} ${v.modelo}${v.versao ? ' ' + v.versao : ''}</h3>
-                    <div class="meta">${v.ano}${v.motor ? ' · ' + v.motor : ''}${v.combustivel ? ' · ' + v.combustivel : ''} · ${v.placa}</div>
+                    <div class="meta">${v.ano}${v.cor ? ' · ' + v.cor : ''}${v.motor ? ' · ' + v.motor : ''}${v.combustivel ? ' · ' + v.combustivel : ''} · ${v.placa}</div>
                   </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px">
@@ -3702,6 +3834,11 @@
     }
 
     function renderMecanicaAgenda() {
+      // corrige inconsistências: cancelado no app mas ainda no caixa
+      if (!window._reprocCancelOk) {
+        window._reprocCancelOk = true;
+        reprocessarCancelamentosPendentes();
+      }
       const el = document.getElementById('mecanica-agenda');
       const ofId = SESSION.oficinaId;
       const hoje = new Date();
@@ -3829,15 +3966,21 @@
     }
 
     function cancelarAg(id) {
-      if (!confirm('Cancelar este agendamento?')) return;
+      if (!confirm('Cancelar este agendamento? Se já houver lançamento no financeiro, ele também será estornado e as preventivas recalculadas.')) return;
       const ag = DB.agendamentos.find(a => a.id === id);
-      if (ag) {
-        ag.status = 'cancelado';
-        notificarDono(ag, 'cancelado');
-        save();
-        toast('Cancelado — dono notificado');
-        renderMecanicaAgenda();
-      }
+      if (!ag) return;
+      ag.status = 'cancelado';
+      // reprocessa lançamentos vinculados (financeiro + km preventiva)
+      const vinculados = (DB.servicos || []).filter(s => s.agendamentoId === ag.id);
+      vinculados.forEach(s => reverterServicoCompleto(s, { silencioso: true }));
+      notificarDono(ag, 'cancelado');
+      save();
+      toast(vinculados.length
+        ? 'Cancelado · ' + vinculados.length + ' lançamento(s) estornado(s) e km recalculada'
+        : 'Cancelado — dono notificado');
+      renderMecanicaAgenda();
+      if (document.getElementById('mecanica-financeiro')?.classList.contains('active')) renderMecanicaFinanceiro();
+      if (document.getElementById('mecanica-servicos')?.classList.contains('active')) renderMecanicaServicos();
     }
 
     function preencherNovoAg(data, hora) {
@@ -4278,6 +4421,7 @@
       let html = `
         <div class="page-header">
           <div><h2>Financeiro</h2><p>Receitas dos serviços registrados</p></div>
+          <button class="btn btn-outline btn-sm" onclick="window._reprocCancelOk=false;reprocessarCancelamentosPendentes();renderMecanicaFinanceiro()">↻ Reprocessar cancelados</button>
         </div>
         <div class="card">
           <div class="list-item"><div><strong>Total faturado</strong></div><span class="km-badge">${fmtMoney(total)}</span></div>
@@ -4368,37 +4512,76 @@
       renderMecanicaFinanceiro();
     }
 
+    /** Remove o serviço e reconstrói marcos de preventiva a partir dos lançamentos restantes */
+    function recalcularUltimaManutencaoVeiculo(veiculoId) {
+      if (!veiculoId) return;
+      const v = DB.veiculos.find(x => x.id === veiculoId);
+      const map = {};
+      (DB.servicos || []).filter(s => s.veiculoId === veiculoId).forEach(s => {
+        const km = Number(s.km) || 0;
+        (s.itens || []).forEach(item => {
+          let key = item;
+          if (v) {
+            const plano = getPreventivas(v);
+            const match = plano.find(p => eqCI(p.nome, item) || includesCI(p.nome, item) || includesCI(item, p.nome));
+            if (match) key = match.nome;
+          }
+          if (!map[key] || km > map[key]) map[key] = km;
+        });
+      });
+      DB.ultimaManutencao[veiculoId] = map;
+    }
+
+    function reverterServicoCompleto(s, opts) {
+      opts = opts || {};
+      if (!s || !s.id) return;
+      const veiculoId = s.veiculoId;
+      // remove do financeiro (some da lista = some do caixa)
+      DB.servicos = (DB.servicos || []).filter(x => x.id !== s.id);
+      // recalcula km/marcos preventivos com o que sobrou
+      if (veiculoId) recalcularUltimaManutencaoVeiculo(veiculoId);
+      // se agendamento ficou concluído só por este serviço, reabre
+      if (s.agendamentoId) {
+        const ainda = (DB.servicos || []).some(x => x.agendamentoId === s.agendamentoId);
+        const ag = DB.agendamentos.find(a => a.id === s.agendamentoId);
+        if (ag && !ainda && ag.status === 'concluido') {
+          ag.status = 'confirmado';
+        }
+      }
+      if (!opts.silencioso) {
+        notificarDonoServico(s, 'Lançamento cancelado/estornado: ' + (s.itens || []).join(', ') +
+          '. Financeiro atualizado e pendência de manutenção reaberta no veículo.');
+      }
+    }
+
     /** Cancela lançamento e reabre pendência de manutenção no plano do dono */
     function cancelarLancamentoServico(servicoId) {
       const s = DB.servicos.find(x => x.id === servicoId);
       if (!s) return;
-      if (!confirm('Excluir este lançamento? A pendência de manutenção do veículo será recalculada (remove o marco desta km).')) return;
-      // remove ultimaManutencao se o km bater
-      if (s.veiculoId && DB.ultimaManutencao[s.veiculoId] && s.itens) {
-        s.itens.forEach(item => {
-          const um = DB.ultimaManutencao[s.veiculoId];
-          if (!um) return;
-          // tenta achar chave igual ou similar
-          Object.keys(um).forEach(k => {
-            if (eqCI(k, item) || includesCI(k, item) || includesCI(item, k)) {
-              if (um[k] === s.km) delete um[k];
-            }
-          });
-        });
-      }
-      // reabre agendamento se existir
-      if (s.agendamentoId) {
-        const ag = DB.agendamentos.find(a => a.id === s.agendamentoId);
-        if (ag && ag.status === 'concluido') {
-          ag.status = 'confirmado';
-        }
-      }
-      notificarDonoServico(s, 'Lançamento cancelado pela oficina: ' + (s.itens || []).join(', ') + '. A pendência de manutenção do veículo foi reaberta no app.');
-      DB.servicos = DB.servicos.filter(x => x.id !== servicoId);
+      if (!confirm('Excluir este lançamento?\n\n• Some do fluxo de caixa (mesmo se estava recebido)\n• Recalcula as km de preventiva do veículo\n• Reabre pendência no plano do proprietário')) return;
+      reverterServicoCompleto(s);
       save();
-      toast('Lançamento cancelado · pendência reaberta');
+      toast('Lançamento removido · caixa e km reprocessados');
       renderMecanicaFinanceiro();
       if (document.getElementById('mecanica-servicos')?.classList.contains('active')) renderMecanicaServicos();
+      if (document.getElementById('mecanica-agenda')?.classList.contains('active')) renderMecanicaAgenda();
+    }
+
+    /** Corrige dados antigos: se agendamento está cancelado mas ainda há serviço pago vinculado */
+    function reprocessarCancelamentosPendentes() {
+      let n = 0;
+      (DB.agendamentos || []).filter(a => a.status === 'cancelado').forEach(ag => {
+        const vins = (DB.servicos || []).filter(s => s.agendamentoId === ag.id);
+        vins.forEach(s => {
+          reverterServicoCompleto(s, { silencioso: true });
+          n++;
+        });
+      });
+      if (n) {
+        save();
+        toast('Reprocessados ' + n + ' lançamento(s) de agendamentos cancelados');
+      }
+      return n;
     }
 
     function renderMecanicaNovoServico() {
