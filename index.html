@@ -207,6 +207,22 @@
     .photo-area img { max-width: 100%; max-height: 150px; border-radius: 8px; margin-top: 12px; }
     .photo-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; justify-content: center; }
     .photo-thumbs img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+    .svc-fotos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .svc-fotos img {
+      width: 56px; height: 56px; object-fit: cover; border-radius: 8px;
+      border: 1px solid var(--border); cursor: pointer;
+    }
+    .svc-fotos img:hover { outline: 2px solid var(--primary); }
+    #modal-foto-bg {
+      display: none; position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.85); align-items: center; justify-content: center;
+      padding: 16px; cursor: zoom-out;
+    }
+    #modal-foto-bg.show { display: flex; }
+    #modal-foto-bg img {
+      max-width: 100%; max-height: 90vh; border-radius: 12px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5); object-fit: contain;
+    }
 
     .check-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
     .check-list label {
@@ -3107,6 +3123,39 @@
     }
 
     // ===================== MANUTENÇÕES =====================
+    function htmlFotosServico(fotos, servicoId) {
+      if (!fotos || !fotos.length) return '';
+      return `<div class="svc-fotos">` + fotos.map((src, i) =>
+        `<img src="${src}" alt="Foto ${i + 1}" title="Ampliar foto"
+          onclick="event.stopPropagation();abrirFotoAmpliada('${servicoId}', ${i})" />`
+      ).join('') +
+      (fotos.length > 1
+        ? `<span style="font-size:11px;color:var(--muted);align-self:center">${fotos.length} fotos</span>`
+        : '') + `</div>`;
+    }
+
+    function abrirFotoAmpliada(servicoId, index) {
+      const s = (DB.servicos || []).find(x => x.id === servicoId);
+      if (!s || !s.fotos || !s.fotos.length) return;
+      const i = Math.max(0, Math.min(index || 0, s.fotos.length - 1));
+      const bg = document.getElementById('modal-foto-bg');
+      const img = document.getElementById('modal-foto-img');
+      if (!bg || !img) return;
+      img.src = s.fotos[i];
+      bg.dataset.servicoId = servicoId;
+      bg.dataset.index = String(i);
+      bg.classList.add('show');
+    }
+
+    function fecharFotoAmpliada() {
+      const bg = document.getElementById('modal-foto-bg');
+      if (bg) {
+        bg.classList.remove('show');
+        const img = document.getElementById('modal-foto-img');
+        if (img) img.src = '';
+      }
+    }
+
     function toggleManutVeiculo(id) {
       if (!window._manutOpen) window._manutOpen = {};
       window._manutOpen[id] = !window._manutOpen[id];
@@ -3317,7 +3366,6 @@
         meusServicos.forEach(s => {
           const v = DB.veiculos.find(x => x.id === s.veiculoId);
           const of = DB.oficinas.find(x => x.id === s.oficinaId);
-          const foto = (s.fotos && s.fotos[0]) ? `<img src="${s.fotos[0]}" style="width:40px;height:40px;border-radius:6px;object-fit:cover;margin-left:10px">` : '';
           const doDono = s.origem === 'dono' || !s.oficinaId;
           const origemTxt = doDono ? 'Você lançou' : (of ? of.nome : 'Oficina');
           let acoes = '';
@@ -3329,15 +3377,18 @@
           } else {
             acoes = `<span class="status ok" style="font-size:11px">oficina</span>`;
           }
+          const galeria = htmlFotosServico(s.fotos, s.id);
           html += `
-            <div class="list-item">
-              <div style="flex:1;min-width:0">
-                <strong style="font-size:14px">${fmtDate(s.data)} · ${origemTxt}</strong>
-                <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${(s.itens||[]).join(', ')} · ${fmtKm(s.km)} km</div>
-                ${s.observacoes ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${s.observacoes}</div>` : ''}
+            <div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px">
+              <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;width:100%">
+                <div style="flex:1;min-width:0">
+                  <strong style="font-size:14px">${fmtDate(s.data)} · ${origemTxt}</strong>
+                  <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${(s.itens||[]).join(', ')} · ${fmtKm(s.km)} km</div>
+                  ${s.observacoes ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${s.observacoes}</div>` : ''}
+                </div>
+                ${acoes}
               </div>
-              ${foto}
-              ${acoes}
+              ${galeria}
             </div>`;
         });
       }
@@ -4480,30 +4531,9 @@
     function editarServicoOficina(servicoId) {
       const s = DB.servicos.find(x => x.id === servicoId);
       if (!s) return;
-      if (servicoBloqueado(s) && s.bloqueado !== false) {
-        toast('Finalizado e pago. Use "Solicitar alteração" para avisar o dono.');
-        return;
-      }
-      const kmStr = prompt('Km do serviço:', String(s.km));
-      if (kmStr == null) return;
-      const km = parseInt(String(kmStr).replace(/\D/g, ''), 10);
-      if (isNaN(km) || km < 0) { toast('Km inválida'); return; }
-      const obs = prompt('Observações:', s.observacoes || '');
-      if (obs == null) return;
-      const valorStr = prompt('Valor total (R$):', String(s.valorTotal != null ? s.valorTotal : 0));
-      if (valorStr == null) return;
-      const valor = parseFloat(String(valorStr).replace(',', '.')) || 0;
-      s.km = km;
-      s.observacoes = obs.trim();
-      s.valorTotal = valor;
-      s.editadoEm = new Date().toISOString();
-      if (s.solicitacaoAlteracao) {
-        notificarDonoServico(s, 'Oficina atualizou o serviço após solicitação: ' + (s.itens || []).join(', ') + ' · ' + fmtKm(km) + ' km · ' + fmtMoney(valor) + '.');
-        s.solicitacaoAlteracao = null;
-      }
-      save();
-      toast('Serviço atualizado');
-      renderMecanicaServicos();
+      // Abre a mesma tela de registro para poder anexar fotos e ajustar dados
+      window._editandoServicoId = s.id;
+      mostrarTela('mecanica', 'novo-servico');
     }
 
     function renderMecanicaServicos() {
@@ -4522,24 +4552,24 @@
             ? `<span class="status ok">${s.formaPagamento || 'pago'}${bloqueado ? ' · 🔒' : ''}</span>`
             : `<span class="status warn">a receber</span>`;
           const valor = s.valorTotal != null ? fmtMoney(s.valorTotal) : '—';
-          let acoes = '';
-          if (bloqueado) {
-            acoes = `<button class="btn btn-sm btn-outline" onclick="solicitarAlteracaoServico('${s.id}')">🔔 Solicitar alteração</button>`;
-          } else {
-            acoes = `<div class="actions-row">
+          let acoes = `<div class="actions-row">
               <button class="btn btn-sm btn-outline" onclick="editarServicoOficina('${s.id}')">✏️ Editar</button>
               ${!s.recebido ? `<button class="btn btn-sm btn-outline" onclick="marcarServicoRecebido('${s.id}')">💰 Marcar pago</button>` : ''}
+              ${bloqueado ? `<button class="btn btn-sm btn-outline" onclick="solicitarAlteracaoServico('${s.id}')" title="Só se precisar mudar dados do veículo do dono">🔔 Avisar dono</button>` : ''}
             </div>`;
-          }
+          const galeria = htmlFotosServico(s.fotos, s.id);
           html += `
-            <div class="list-item" style="flex-wrap:wrap;gap:8px">
-              <div style="flex:1;min-width:140px">
-                <strong style="font-size:14px">${v ? v.modelo : 'Veículo'} · ${s.cliente || ''}</strong>
-                <div style="font-size:13px;color:var(--text-secondary)">${fmtDate(s.data)} · ${(s.itens||[]).join(', ')} · ${fmtKm(s.km)} km</div>
-                <div style="font-size:12px;color:var(--muted);margin-top:2px">${valor}${s.solicitacaoAlteracao ? ' · alteração solicitada' : ''}</div>
+            <div class="list-item" style="flex-wrap:wrap;gap:8px;flex-direction:column;align-items:stretch">
+              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;width:100%">
+                <div style="flex:1;min-width:140px">
+                  <strong style="font-size:14px">${v ? v.modelo : 'Veículo'} · ${s.cliente || ''}</strong>
+                  <div style="font-size:13px;color:var(--text-secondary)">${fmtDate(s.data)} · ${(s.itens||[]).join(', ')} · ${fmtKm(s.km)} km</div>
+                  <div style="font-size:12px;color:var(--muted);margin-top:2px">${valor}${s.solicitacaoAlteracao ? ' · alteração solicitada' : ''}</div>
+                </div>
+                ${pago}
+                ${acoes}
               </div>
-              ${pago}
-              ${acoes}
+              ${galeria}
             </div>`;
         });
       }
@@ -4600,9 +4630,9 @@
                 <div style="font-size:11px;color:var(--muted)">${s.recebido ? (s.formaPagamento || 'pago') : 'a receber'}</div>
               </div>
               <div class="actions-row">
-                <button class="btn btn-sm btn-outline" onclick="editarLancamentoFinanceiro('${s.id}')">✏️</button>
-                ${s.recebido ? `<button class="btn btn-sm btn-outline" onclick="estornarRecebimento('${s.id}')" title="Voltar para a receber">↩ Estornar</button>` : `<button class="btn btn-sm btn-outline" onclick="marcarServicoRecebido('${s.id}')">💰</button>`}
-                <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="cancelarLancamentoServico('${s.id}')" title="Cancelar e reabrir pendência">🗑️</button>
+                <button class="btn btn-sm btn-outline" onclick="editarServicoOficina('${s.id}')" title="Abrir tela completa">✏️</button>
+                ${s.recebido ? `<button class="btn btn-sm btn-outline" onclick="estornarRecebimento('${s.id}')" title="Só caixa da oficina">↩ Estornar</button>` : `<button class="btn btn-sm btn-outline" onclick="marcarServicoRecebido('${s.id}')">💰</button>`}
+                <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="cancelarLancamentoServico('${s.id}')" title="Remover do caixa">🗑️</button>
               </div>
             </div>`;
         });
@@ -4645,14 +4675,14 @@
       const s = DB.servicos.find(x => x.id === servicoId);
       if (!s) return;
       if (!s.recebido) { toast('Já está a receber'); return; }
-      if (!confirm('Estornar este recebimento? O valor volta para “a receber”.')) return;
+      if (!confirm('Estornar este recebimento no caixa da oficina?\n\nO proprietário NÃO será notificado e os dados do veículo não mudam.')) return;
       s.recebido = false;
       s.formaPagamento = null;
       s.statusFinanceiro = 'a_receber';
       s.bloqueado = false;
-      notificarDonoServico(s, 'Recebimento estornado pela oficina: ' + (s.itens || []).join(', ') + '. Pagamento volta a pendente.');
+      // estorno é só caixa da mecânica — sem notificar dono e sem mexer no carro
       save();
-      toast('Estornado · a receber');
+      toast('Estornado no caixa · a receber');
       renderMecanicaFinanceiro();
     }
 
@@ -4680,32 +4710,40 @@
       opts = opts || {};
       if (!s || !s.id) return;
       const veiculoId = s.veiculoId;
-      // remove do financeiro (some da lista = some do caixa)
+      const jaPago = !!s.recebido;
+      // remove do financeiro / histórico da oficina
       DB.servicos = (DB.servicos || []).filter(x => x.id !== s.id);
-      // recalcula km/marcos preventivos com o que sobrou
-      if (veiculoId) recalcularUltimaManutencaoVeiculo(veiculoId);
-      // se agendamento ficou concluído só por este serviço, reabre
-      if (s.agendamentoId) {
+      // Depois de pago: não mexe nos dados do carro (km/preventiva)
+      // Antes do pagamento (ou cancelamento de agenda): reprocessa preventiva
+      if (veiculoId && !jaPago && !opts.somenteCaixa) {
+        recalcularUltimaManutencaoVeiculo(veiculoId);
+      }
+      if (s.agendamentoId && !jaPago && !opts.somenteCaixa) {
         const ainda = (DB.servicos || []).some(x => x.agendamentoId === s.agendamentoId);
         const ag = DB.agendamentos.find(a => a.id === s.agendamentoId);
         if (ag && !ainda && ag.status === 'concluido') {
           ag.status = 'confirmado';
         }
       }
-      if (!opts.silencioso) {
-        notificarDonoServico(s, 'Lançamento cancelado/estornado: ' + (s.itens || []).join(', ') +
-          '. Financeiro atualizado e pendência de manutenção reaberta no veículo.');
+      // Notifica dono só se ainda não estava pago (cancelamento até o pagamento)
+      if (!opts.silencioso && !jaPago && !opts.somenteCaixa) {
+        notificarDonoServico(s, 'Lançamento cancelado pela oficina: ' + (s.itens || []).join(', ') +
+          '. Pendência de manutenção reaberta no veículo.');
       }
     }
 
-    /** Cancela lançamento e reabre pendência de manutenção no plano do dono */
+    /** Cancela lançamento no caixa; só interfere no carro se ainda não estava pago */
     function cancelarLancamentoServico(servicoId) {
       const s = DB.servicos.find(x => x.id === servicoId);
       if (!s) return;
-      if (!confirm('Excluir este lançamento?\n\n• Some do fluxo de caixa (mesmo se estava recebido)\n• Recalcula as km de preventiva do veículo\n• Reabre pendência no plano do proprietário')) return;
-      reverterServicoCompleto(s);
+      const jaPago = !!s.recebido;
+      const msg = jaPago
+        ? 'Remover este lançamento só do caixa/histórico da oficina?\n\nO proprietário NÃO será notificado e os dados do veículo (km/preventivas) NÃO mudam.'
+        : 'Excluir este lançamento?\n\n• Some do fluxo de caixa\n• Recalcula as km de preventiva do veículo\n• Notifica o proprietário (ainda não havia pagamento)';
+      if (!confirm(msg)) return;
+      reverterServicoCompleto(s, { somenteCaixa: jaPago, silencioso: jaPago });
       save();
-      toast('Lançamento removido · caixa e km reprocessados');
+      toast(jaPago ? 'Removido do caixa da oficina' : 'Lançamento removido · pendência reaberta no veículo');
       renderMecanicaFinanceiro();
       if (document.getElementById('mecanica-servicos')?.classList.contains('active')) renderMecanicaServicos();
       if (document.getElementById('mecanica-agenda')?.classList.contains('active')) renderMecanicaAgenda();
@@ -4730,92 +4768,135 @@
 
     function renderMecanicaNovoServico() {
       const el = document.getElementById('mecanica-novo-servico');
-      pendingFotosServico = [];
+      const editId = window._editandoServicoId || null;
+      const editando = editId ? (DB.servicos || []).find(x => x.id === editId) : null;
+      if (editId && !editando) window._editandoServicoId = null;
+
+      pendingFotosServico = (editando && editando.fotos && editando.fotos.length)
+        ? editando.fotos.slice()
+        : [];
       const ofId = SESSION.oficinaId;
       const ativos = DB.agendamentos.filter(a =>
         a.oficinaId === ofId && ['confirmado', 'em_andamento', 'pendente'].includes(a.status)
       );
+      // em edição, inclui o agendamento original mesmo se concluído
+      if (editando && editando.agendamentoId && !ativos.some(a => a.id === editando.agendamentoId)) {
+        const agOrig = DB.agendamentos.find(a => a.id === editando.agendamentoId);
+        if (agOrig) ativos.unshift(agOrig);
+      }
       const opts = ativos.map(a => {
         const v = DB.veiculos.find(x => x.id === a.veiculoId);
         return `<option value="${a.id}">${a.cliente} · ${v ? v.modelo : a.servico} (${fmtDate(a.data)} ${a.hora})</option>`;
       }).join('');
 
       const catalogo = catalogoDaOficina(ofId);
+      const itensEdit = (editando && editando.itens) ? editando.itens : [];
       let checksHtml = '';
       if (catalogo.length === 0) {
+        const padrao = ['Troca de óleo','Filtro de óleo','Filtro de ar','Pastilhas de freio','Fluido de freio','Correia dentada'];
+        // inclui itens do registro que não estão no padrão
+        itensEdit.forEach(it => { if (!padrao.some(p => eqCI(p, it))) padrao.push(it); });
         checksHtml = `
           <p style="font-size:13px;color:var(--warning);margin-bottom:10px">
             Cadastre serviços em <strong>Tabela de preços</strong> para precificar automaticamente.
-            Itens padrão abaixo (sem valor).
           </p>
-          <div class="check-list" id="sv-itens">
-            <label><input type="checkbox" data-valor="0" value="Troca de óleo" checked onchange="atualizarTotalServico()"> Troca de óleo</label>
-            <label><input type="checkbox" data-valor="0" value="Filtro de óleo" checked onchange="atualizarTotalServico()"> Filtro de óleo</label>
-            <label><input type="checkbox" data-valor="0" value="Filtro de ar" onchange="atualizarTotalServico()"> Filtro de ar</label>
-            <label><input type="checkbox" data-valor="0" value="Pastilhas de freio" onchange="atualizarTotalServico()"> Pastilhas de freio</label>
-            <label><input type="checkbox" data-valor="0" value="Fluido de freio" onchange="atualizarTotalServico()"> Fluido de freio</label>
-            <label><input type="checkbox" data-valor="0" value="Correia dentada" onchange="atualizarTotalServico()"> Correia dentada</label>
-          </div>`;
+          <div class="check-list" id="sv-itens">` +
+          padrao.map(n => {
+            const chk = (!editando && (n === 'Troca de óleo' || n === 'Filtro de óleo')) ||
+              itensEdit.some(i => eqCI(i, n)) ? 'checked' : '';
+            return `<label><input type="checkbox" data-valor="0" value="${n.replace(/"/g,'&quot;')}" ${chk} onchange="atualizarTotalServico()"> ${n}</label>`;
+          }).join('') + `</div>`;
       } else {
-        checksHtml = `<div class="check-list" id="sv-itens">` + catalogo.map(c =>
-          `<label><input type="checkbox" data-valor="${c.valor}" data-id="${c.id}" value="${c.nome.replace(/"/g,'&quot;')}" onchange="atualizarTotalServico()">
-            ${c.nome} <span style="color:var(--muted);font-size:12px">· ${fmtMoney(c.valor)}</span></label>`
-        ).join('') + `</div>`;
+        let nomesCat = catalogo.map(c => c.nome);
+        itensEdit.forEach(it => { if (!nomesCat.some(n => eqCI(n, it))) nomesCat.push(it); });
+        checksHtml = `<div class="check-list" id="sv-itens">` + nomesCat.map(nome => {
+          const c = catalogo.find(x => eqCI(x.nome, nome));
+          const valor = c ? c.valor : 0;
+          const chk = itensEdit.some(i => eqCI(i, nome)) ? 'checked' : '';
+          return `<label><input type="checkbox" data-valor="${valor}" value="${String(nome).replace(/"/g,'&quot;')}" ${chk} onchange="atualizarTotalServico()">
+            ${nome} <span style="color:var(--muted);font-size:12px">· ${fmtMoney(valor)}</span></label>`;
+        }).join('') + `</div>`;
       }
 
+      const fotosHtml = pendingFotosServico.length
+        ? '<div class="photo-thumbs">' + pendingFotosServico.map(src => `<img src="${src}" alt="foto">`).join('') + '</div>'
+        : '📷 Nenhuma foto ainda';
+
+      const titulo = editando ? 'Editar serviço' : 'Registrar Serviço';
+      const sub = editando
+        ? (editando.recebido
+            ? 'Registro já pago — ajustes ficam no histórico/caixa da oficina (dados do veículo não mudam).'
+            : 'Ajuste itens, valor e anexe fotos.')
+        : 'Conclua o serviço, cobrado e recebido';
+
+      const agSelect = editando
+        ? `<select id="sv-ag" disabled>
+            <option value="${editando.agendamentoId || ''}">${editando.cliente || 'Cliente'} · registro existente</option>
+            ${opts}
+          </select>
+          <input type="hidden" id="sv-edit-id" value="${editando.id}" />`
+        : `<select id="sv-ag">${opts || '<option value="">Nenhum agendamento ativo</option>'}</select>
+          <input type="hidden" id="sv-edit-id" value="" />`;
+
       el.innerHTML = `
-        <div class="page-header"><div><h2>Registrar Serviço</h2><p>Conclua o serviço, cobrado e recebido</p></div></div>
+        <div class="page-header">
+          <div><h2>${titulo}</h2><p>${sub}</p></div>
+          ${editando ? `<button class="btn btn-outline btn-sm" onclick="window._editandoServicoId=null;mostrarTela('mecanica','servicos')">Voltar ao histórico</button>` : ''}
+        </div>
         <div class="card">
           <div class="form-group">
             <label>Agendamento / Cliente *</label>
-            <select id="sv-ag">${opts || '<option value="">Nenhum agendamento ativo</option>'}</select>
+            ${agSelect}
           </div>
-          <div class="form-group"><label>Km no momento do serviço *</label><input type="number" id="sv-km" placeholder="Ex: 87620" /></div>
+          <div class="form-group"><label>Km no momento do serviço *</label>
+            <input type="number" id="sv-km" placeholder="Ex: 87620" value="${editando ? (editando.km || '') : ''}" />
+          </div>
           <div class="form-group">
             <label>Serviços realizados *</label>
             ${checksHtml}
           </div>
           <div class="form-group">
             <label>Valor total (R$)</label>
-            <input type="number" id="sv-valor" min="0" step="0.01" placeholder="0,00" oninput="/* manual ok */" />
+            <input type="number" id="sv-valor" min="0" step="0.01" placeholder="0,00"
+              value="${editando && editando.valorTotal != null ? editando.valorTotal : ''}" />
             <p style="font-size:12px;color:var(--muted);margin-top:6px">Soma automática dos itens marcados — você pode ajustar.</p>
           </div>
           <div class="form-group">
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500">
-              <input type="checkbox" id="sv-recebido" checked style="width:18px;height:18px" onchange="togglePagamentoFields()" />
+              <input type="checkbox" id="sv-recebido" ${!editando || editando.recebido ? 'checked' : ''} style="width:18px;height:18px" onchange="togglePagamentoFields()" />
               Serviço concluído e valor recebido
             </label>
           </div>
-          <div id="sv-pagamento-wrap">
+          <div id="sv-pagamento-wrap" style="${editando && !editando.recebido ? 'display:none' : ''}">
             <div class="form-group">
               <label>Forma de pagamento</label>
               <select id="sv-pagamento">
-                <option>Pix</option>
-                <option>Dinheiro</option>
-                <option>Cartão de crédito</option>
-                <option>Cartão de débito</option>
-                <option>Transferência</option>
-                <option>Boleto</option>
-                <option>Outro</option>
+                ${['Pix','Dinheiro','Cartão de crédito','Cartão de débito','Transferência','Boleto','Outro'].map(f =>
+                  `<option ${editando && editando.formaPagamento === f ? 'selected' : ''}>${f}</option>`
+                ).join('')}
               </select>
             </div>
           </div>
           <div class="form-group">
             <label>Fotos dos itens / serviço</label>
-            <div class="photo-area" id="sv-preview" style="cursor:default">📷 Nenhuma foto ainda</div>
-            <input type="file" id="sv-fotos-galeria" accept="image/*" multiple style="display:none" onchange="previewMulti(this,'sv-preview')" />
-            <input type="file" id="sv-fotos-camera" accept="image/*" capture="environment" style="display:none" onchange="previewMulti(this,'sv-preview')" />
+            <div class="photo-area" id="sv-preview" style="cursor:default">${fotosHtml}</div>
+            <input type="file" id="sv-fotos-galeria" accept="image/*" multiple style="display:none" onchange="previewMulti(this,'sv-preview', true)" />
+            <input type="file" id="sv-fotos-camera" accept="image/*" capture="environment" style="display:none" onchange="previewMulti(this,'sv-preview', true)" />
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
               <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('sv-fotos-galeria').click()">🖼️ Galeria</button>
               <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('sv-fotos-camera').click()">📷 Câmera</button>
+              ${pendingFotosServico.length ? `<button type="button" class="btn btn-ghost btn-sm" onclick="pendingFotosServico=[];const p=document.getElementById('sv-preview');if(p)p.innerHTML='📷 Nenhuma foto ainda'">Remover fotos</button>` : ''}
             </div>
-            <p style="font-size:12px;color:var(--muted);margin-top:6px">Galeria: várias fotos. Câmera: uma por vez.</p>
+            <p style="font-size:12px;color:var(--muted);margin-top:6px">Galeria: várias fotos. Câmera: uma por vez. Na edição, novas fotos são adicionadas às existentes.</p>
           </div>
-          <div class="form-group"><label>Observações</label><textarea id="sv-obs" rows="3" placeholder="Observações técnicas..."></textarea></div>
-          <button class="btn btn-success btn-block" onclick="finalizarServico()">Finalizar e registrar no financeiro</button>
+          <div class="form-group"><label>Observações</label>
+            <textarea id="sv-obs" rows="3" placeholder="Observações técnicas...">${editando ? (editando.observacoes || '').replace(/</g,'&lt;') : ''}</textarea>
+          </div>
+          <button class="btn btn-success btn-block" onclick="finalizarServico()">${editando ? 'Salvar alterações' : 'Finalizar e registrar no financeiro'}</button>
         </div>
       `;
-      atualizarTotalServico();
+      if (!editando) atualizarTotalServico();
+      togglePagamentoFields();
     }
 
     function atualizarTotalServico() {
@@ -4834,18 +4915,26 @@
 
     let pendingFotosServico = [];
 
-    async function previewMulti(input, previewId) {
+    async function previewMulti(input, previewId, append) {
       const preview = document.getElementById(previewId);
       if (!preview || !input.files || !input.files.length) return;
       preview.innerHTML = 'comprimindo fotos…';
-      pendingFotosServico = await Promise.all(
+      const novas = await Promise.all(
         Array.from(input.files).slice(0, 6).map(f => compressImageFile(f, 900))
       );
+      if (append && pendingFotosServico && pendingFotosServico.length) {
+        pendingFotosServico = pendingFotosServico.concat(novas).slice(0, 12);
+      } else {
+        pendingFotosServico = novas;
+      }
       preview.innerHTML = '<div class="photo-thumbs">' + pendingFotosServico.map(src => `<img src="${src}" alt="foto">`).join('') + '</div>';
+      input.value = '';
     }
 
     function finalizarServico() {
-      const agId = document.getElementById('sv-ag').value;
+      const editId = (document.getElementById('sv-edit-id')?.value || '').trim() || window._editandoServicoId || '';
+      const editando = editId ? (DB.servicos || []).find(x => x.id === editId) : null;
+      const agId = document.getElementById('sv-ag')?.value;
       const km = parseInt(document.getElementById('sv-km').value, 10);
       const obs = document.getElementById('sv-obs').value.trim();
       const checks = [...document.querySelectorAll('#sv-itens input:checked')].map(c => c.value);
@@ -4853,10 +4942,46 @@
       const recebido = !!(document.getElementById('sv-recebido') && document.getElementById('sv-recebido').checked);
       const formaPagamento = recebido ? (document.getElementById('sv-pagamento')?.value || 'Outro') : null;
 
-      if (!agId) { toast('Selecione um agendamento'); return; }
       if (isNaN(km) || km < 0) { toast('Informe o km'); return; }
       if (checks.length === 0) { toast('Marque pelo menos um serviço'); return; }
 
+      // ---- EDIÇÃO ----
+      if (editando) {
+        const jaEstavaPago = !!editando.recebido;
+        editando.km = km;
+        editando.itens = checks;
+        editando.fotos = (pendingFotosServico || []).slice();
+        editando.observacoes = obs;
+        editando.valorTotal = valorTotal;
+        editando.recebido = recebido;
+        editando.formaPagamento = formaPagamento;
+        editando.statusFinanceiro = recebido ? 'recebido' : 'a_receber';
+        editando.bloqueado = !!recebido;
+        editando.editadoEm = new Date().toISOString();
+        // Só atualiza preventiva/km do carro se ainda NÃO estava pago
+        if (!jaEstavaPago) {
+          const v = DB.veiculos.find(x => x.id === editando.veiculoId);
+          if (v) {
+            if (km > v.km) v.km = km;
+            if (!DB.ultimaManutencao[v.id]) DB.ultimaManutencao[v.id] = {};
+            const plano = getPreventivas(v);
+            checks.forEach(item => {
+              const match = plano.find(p => includesCI(p.nome, item.split(' ')[0]) || includesCI(item, p.nome.split(' ')[0]));
+              const key = match?.nome || PREVENTIVAS.find(p => includesCI(p.nome, item.split(' ')[0]))?.nome || item;
+              DB.ultimaManutencao[v.id][key] = km;
+            });
+          }
+        }
+        pendingFotosServico = [];
+        window._editandoServicoId = null;
+        save();
+        toast(jaEstavaPago ? 'Histórico/caixa atualizado (veículo inalterado)' : 'Serviço atualizado');
+        mostrarTela('mecanica', 'servicos');
+        return;
+      }
+
+      // ---- NOVO ----
+      if (!agId) { toast('Selecione um agendamento'); return; }
       const ag = DB.agendamentos.find(a => a.id === agId);
       if (!ag) { toast('Agendamento não encontrado'); return; }
 
@@ -4883,6 +5008,7 @@
         fotos: pendingFotosServico,
         observacoes: obs,
         cliente: ag.cliente,
+        donoId: ag.donoId || null,
         valorTotal,
         recebido,
         formaPagamento,
@@ -4891,7 +5017,6 @@
         bloqueado: !!recebido
       });
       ag.status = 'concluido';
-      // notifica dono que o serviço foi concluído
       notificarDonoServico(ag, recebido
         ? `Serviço concluído e pago (${formaPagamento || 'pago'}): ${(checks||[]).join(', ')} · ${fmtKm(km)} km.`
         : `Serviço concluído (a receber): ${(checks||[]).join(', ')} · ${fmtKm(km)} km.`);
@@ -4906,5 +5031,8 @@
     // Init
     atualizarSelectOficinasLogin();
   </script>
+  <div id="modal-foto-bg" onclick="fecharFotoAmpliada()">
+    <img id="modal-foto-img" alt="Foto da manutenção" />
+  </div>
 </body>
 </html>
