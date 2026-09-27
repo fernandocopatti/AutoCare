@@ -285,6 +285,136 @@
 </head>
 <body>
 
+
+  <!-- ========== CADASTRO / PRIMEIRO ACESSO ========== -->
+  <div id="cadastro" class="login-screen" style="display:none">
+    <div class="login-box" style="max-width:440px">
+      <div class="login-logo"><div class="icon">🚗</div></div>
+      <h1>Criar conta</h1>
+      <p class="subtitle">Primeiro acesso no AutoCare — escolha o perfil e preencha seus dados</p>
+
+      <label style="display:block;font-size:13px;font-weight:500;margin-bottom:10px;color:var(--text-secondary)">Tipo de perfil *</label>
+      <div class="role-grid" id="cad-role-grid">
+        <div class="role-card selected" data-role="dono" onclick="selectCadRole(this)">
+          <div class="role-icon">👤</div>
+          <div>
+            <div class="role-title">Proprietário</div>
+            <div class="role-desc">Meus veículos e manutenções</div>
+          </div>
+        </div>
+        <div class="role-card" data-role="mecanica" onclick="selectCadRole(this)">
+          <div class="role-icon">🔧</div>
+          <div>
+            <div class="role-title">Oficina / Mecânica</div>
+            <div class="role-desc">Agenda e serviços (aguarda aprovação)</div>
+          </div>
+        </div>
+        <div class="role-card" data-role="admin" onclick="selectCadRole(this)">
+          <div class="role-icon">⚙️</div>
+          <div>
+            <div class="role-title">Administrador</div>
+            <div class="role-desc">Gestão do app e oficinas</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="cad-google-wrap" style="margin:14px 0;text-align:center">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Opcional — agiliza nome e e-mail</p>
+        <div id="cad-google-btn" style="display:flex;justify-content:center"></div>
+      </div>
+
+      <!-- Campos comuns -->
+      <div class="form-group">
+        <label>Nome completo *</label>
+        <input type="text" id="cad-nome" placeholder="Como você quer ser identificado" autocomplete="name" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Telefone / WhatsApp *</label>
+          <input type="tel" id="cad-telefone" placeholder="(00) 90000-0000" />
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="cad-email" placeholder="seu@email.com" />
+        </div>
+      </div>
+
+      <!-- Só proprietário -->
+      <div id="cad-dono-extra">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Cidade</label>
+            <input type="text" id="cad-cidade" placeholder="Sua cidade" />
+          </div>
+          <div class="form-group">
+            <label>UF</label>
+            <input type="text" id="cad-uf" placeholder="RS" maxlength="2" style="text-transform:uppercase" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Só mecânica / oficina -->
+      <div id="cad-mec-extra" style="display:none">
+        <div class="form-group">
+          <label>Nome da oficina *</label>
+          <input type="text" id="cad-of-nome" placeholder="Ex: Master Mecânica" />
+        </div>
+        <div class="form-group">
+          <label>Razão social</label>
+          <input type="text" id="cad-of-razao" placeholder="Opcional" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>CNPJ</label>
+            <input type="text" id="cad-of-cnpj" placeholder="00.000.000/0000-00" />
+          </div>
+          <div class="form-group">
+            <label>Telefone da oficina</label>
+            <input type="tel" id="cad-of-tel" placeholder="(00) 3000-0000" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Endereço</label>
+          <input type="text" id="cad-of-end" placeholder="Rua, número, bairro" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Cidade</label>
+            <input type="text" id="cad-of-cidade" />
+          </div>
+          <div class="form-group">
+            <label>UF</label>
+            <input type="text" id="cad-of-uf" maxlength="2" style="text-transform:uppercase" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Especialidades</label>
+          <input type="text" id="cad-of-esp" placeholder="Motor, freios, revisão…" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Criar PIN *</label>
+          <input type="password" id="cad-pin" inputmode="numeric" maxlength="12" placeholder="Mín. 4 dígitos" autocomplete="new-password" />
+        </div>
+        <div class="form-group">
+          <label>Confirmar PIN *</label>
+          <input type="password" id="cad-pin2" inputmode="numeric" maxlength="12" placeholder="Repita o PIN" autocomplete="new-password" />
+        </div>
+      </div>
+
+      <label style="display:flex;align-items:flex-start;gap:10px;margin:12px 0;cursor:pointer;font-size:14px">
+        <input type="checkbox" id="cad-bio" style="width:18px;height:18px;margin-top:2px;flex-shrink:0" />
+        <span>Ativar desbloqueio por <strong>biometria</strong> neste aparelho (Face ID / digital), se disponível</span>
+      </label>
+      <p id="cad-bio-status" style="font-size:12px;color:var(--muted);margin:-4px 0 12px"></p>
+
+      <button class="btn btn-primary btn-block" onclick="finalizarCadastro()">Criar conta e entrar</button>
+      <button class="btn btn-outline btn-block" style="margin-top:10px" onclick="mostrarLogin()">Já tenho conta — fazer login</button>
+    </div>
+  </div>
+
   <!-- ========== LOGIN ========== -->
   <div id="login" class="login-screen">
     <div class="login-box">
@@ -295,6 +425,14 @@
       <div class="form-group">
         <label>Seu nome</label>
         <input type="text" id="login-nome" placeholder="Ex: Maria Silva" autocomplete="name" />
+      </div>
+      <div class="form-group">
+        <label>PIN de acesso * <span style="font-weight:400;color:var(--muted)">(mín. 4 dígitos)</span></label>
+        <input type="password" id="login-pin" inputmode="numeric" pattern="[0-9]*" maxlength="12"
+          placeholder="••••" autocomplete="current-password" />
+        <p style="font-size:12px;color:var(--muted);margin-top:6px">
+          No 1º acesso o PIN é criado. Depois só entra com o PIN correto desta conta.
+        </p>
       </div>
 
       <label style="display:block;font-size:13px;font-weight:500;margin-bottom:10px;color:var(--text-secondary)">Tipo de acesso</label>
@@ -334,6 +472,13 @@
       </div>
 
       <button class="btn btn-primary btn-block" onclick="fazerLogin()">Entrar</button>
+      <button type="button" class="btn btn-outline btn-block" id="login-bio-btn" style="margin-top:10px;display:none" onclick="entrarComBiometria()">
+        fingerprint Entrar com biometria
+      </button>
+      <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.4">
+        🔒 Use PIN e, se quiser, Google + biometria neste aparelho.
+      </p>
+      <button type="button" class="btn btn-ghost btn-block" style="margin-top:8px" onclick="mostrarCadastro()">Não tem conta? <strong>Criar cadastro</strong></button>
 
       <div style="display:flex;align-items:center;gap:12px;margin:18px 0 14px">
         <div style="flex:1;height:1px;background:var(--border)"></div>
@@ -597,6 +742,17 @@
       <div class="form-group">
         <label>Observações</label>
         <textarea id="pf-obs" rows="2" placeholder="Oficina, nota fiscal, detalhes…"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Fotos (opcional)</label>
+        <div class="photo-area" id="pf-preview" style="cursor:default">📷 Nenhuma foto ainda</div>
+        <input type="file" id="pf-fotos-galeria" accept="image/*" multiple style="display:none" onchange="previewFotosPreventiva(this)" />
+        <input type="file" id="pf-fotos-camera" accept="image/*" capture="environment" style="display:none" onchange="previewFotosPreventiva(this)" />
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('pf-fotos-galeria').click()">🖼️ Galeria</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('pf-fotos-camera').click()">📷 Câmera</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="limparFotosPreventiva()">Remover fotos</button>
+        </div>
       </div>
       <p id="pf-dica" style="font-size:12px;color:var(--muted);margin:0 0 12px"></p>
       <div class="modal-actions">
@@ -1126,6 +1282,7 @@
         ultimaManutencao: {},
         notificacoes: [],
         proprietarios: {},
+        acessoPins: {},
         adminPin: null
       };
     }
@@ -1187,7 +1344,9 @@
     }
 
     let DB = load();
-    let SESSION = { role: null, nome: '', oficinaId: null };
+    let SESSION = { role: null, nome: '', oficinaId: null, google: null };
+      const pinEl = document.getElementById('login-pin');
+      if (pinEl) pinEl.value = '';
 
     // ===================== UTILS =====================
     function toast(msg) {
@@ -1328,6 +1487,7 @@
         ultimaManutencao: data.ultimaManutencao || {},
         notificacoes: data.notificacoes || [],
         proprietarios: data.proprietarios || {},
+        acessoPins: data.acessoPins || {},
         adminPin: data.adminPin || null
       };
       // evita reenviar logo após restaurar
@@ -1783,7 +1943,11 @@
         const email = payload.email || '';
         document.getElementById('login-nome').value = nome;
         SESSION.google = { email, name: nome, picture: payload.picture || '' };
-        toast('Google: ' + nome + ' — escolha o perfil e clique em Entrar');
+        const cn = document.getElementById('cad-nome');
+        const ce = document.getElementById('cad-email');
+        if (cn && !cn.value) cn.value = nome;
+        if (ce && email) ce.value = email;
+        toast('Google OK: ' + nome + ' — complete o cadastro ou entre com PIN');
       } catch (e) {
         console.error(e);
         toast('Falha ao ler login Google');
@@ -1999,6 +2163,325 @@
       } catch (e) { return null; }
     }
 
+
+    // ===================== CADASTRO + BIOMETRIA =====================
+    let selectedCadRole = 'dono';
+    const BIO_KEY = 'autocare_webauthn_v1';
+
+    function temContasCadastradas() {
+      garantirAcessoPins();
+      if (DB.adminPin) return true;
+      return Object.keys(DB.acessoPins || {}).length > 0;
+    }
+
+    function mostrarCadastro() {
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('cadastro').style.display = 'flex';
+      atualizarBioStatusCadastro();
+      // reusa botão Google no cadastro se possível
+      try {
+        const wrap = document.getElementById('cad-google-btn');
+        if (wrap && window.google && google.accounts && google.accounts.id) {
+          wrap.innerHTML = '';
+          google.accounts.id.renderButton(wrap, {
+            type: 'standard', theme: 'outline', size: 'large', text: 'signup_with', width: 320
+          });
+        }
+      } catch (e) {}
+    }
+
+    function mostrarLogin() {
+      document.getElementById('cadastro').style.display = 'none';
+      document.getElementById('login').style.display = 'flex';
+      atualizarBotaoBiometriaLogin();
+    }
+
+    function selectCadRole(el) {
+      document.querySelectorAll('#cad-role-grid .role-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedCadRole = el.dataset.role;
+      document.getElementById('cad-dono-extra').style.display = selectedCadRole === 'dono' ? 'block' : 'none';
+      document.getElementById('cad-mec-extra').style.display = selectedCadRole === 'mecanica' ? 'block' : 'none';
+    }
+
+    function atualizarBioStatusCadastro() {
+      const el = document.getElementById('cad-bio-status');
+      const chk = document.getElementById('cad-bio');
+      if (!el) return;
+      if (!window.PublicKeyCredential) {
+        el.textContent = 'Biometria não disponível neste navegador. Você poderá usar só o PIN.';
+        if (chk) { chk.checked = false; chk.disabled = true; }
+      } else {
+        el.textContent = 'No iPhone/Android moderno, o sistema pode pedir Face ID ou digital ao ativar.';
+        if (chk) chk.disabled = false;
+      }
+    }
+
+    function loadBioStore() {
+      try { return JSON.parse(localStorage.getItem(BIO_KEY) || '{}') || {}; } catch (e) { return {}; }
+    }
+    function saveBioStore(obj) {
+      localStorage.setItem(BIO_KEY, JSON.stringify(obj));
+    }
+
+    function bufferToBase64(buf) {
+      const bytes = new Uint8Array(buf);
+      let s = '';
+      bytes.forEach(b => s += String.fromCharCode(b));
+      return btoa(s);
+    }
+    function base64ToBuffer(b64) {
+      const s = atob(b64);
+      const buf = new Uint8Array(s.length);
+      for (let i = 0; i < s.length; i++) buf[i] = s.charCodeAt(i);
+      return buf.buffer;
+    }
+
+    async function registrarBiometria(userKey, displayName) {
+      if (!window.PublicKeyCredential) return false;
+      try {
+        const challenge = crypto.getRandomValues(new Uint8Array(32));
+        const userId = new TextEncoder().encode(userKey).slice(0, 32);
+        const cred = await navigator.credentials.create({
+          publicKey: {
+            challenge,
+            rp: { name: 'AutoCare', id: location.hostname || 'localhost' },
+            user: { id: userId, name: userKey, displayName: displayName || userKey },
+            pubKeyCredParams: [
+              { alg: -7, type: 'public-key' },
+              { alg: -257, type: 'public-key' }
+            ],
+            authenticatorSelection: {
+              authenticatorAttachment: 'platform',
+              userVerification: 'required',
+              residentKey: 'preferred'
+            },
+            timeout: 90000
+          }
+        });
+        if (!cred) return false;
+        const store = loadBioStore();
+        store[userKey] = {
+          credId: bufferToBase64(cred.rawId),
+          role: selectedCadRole || SESSION.role,
+          nome: displayName,
+          criadoEm: new Date().toISOString()
+        };
+        saveBioStore(store);
+        return true;
+      } catch (e) {
+        console.warn('biometria', e);
+        toast('Biometria não concluída: ' + (e.message || 'cancelado'));
+        return false;
+      }
+    }
+
+    async function verificarBiometria(userKey) {
+      const store = loadBioStore();
+      const entry = store[userKey];
+      if (!entry || !entry.credId) return false;
+      try {
+        const challenge = crypto.getRandomValues(new Uint8Array(32));
+        const assertion = await navigator.credentials.get({
+          publicKey: {
+            challenge,
+            timeout: 90000,
+            userVerification: 'required',
+            allowCredentials: [{
+              id: base64ToBuffer(entry.credId),
+              type: 'public-key',
+              transports: ['internal']
+            }]
+          }
+        });
+        return !!assertion;
+      } catch (e) {
+        console.warn('bio get', e);
+        return false;
+      }
+    }
+
+    function atualizarBotaoBiometriaLogin() {
+      const btn = document.getElementById('login-bio-btn');
+      if (!btn) return;
+      const store = loadBioStore();
+      const has = Object.keys(store).length > 0 && window.PublicKeyCredential;
+      btn.style.display = has ? 'block' : 'none';
+    }
+
+    async function entrarComBiometria() {
+      const store = loadBioStore();
+      const keys = Object.keys(store);
+      if (!keys.length) { toast('Nenhuma biometria cadastrada neste aparelho'); return; }
+      // tenta a última / única chave
+      let okKey = null;
+      for (const k of keys) {
+        if (await verificarBiometria(k)) { okKey = k; break; }
+      }
+      if (!okKey) { toast('Biometria não reconhecida ou cancelada'); return; }
+      const entry = store[okKey];
+      // preenche e entra sem PIN (já autenticado pelo aparelho)
+      document.getElementById('login-nome').value = entry.nome || '';
+      const role = entry.role || 'dono';
+      selectedRole = role;
+      document.querySelectorAll('#role-grid .role-card').forEach(c => {
+        c.classList.toggle('selected', c.dataset.role === role);
+      });
+      if (role === 'mecanica') {
+        document.getElementById('login-oficina-wrap').style.display = 'block';
+        atualizarSelectOficinasLogin();
+        if (okKey.startsWith('mec:')) {
+          const ofId = okKey.slice(4);
+          const sel = document.getElementById('login-oficina');
+          if (sel) sel.value = ofId;
+        }
+      }
+      // bypass PIN: marca sessão biométrica
+      SESSION._bioOk = okKey;
+      // pin dummy skip - call internal enter
+      entrarAposAuth(entry.nome || 'Usuário', role, okKey.startsWith('mec:') ? okKey.slice(4) : null);
+    }
+
+    async function finalizarCadastro() {
+      const nome = (document.getElementById('cad-nome')?.value || '').trim();
+      const telefone = (document.getElementById('cad-telefone')?.value || '').trim();
+      const email = (document.getElementById('cad-email')?.value || '').trim() ||
+        (SESSION.google && SESSION.google.email) || '';
+      const pin = (document.getElementById('cad-pin')?.value || '').trim();
+      const pin2 = (document.getElementById('cad-pin2')?.value || '').trim();
+      const role = selectedCadRole;
+
+      if (!nome) { toast('Informe o nome'); return; }
+      if (role !== 'admin' && !telefone) { toast('Informe telefone / WhatsApp'); return; }
+      if (!pin || pin.length < 4) { toast('PIN com pelo menos 4 dígitos'); return; }
+      if (pin !== pin2) { toast('Os PINs não conferem'); return; }
+
+      garantirAcessoPins();
+      let oficinaId = null;
+
+      if (role === 'admin') {
+        if (DB.adminPin) {
+          toast('Já existe administrador. Use o login.');
+          mostrarLogin();
+          return;
+        }
+        DB.adminPin = hashPin(pin);
+        DB.acessoPins['admin'] = DB.adminPin;
+      } else if (role === 'mecanica') {
+        const ofNome = (document.getElementById('cad-of-nome')?.value || '').trim();
+        if (!ofNome) { toast('Informe o nome da oficina'); return; }
+        const of = {
+          id: uid(),
+          nome: ofNome,
+          razaoSocial: (document.getElementById('cad-of-razao')?.value || '').trim(),
+          cnpj: (document.getElementById('cad-of-cnpj')?.value || '').trim(),
+          email: email,
+          contato: nome,
+          telefone: (document.getElementById('cad-of-tel')?.value || telefone).trim(),
+          endereco: (document.getElementById('cad-of-end')?.value || '').trim(),
+          cidade: (document.getElementById('cad-of-cidade')?.value || '').trim(),
+          uf: (document.getElementById('cad-of-uf')?.value || '').trim().toUpperCase(),
+          especialidades: (document.getElementById('cad-of-esp')?.value || '').trim(),
+          status: 'pendente',
+          solicitadoPor: nome,
+          solicitadoEm: new Date().toISOString().slice(0, 10),
+          acessoPin: hashPin(pin),
+          nota: null, lat: null, lng: null, cor: 'azul', logo: null
+        };
+        DB.oficinas.push(of);
+        oficinaId = of.id;
+        DB.acessoPins['mec:' + of.id] = hashPin(pin);
+        toast('Oficina cadastrada — aguarde aprovação do admin para entrar na agenda');
+      } else {
+        // dono
+        if (SESSION.google && SESSION.google.email) {
+          SESSION.google = SESSION.google;
+        } else if (email) {
+          SESSION.google = SESSION.google || { email, name: nome };
+        }
+        SESSION.nome = nome;
+        const p = perfilDonoAtual();
+        p.nome = nome;
+        p.telefone = telefone;
+        p.email = email;
+        p.cidade = (document.getElementById('cad-cidade')?.value || '').trim();
+        p.uf = (document.getElementById('cad-uf')?.value || '').trim().toUpperCase();
+        p.atualizadoEm = new Date().toISOString();
+        const key = chaveAcessoLogin('dono', nome, null);
+        DB.acessoPins[key] = hashPin(pin);
+      }
+
+      save();
+
+      const userKey = role === 'admin' ? 'admin'
+        : role === 'mecanica' ? ('mec:' + oficinaId)
+        : chaveAcessoLogin('dono', nome, null);
+
+      if (document.getElementById('cad-bio')?.checked) {
+        const ok = await registrarBiometria(userKey, nome);
+        if (ok) toast('Biometria ativada neste aparelho');
+      }
+
+      // preenche login e entra (mecânica pendente não entra na agenda)
+      document.getElementById('login-nome').value = nome;
+      document.getElementById('login-pin').value = pin;
+      selectedRole = role;
+      document.querySelectorAll('#role-grid .role-card').forEach(c => {
+        c.classList.toggle('selected', c.dataset.role === role);
+      });
+
+      if (role === 'mecanica') {
+        document.getElementById('cadastro').style.display = 'none';
+        document.getElementById('login').style.display = 'flex';
+        atualizarSelectOficinasLogin();
+        toast('Cadastro enviado. Quando a oficina for aprovada, entre com PIN.');
+        atualizarBotaoBiometriaLogin();
+        return;
+      }
+
+      document.getElementById('cadastro').style.display = 'none';
+      entrarAposAuth(nome, role, oficinaId);
+    }
+
+    /** Entrada após PIN ou biometria validados */
+    function entrarAposAuth(nome, role, oficinaId) {
+      SESSION.role = role;
+      SESSION.nome = nome;
+      SESSION.oficinaId = oficinaId || null;
+      SESSION.logadoEm = new Date().toISOString();
+
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('cadastro').style.display = 'none';
+
+      if (role === 'dono') {
+        document.getElementById('app-dono').classList.add('active');
+        const p = perfilDonoAtual();
+        if (p.nome) SESSION.nome = p.nome;
+        else p.nome = nome;
+        if (SESSION.google && SESSION.google.email && !p.email) p.email = SESSION.google.email;
+        atualizarChipDono();
+        if (!p.telefone) {
+          toast('Complete seu cadastro (telefone)');
+          mostrarTela('dono', 'perfil');
+        } else {
+          mostrarTela('dono', 'veiculos');
+        }
+      } else if (role === 'mecanica') {
+        document.getElementById('app-mecanica').classList.add('active');
+        document.getElementById('mec-user-name').textContent = nome;
+        const of = DB.oficinas.find(o => o.id === SESSION.oficinaId);
+        document.getElementById('mec-oficina-badge').textContent = '🔧 ' + (of ? of.nome : 'Oficina');
+        mostrarTela('mecanica', 'agenda');
+      } else if (role === 'admin') {
+        document.getElementById('app-admin').classList.add('active');
+        document.getElementById('admin-user-name').textContent = nome;
+        mostrarTela('admin', 'oficinas');
+      }
+
+      if (typeof tentarSyncAoLogar === 'function') tentarSyncAoLogar();
+      else if (typeof agendarSyncGithub === 'function') agendarSyncGithub();
+    }
+
     // ===================== LOGIN / PERFIS =====================
     let selectedRole = 'dono';
 
@@ -2032,68 +2515,106 @@
       }
     }
 
-    function fazerLogin() {
-      const nome = (document.getElementById('login-nome').value || '').trim() || 'Usuário';
-      SESSION.role = selectedRole;
-      SESSION.nome = nome;
-      SESSION.oficinaId = null;
+    /** Hash simples (não é criptografia bancária — só dificulta leitura casual no localStorage) */
+    function hashPin(pin) {
+      const s = String(pin || '');
+      let h = 2166136261;
+      for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return 'p' + (h >>> 0).toString(16);
+    }
 
+    function chaveAcessoLogin(role, nome, oficinaId) {
+      if (role === 'admin') return 'admin';
+      if (role === 'mecanica') return 'mec:' + (oficinaId || '');
+      // dono: prioriza Google
+      if (SESSION.google && SESSION.google.email) return 'dono:g:' + SESSION.google.email.toLowerCase();
+      return 'dono:n:' + (nome || '').trim().toLowerCase();
+    }
+
+    function garantirAcessoPins() {
+      if (!DB.acessoPins || typeof DB.acessoPins !== 'object') DB.acessoPins = {};
+    }
+
+    /** Valida ou cria PIN. Retorna false se bloqueou o login. */
+    function validarPinAcesso(role, nome, oficinaId) {
+      const pin = (document.getElementById('login-pin')?.value || '').trim();
+      if (!pin || pin.length < 4) {
+        toast('Informe um PIN com pelo menos 4 dígitos');
+        return false;
+      }
+      garantirAcessoPins();
+
+      if (role === 'admin') {
+        if (!DB.adminPin) {
+          const conf = prompt('Confirme o PIN de administrador (primeiro acesso):');
+          if (conf !== pin) { toast('PIN não confere'); return false; }
+          DB.adminPin = hashPin(pin);
+          DB.acessoPins['admin'] = DB.adminPin;
+          save();
+          toast('PIN de administrador criado');
+          return true;
+        }
+        // aceita hash novo ou PIN antigo em texto puro (migração)
+        if (DB.adminPin === pin || DB.adminPin === hashPin(pin)) {
+          if (DB.adminPin === pin) { DB.adminPin = hashPin(pin); save(); }
+          return true;
+        }
+        toast('PIN de administrador incorreto');
+        return false;
+      }
+
+      const key = chaveAcessoLogin(role, nome, oficinaId);
+      const salvo = DB.acessoPins[key];
+      if (!salvo) {
+        const conf = prompt('Primeiro acesso desta conta.\nConfirme o PIN para criar:');
+        if (conf !== pin) { toast('PIN não confere — tente de novo'); return false; }
+        DB.acessoPins[key] = hashPin(pin);
+        // PIN da oficina (mecânica) também no cadastro da oficina
+        if (role === 'mecanica' && oficinaId) {
+          const of = DB.oficinas.find(o => o.id === oficinaId);
+          if (of) of.acessoPin = hashPin(pin);
+        }
+        save();
+        toast('PIN criado para esta conta');
+        return true;
+      }
+      if (salvo === hashPin(pin) || salvo === pin) {
+        if (salvo === pin) { DB.acessoPins[key] = hashPin(pin); save(); }
+        return true;
+      }
+      toast('PIN incorreto');
+      return false;
+    }
+
+    function fazerLogin() {
+      const nome = (document.getElementById('login-nome').value || '').trim();
+      if (!nome) { toast('Informe seu nome'); return; }
+
+      // Proprietário: recomenda Google (não bloqueia se já tem PIN da conta)
+      if (selectedRole === 'dono' && !(SESSION.google && SESSION.google.email)) {
+        // aviso só informativo — PIN ainda protege
+      }
+
+      let oficinaId = null;
       if (selectedRole === 'mecanica') {
-        const ofId = document.getElementById('login-oficina').value;
-        if (!ofId) {
+        oficinaId = document.getElementById('login-oficina').value;
+        if (!oficinaId) {
           toast('Selecione uma oficina aprovada ou cadastre a sua');
           return;
         }
-        const of = DB.oficinas.find(o => o.id === ofId);
+        const of = DB.oficinas.find(o => o.id === oficinaId);
         if (!of || (of.status && of.status !== 'aprovada')) {
           toast('Esta oficina ainda não foi aprovada pelo administrador');
           return;
         }
-        SESSION.oficinaId = ofId;
       }
 
-      if (selectedRole === 'admin') {
-        // Gate simples por PIN — não é segurança real (é tudo client-side),
-        // só evita que qualquer pessoa entre como admin sem querer.
-        if (!DB.adminPin) {
-          const novoPin = prompt('Primeiro acesso como Administrador.\nCrie um PIN (mín. 4 dígitos) para proteger esta área:');
-          if (!novoPin || novoPin.trim().length < 4) { toast('PIN precisa ter ao menos 4 dígitos'); return; }
-          DB.adminPin = novoPin.trim();
-          save();
-          toast('PIN de administrador criado');
-        } else {
-          const pin = prompt('PIN de administrador:');
-          if (pin !== DB.adminPin) { toast('PIN incorreto'); return; }
-        }
-      }
+      if (!validarPinAcesso(selectedRole, nome, oficinaId)) return;
 
-      document.getElementById('login').style.display = 'none';
-
-      if (selectedRole === 'dono') {
-        document.getElementById('app-dono').classList.add('active');
-        const p = perfilDonoAtual();
-        if (p.nome) SESSION.nome = p.nome;
-        else p.nome = nome;
-        if (SESSION.google && SESSION.google.email && !p.email) p.email = SESSION.google.email;
-        atualizarChipDono();
-        // se cadastro incompleto (sem telefone), leva ao perfil
-        if (!p.telefone) {
-          toast('Complete seu cadastro (telefone)');
-          mostrarTela('dono', 'perfil');
-        } else {
-          mostrarTela('dono', 'veiculos');
-        }
-      } else if (selectedRole === 'mecanica') {
-        document.getElementById('app-mecanica').classList.add('active');
-        document.getElementById('mec-user-name').textContent = nome;
-        const of = DB.oficinas.find(o => o.id === SESSION.oficinaId);
-        document.getElementById('mec-oficina-badge').textContent = '🔧 ' + (of ? of.nome : 'Oficina');
-        mostrarTela('mecanica', 'agenda');
-      } else if (selectedRole === 'admin') {
-        document.getElementById('app-admin').classList.add('active');
-        document.getElementById('admin-user-name').textContent = nome;
-        mostrarTela('admin', 'oficinas');
-      }
+      entrarAposAuth(nome, selectedRole, oficinaId);
 
       // multi-dispositivo: puxa nuvem se auto-sync estiver ligado
       setTimeout(() => { sincronizarAoEntrar().catch(() => {}); }, 300);
@@ -2117,7 +2638,9 @@
       document.getElementById('app-mecanica').classList.remove('active');
       document.getElementById('app-admin').classList.remove('active');
       document.getElementById('login').style.display = 'flex';
-      SESSION = { role: null, nome: '', oficinaId: null };
+      SESSION = { role: null, nome: '', oficinaId: null, google: null };
+      const pinEl = document.getElementById('login-pin');
+      if (pinEl) pinEl.value = '';
       atualizarSelectOficinasLogin();
     }
 
@@ -3410,6 +3933,13 @@
       document.getElementById('pf-km').value = s.km;
       document.getElementById('pf-data').value = s.data || '';
       document.getElementById('pf-obs').value = s.observacoes || '';
+      pendingFotosPreventiva = (s.fotos && s.fotos.length) ? s.fotos.slice() : [];
+      const prev = document.getElementById('pf-preview');
+      if (prev) {
+        prev.innerHTML = pendingFotosPreventiva.length
+          ? '<div class="photo-thumbs">' + pendingFotosPreventiva.map(src => `<img src="${src}" alt="foto">`).join('') + '</div>'
+          : '📷 Nenhuma foto ainda';
+      }
       if (s.itens && s.itens[0]) {
         const sel = document.getElementById('pf-item');
         const opt = [...sel.options].find(o => o.value === s.itens[0]);
@@ -3437,6 +3967,30 @@
     }
 
     
+    let pendingFotosPreventiva = [];
+
+    async function previewFotosPreventiva(input) {
+      if (!input.files || !input.files.length) return;
+      const prev = document.getElementById('pf-preview');
+      if (prev) prev.innerHTML = 'comprimindo…';
+      const novas = await Promise.all(
+        Array.from(input.files).slice(0, 6).map(f => compressImageFile(f, 900))
+      );
+      pendingFotosPreventiva = (pendingFotosPreventiva || []).concat(novas).slice(0, 12);
+      if (prev) {
+        prev.innerHTML = pendingFotosPreventiva.length
+          ? '<div class="photo-thumbs">' + pendingFotosPreventiva.map(s => `<img src="${s}" alt="foto">`).join('') + '</div>'
+          : '📷 Nenhuma foto ainda';
+      }
+      input.value = '';
+    }
+
+    function limparFotosPreventiva() {
+      pendingFotosPreventiva = [];
+      const prev = document.getElementById('pf-preview');
+      if (prev) prev.innerHTML = '📷 Nenhuma foto ainda';
+    }
+
     function abrirModalPreventivaFeita(veiculoId, nomeItem) {
       const meus = meusVeiculos();
       if (meus.length === 0) { toast('Cadastre um veículo primeiro'); return; }
@@ -3552,6 +4106,7 @@
           s.km = km;
           s.itens = [nome];
           s.observacoes = obs;
+          s.fotos = (pendingFotosPreventiva || []).slice();
           s.editadoEm = new Date().toISOString();
           toast('Lançamento atualizado: ' + nome + ' · ' + fmtKm(km) + ' km');
         } else {
@@ -3565,7 +4120,7 @@
           data,
           km,
           itens: [nome],
-          fotos: [],
+          fotos: (pendingFotosPreventiva || []).slice(),
           observacoes: obs,
           cliente: SESSION.nome || '',
           valorTotal: 0,
@@ -3576,6 +4131,7 @@
         toast('Lançamento salvo: ' + nome + ' · ' + fmtKm(km) + ' km');
       }
 
+      pendingFotosPreventiva = [];
       save();
       fecharModal('modal-preventiva');
       renderDonoManutencao();
@@ -4221,15 +4777,14 @@
             <input type="tel" id="mag-tel" placeholder="11999990000" />
           </div>
           <div class="form-group">
-            <label>Serviço *</label>
-            <select id="mag-servico">
-              <option>Revisão preventiva</option>
-              <option>Troca de óleo</option>
-              <option>Freios</option>
-              <option>Suspensão</option>
-              <option>Diagnóstico</option>
-              <option>Outro / Corretiva</option>
-            </select>
+            <label>Serviços * <span style="font-weight:400;color:var(--muted)">(pode marcar mais de um)</span></label>
+            <div id="mag-servicos-lista" style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;background:#fff;max-height:220px;overflow:auto">
+            </div>
+            <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="magServicosToggleAll(true)">Marcar todos</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="magServicosToggleAll(false)">Limpar</button>
+            </div>
+            <p id="mag-servicos-resumo" style="font-size:12px;color:var(--muted);margin-top:6px">Nenhum selecionado</p>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -4254,7 +4809,53 @@
       `;
       const hoje = new Date().toISOString().slice(0, 10);
       document.getElementById('mag-data').value = hoje;
+      preencherServicosMag();
       atualizarMagHoras();
+    }
+
+    function preencherServicosMag() {
+      const box = document.getElementById('mag-servicos-lista');
+      if (!box) return;
+      const cat = (typeof catalogoDaOficina === 'function' ? catalogoDaOficina(SESSION.oficinaId) : null)
+        || (DB.catalogoServicos || []).filter(c => c.oficinaId === SESSION.oficinaId);
+      let opts;
+      if (cat.length) {
+        opts = cat.map(c => ({
+          nome: c.nome,
+          label: c.valor != null ? (c.nome + ' · ' + fmtMoney(c.valor)) : c.nome
+        }));
+      } else {
+        opts = [
+          'Revisão preventiva', 'Troca de óleo', 'Freios', 'Suspensão',
+          'Diagnóstico', 'Alinhamento e balanceamento', 'Outro / Corretiva'
+        ].map(n => ({ nome: n, label: n }));
+      }
+      box.innerHTML = opts.map(o => `
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;padding:4px 0">
+          <input type="checkbox" class="mag-servico-chk" value="${String(o.nome).replace(/"/g, '&quot;')}"
+            onchange="atualizarResumoServicosMag()" style="width:18px;height:18px;flex-shrink:0" />
+          <span>${o.label}</span>
+        </label>
+      `).join('');
+      atualizarResumoServicosMag();
+    }
+
+    function magServicosSelecionados() {
+      return [...document.querySelectorAll('.mag-servico-chk:checked')].map(c => c.value);
+    }
+
+    function magServicosToggleAll(on) {
+      document.querySelectorAll('.mag-servico-chk').forEach(c => { c.checked = !!on; });
+      atualizarResumoServicosMag();
+    }
+
+    function atualizarResumoServicosMag() {
+      const el = document.getElementById('mag-servicos-resumo');
+      if (!el) return;
+      const list = magServicosSelecionados();
+      if (!list.length) el.textContent = 'Nenhum selecionado';
+      else if (list.length === 1) el.textContent = '1 serviço: ' + list[0];
+      else el.textContent = list.length + ' serviços: ' + list.join(' · ');
     }
 
     function onMagVeiculoChange() {
@@ -4287,13 +4888,15 @@
       const veiculoId = document.getElementById('mag-veiculo').value || null;
       const cliente = document.getElementById('mag-cliente').value.trim();
       const telefoneCliente = document.getElementById('mag-tel').value.trim();
-      const servico = document.getElementById('mag-servico').value;
+      const servicos = typeof magServicosSelecionados === 'function' ? magServicosSelecionados() : [];
+      const servico = servicos.length ? servicos.join(' · ') : '';
       const data = document.getElementById('mag-data').value;
       const hora = document.getElementById('mag-hora').value;
       const notas = document.getElementById('mag-notas').value.trim();
       const abrirWa = document.getElementById('mag-whatsapp').checked;
 
       if (!cliente) { toast('Informe o nome do cliente'); return; }
+      if (!servicos.length) { toast('Selecione pelo menos um serviço'); return; }
       if (!data || !hora) { toast('Escolha data e horário'); return; }
       if (!horariosLivres(ofId, data).includes(hora)) {
         toast('Horário indisponível'); atualizarMagHoras(); return;
@@ -4309,7 +4912,9 @@
         id: uid(),
         veiculoId,
         oficinaId: ofId,
-        data, hora, servico,
+        data, hora,
+        servico,
+        servicos: servicos.slice(),
         status: 'confirmado',
         cliente,
         telefoneCliente,
@@ -5030,6 +5635,14 @@
 
     // Init
     atualizarSelectOficinasLogin();
+    atualizarBotaoBiometriaLogin();
+    if (!temContasCadastradas()) {
+      mostrarCadastro();
+    } else {
+      document.getElementById('login').style.display = 'flex';
+      const cad = document.getElementById('cadastro');
+      if (cad) cad.style.display = 'none';
+    }
   </script>
   <div id="modal-foto-bg" onclick="fecharFotoAmpliada()">
     <img id="modal-foto-img" alt="Foto da manutenção" />
