@@ -161,10 +161,11 @@
       font-size: 13px; font-weight: 600;
     }
     .stats-row {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
       padding-top: 14px; border-top: 1px solid var(--border);
     }
-    @media (max-width: 520px) { .stats-row { grid-template-columns: 1fr; } }
+    @media (max-width: 520px) { .stats-row { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 380px) { .stats-row { grid-template-columns: 1fr; } }
     .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
     .stat-value { font-size: 15px; font-weight: 600; margin-top: 2px; }
 
@@ -2593,14 +2594,57 @@
     }
 
     async function urlParaDataUrl(url) {
-      const resp = await fetch(url, { mode: 'cors' });
-      if (!resp.ok) throw new Error('http ' + resp.status);
-      const blob = await resp.blob();
+      // 1) fetch direto (Wikimedia costuma liberar CORS)
+      try {
+        const resp = await fetch(url, { mode: 'cors', credentials: 'omit' });
+        if (resp.ok) {
+          const blob = await resp.blob();
+          return await new Promise((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onload = () => resolve(fr.result);
+            fr.onerror = reject;
+            fr.readAsDataURL(blob);
+          });
+        }
+      } catch (e) {}
+
+      // 2) Image + canvas com crossOrigin
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            try {
+              const max = 640;
+              let w = img.naturalWidth || img.width;
+              let h = img.naturalHeight || img.height;
+              if (w > max || h > max) {
+                const r = Math.min(max / w, max / h);
+                w = Math.round(w * r); h = Math.round(h * r);
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = w; canvas.height = h;
+              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+              resolve(canvas.toDataURL('image/jpeg', 0.85));
+            } catch (err) { reject(err); }
+          };
+          img.onerror = () => reject(new Error('img error'));
+          img.src = url;
+        });
+        return dataUrl;
+      } catch (e) {}
+
+      // 3) Proxy público (contorna CORS no iOS/Safari)
+      const bare = String(url).replace(/^https?:\/\//, '');
+      const proxied = 'https://images.weserv.nl/?url=' + encodeURIComponent(bare) + '&w=640&output=jpg';
+      const resp2 = await fetch(proxied, { mode: 'cors', credentials: 'omit' });
+      if (!resp2.ok) throw new Error('proxy ' + resp2.status);
+      const blob2 = await resp2.blob();
       return await new Promise((resolve, reject) => {
         const fr = new FileReader();
         fr.onload = () => resolve(fr.result);
         fr.onerror = reject;
-        fr.readAsDataURL(blob);
+        fr.readAsDataURL(blob2);
       });
     }
 
@@ -2674,12 +2718,11 @@
 
       if (imgUrl) {
         try {
-          const dataUrl = await urlParaDataUrl(imgUrl);
-          // comprime via canvas se for grande
-          let finalUrl = dataUrl;
+          let finalUrl = await urlParaDataUrl(imgUrl);
+          // garante JPEG compacto em data URL (salva no aparelho, não some)
           try {
             const img = new Image();
-            await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataUrl; });
+            await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = finalUrl; });
             const max = 600;
             let w = img.width, h = img.height;
             if (w > max || h > max) {
@@ -2691,16 +2734,15 @@
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
             finalUrl = canvas.toDataURL('image/jpeg', 0.82);
           } catch (e) {}
+          if (!finalUrl || !String(finalUrl).startsWith('data:')) throw new Error('sem dataurl');
           window._fotoVeiculoPendente = finalUrl;
           if (prev) prev.innerHTML = '<img src="' + finalUrl + '" alt="foto" style="max-height:120px;border-radius:8px">';
-          toast('Imagem importada automaticamente — confira e salve');
+          toast('Imagem importada — confira e toque em Salvar');
           return;
         } catch (e) {
-          // CORS no binário: ainda mostra a URL remota como preview (pode não persistir offline)
-          window._fotoVeiculoPendente = imgUrl;
-          if (prev) prev.innerHTML = '<img src="' + imgUrl + '" alt="foto" style="max-height:120px;border-radius:8px" crossorigin="anonymous">';
-          toast('Imagem encontrada (link). Preferível salvar e enviar arquivo se sumir.');
-          return;
+          console.warn('falha importar imagem', e);
+          if (prev) prev.innerHTML = '📷 Toque para enviar foto';
+          toast('Não deu para importar automático. Tente de novo ou envie a foto manualmente.');
         }
       }
 
@@ -2792,6 +2834,27 @@
       return list[0] ? fmtDate(list[0].data) : '—';
     }
 
+    /** Média de consumo (km/L) com base nos abastecimentos do veículo */
+    function mediaConsumoVeiculo(veiculoId) {
+      const list = (DB.abastecimentos || [])
+        .filter(a => a.veiculoId === veiculoId)
+        .sort((a, b) => (a.km || 0) - (b.km || 0));
+      if (list.length < 2) return null;
+      let dist = 0, litros = 0;
+      for (let i = 1; i < list.length; i++) {
+        const d = (list[i].km || 0) - (list[i - 1].km || 0);
+        const L = Number(list[i].litros) || 0;
+        if (d > 0 && L > 0) { dist += d; litros += L; }
+      }
+      if (litros <= 0) return null;
+      return dist / litros;
+    }
+
+    function mediaConsumoTexto(veiculoId) {
+      const m = mediaConsumoVeiculo(veiculoId);
+      return m != null ? m.toFixed(1).replace('.', ',') + ' km/L' : '—';
+    }
+
     function renderDonoVeiculos() {
       const el = document.getElementById('dono-veiculos');
       const meus = meusVeiculos();
@@ -2834,6 +2897,10 @@
                 <div>
                   <div class="stat-label">Próxima revisão</div>
                   <div class="stat-value" style="color:${prox.cor}">${prox.texto}</div>
+                </div>
+                <div>
+                  <div class="stat-label">Média consumo</div>
+                  <div class="stat-value">${mediaConsumoTexto(v.id)}</div>
                 </div>
                 <div>
                   <div class="stat-label">Último abastecimento</div>
