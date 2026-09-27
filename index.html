@@ -164,6 +164,20 @@
       display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
       padding-top: 14px; border-top: 1px solid var(--border);
     }
+    .manut-acc-head {
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      cursor: pointer; user-select: none; margin: -4px 0 0;
+    }
+    .manut-acc-head:hover { opacity: 0.92; }
+    .manut-acc-chevron {
+      width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #f1f5f9; color: var(--text-secondary); font-size: 14px;
+      transition: transform 0.15s ease;
+    }
+    .manut-acc-chevron.open { transform: rotate(90deg); }
+    .manut-acc-body { margin-top: 12px; }
+    .manut-acc-body.collapsed { display: none; }
     @media (max-width: 520px) { .stats-row { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 380px) { .stats-row { grid-template-columns: 1fr; } }
     .stat-label { font-size: 12px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -3090,6 +3104,15 @@
     }
 
     // ===================== MANUTENÇÕES =====================
+    function toggleManutVeiculo(id) {
+      if (!window._manutOpen) window._manutOpen = {};
+      window._manutOpen[id] = !window._manutOpen[id];
+      const body = document.getElementById('manut-body-' + id);
+      const chev = document.getElementById('manut-chev-' + id);
+      if (body) body.classList.toggle('collapsed', !window._manutOpen[id]);
+      if (chev) chev.classList.toggle('open', !!window._manutOpen[id]);
+    }
+
     function renderDonoManutencao() {
       const el = document.getElementById('dono-manutencao');
       const meus = meusVeiculos();
@@ -3103,13 +3126,20 @@
           </div>
         </div>
         <div class="card" style="background:#f8fafc">
-          <p style="font-size:13px;color:var(--text-secondary);margin:0">
-            <strong>Como obter o plano:</strong><br>
-            1) <strong>Exemplo JSON</strong> — baixa um arquivo modelo, edite os km conforme o manual e use <strong>Importar JSON</strong>.<br>
-            2) <strong>Aplicar modelo</strong> — planos típicos por marca (não é o manual oficial).<br>
-            3) <strong>Importar PDF</strong> — lê o texto do manual (se não for só imagem), sugere intervalos; você confirma.<br>
-            4) <strong>Editar JSON</strong> — cola o plano direto, sem arquivo.
-          </p>
+          <div class="manut-acc-head" onclick="const b=document.getElementById('manut-help-body');const c=document.getElementById('manut-help-chev');if(b){b.classList.toggle('collapsed');c&&c.classList.toggle('open');}">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="manut-acc-chevron" id="manut-help-chev">▶</span>
+              <strong style="font-size:14px">Como obter o plano do manual</strong>
+            </div>
+          </div>
+          <div class="manut-acc-body collapsed" id="manut-help-body">
+            <p style="font-size:13px;color:var(--text-secondary);margin:0">
+              1) <strong>Exemplo JSON</strong> — baixa um arquivo modelo, edite os km conforme o manual e use <strong>Importar JSON</strong>.<br>
+              2) <strong>Aplicar modelo</strong> — planos típicos por marca (não é o manual oficial).<br>
+              3) <strong>Importar PDF</strong> — lê o texto do manual (se não for só imagem), sugere intervalos; você confirma.<br>
+              4) <strong>Editar JSON</strong> — cola o plano direto, sem arquivo.
+            </p>
+          </div>
         </div>`;
 
       if (meus.length === 0) {
@@ -3122,19 +3152,63 @@
         `<option value="${k}">${MANUAIS_MODELO[k].titulo}</option>`
       ).join('');
 
+      if (!window._manutOpen) window._manutOpen = {};
+      // com 1 veículo deixa aberto; com vários, abre o que tiver mais itens atrasados (ou o primeiro)
+      if (meus.length === 1) {
+        window._manutOpen[meus[0].id] = true;
+      } else {
+        const algumAberto = meus.some(v => window._manutOpen[v.id]);
+        if (!algumAberto) {
+          let melhor = meus[0].id, piorScore = -1;
+          meus.forEach(v => {
+            const plano = getPreventivas(v);
+            let atras = 0;
+            plano.forEach(p => {
+              const ultima = (DB.ultimaManutencao[v.id] || {})[p.nome] || 0;
+              const intv = p.intervaloKm || 0;
+              if (!intv) return;
+              const prox = ultima > 0 ? ultima + intv : intv;
+              if (v.km >= prox) atras++;
+            });
+            if (atras > piorScore) { piorScore = atras; melhor = v.id; }
+          });
+          window._manutOpen[melhor] = true;
+        }
+      }
+
       meus.forEach(v => {
         const plano = getPreventivas(v);
         const fonte = v.planoPreventiva
           ? (v.planoPreventiva.fonte || 'Manual importado')
           : 'Plano genérico (padrão)';
+        // contagem rápida de atrasadas / ok
+        let nAtras = 0, nOk = 0;
+        plano.forEach(p => {
+          const ultima = (DB.ultimaManutencao[v.id] || {})[p.nome] || 0;
+          const intv = p.intervaloKm || 0;
+          if (!intv) return;
+          const prox = ultima > 0 ? ultima + intv : intv;
+          if (v.km >= prox) nAtras++; else nOk++;
+        });
+        const aberto = !!window._manutOpen[v.id];
+        const resumoBadge = nAtras
+          ? `<span class="status late">${nAtras} pendente${nAtras > 1 ? 's' : ''}</span>`
+          : `<span class="status ok">${plano.length} itens</span>`;
         html += `<div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-            <div>
-              <h3 style="font-size:16px;font-weight:600">${v.marca} ${v.modelo}</h3>
-              <div style="font-size:12px;color:var(--muted);margin-top:2px">📋 ${fonte}</div>
+          <div class="manut-acc-head" onclick="toggleManutVeiculo('${v.id}')">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
+              <span class="manut-acc-chevron ${aberto ? 'open' : ''}" id="manut-chev-${v.id}">▶</span>
+              <div style="min-width:0">
+                <h3 style="font-size:16px;font-weight:600;margin:0">${v.marca} ${v.modelo}${v.versao ? ' ' + v.versao : ''}</h3>
+                <div style="font-size:12px;color:var(--muted);margin-top:2px">📋 ${fonte}${meus.length > 1 ? ' · toque para ' + (aberto ? 'recolher' : 'expandir') : ''}</div>
+              </div>
             </div>
-            <span class="km-badge">${fmtKm(v.km)} km</span>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+              ${resumoBadge}
+              <span class="km-badge">${fmtKm(v.km)} km</span>
+            </div>
           </div>
+          <div class="manut-acc-body ${aberto ? '' : 'collapsed'}" id="manut-body-${v.id}">
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center">
             <select id="manual-modelo-${v.id}" style="flex:1;min-width:160px;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);font-size:13px">
               ${modelosOpt}
@@ -3229,7 +3303,7 @@
               <span class="status ${cls}">${texto}</span>
             </div>`;
         });
-        html += `</div>`;
+        html += `</div></div>`; // body + card
       });
 
       html += `<div class="card"><h3 style="font-size:15px;font-weight:600;margin-bottom:12px">Histórico de serviços</h3>`;
