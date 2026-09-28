@@ -48,13 +48,20 @@
     body {
       font-family: 'Poppins', system-ui, -apple-system, sans-serif;
       background: var(--bg); color: var(--text); line-height: 1.5;
-      min-height: 100vh; -webkit-font-smoothing: antialiased;
+      min-height: 100vh; min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+      /* laterais e rodapé; topo fica no topbar sticky */
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
     /* LOGIN */
     .login-screen {
-      min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      padding: 24px; background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 55%, #1e40af 100%);
+      min-height: 100vh; min-height: 100dvh;
+      display: flex; align-items: center; justify-content: center;
+      padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+      background: linear-gradient(145deg, #0f172a 0%, #1e3a8a 55%, #1e40af 100%);
     }
     .login-box {
       background: var(--surface); border-radius: 20px; padding: 44px 36px;
@@ -134,8 +141,20 @@
 
     .topbar {
       background: var(--surface); border-bottom: 1px solid var(--border);
-      padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 50;
+      padding: env(safe-area-inset-top) 16px 0;
+      min-height: calc(56px + env(safe-area-inset-top));
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      gap: 8px;
+      box-sizing: border-box;
+    }
+    .topbar-brand { font-size: 16px !important; min-width: 0; }
+    .topbar-brand span, .topbar .user-chip { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    @media (min-width: 600px) {
+      .topbar { padding: 0 24px; min-height: 64px; }
+      .topbar-brand { font-size: 18px !important; }
     }
     .topbar-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--primary); }
     .topbar-brand .icon {
@@ -154,17 +173,34 @@
 
     .nav {
       background: var(--surface); border-bottom: 1px solid var(--border);
-      display: flex; overflow-x: auto; padding: 0 16px; gap: 4px;
+      display: flex; overflow-x: auto; padding: 0 8px; gap: 2px;
+      position: sticky;
+      top: calc(56px + env(safe-area-inset-top));
+      z-index: 49;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
     }
+    .nav::-webkit-scrollbar { display: none; }
     .nav button {
-      padding: 14px 16px; background: none; border: none; font-size: 14px; font-weight: 500;
+      padding: 12px 12px; background: none; border: none; font-size: 13px; font-weight: 500;
       color: var(--muted); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent;
-      display: flex; align-items: center; gap: 8px; font-family: inherit; transition: all .15s;
+      display: flex; align-items: center; gap: 6px; font-family: inherit; transition: all .15s;
     }
     .nav button:hover { color: var(--text); }
     .nav button.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+    @media (min-width: 600px) {
+      .nav { top: calc(64px + env(safe-area-inset-top)); padding: 0 16px; gap: 4px; }
+      .nav button { padding: 14px 16px; font-size: 14px; }
+    }
 
-    main { flex: 1; padding: 28px 24px; max-width: 900px; margin: 0 auto; width: 100%; }
+    main {
+      flex: 1;
+      padding: 20px 16px calc(24px + env(safe-area-inset-bottom));
+      max-width: 900px; margin: 0 auto; width: 100%;
+    }
+    @media (min-width: 600px) {
+      main { padding: 28px 24px calc(28px + env(safe-area-inset-bottom)); }
+    }
     .screen { display: none; }
     .screen.active { display: block; animation: fadeIn .2s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
@@ -644,6 +680,7 @@
       <button class="active" data-tela="veiculos" onclick="mostrarTela('dono','veiculos')">🚙 Veículos</button>
       <button data-tela="oficinas" onclick="mostrarTela('dono','oficinas')">🏢 Oficinas</button>
       <button data-tela="abastecimento" onclick="mostrarTela('dono','abastecimento')">⛽ Abastecer</button>
+      <button data-tela="custos" onclick="mostrarTela('dono','custos')">💰 Custos</button>
       <button data-tela="manutencao" onclick="mostrarTela('dono','manutencao')">🛠️ Manutenções</button>
       <button data-tela="agendar" onclick="mostrarTela('dono','agendar')">📅 Meus agendamentos</button>
       <button data-tela="perfil" onclick="mostrarTela('dono','perfil')">👤 Meu cadastro</button>
@@ -653,6 +690,7 @@
       <div id="dono-veiculos" class="screen active"></div>
       <div id="dono-oficinas" class="screen"></div>
       <div id="dono-abastecimento" class="screen"></div>
+      <div id="dono-custos" class="screen"></div>
       <div id="dono-manutencao" class="screen"></div>
       <div id="dono-agendar" class="screen"></div>
       <div id="dono-perfil" class="screen"></div>
@@ -1445,6 +1483,7 @@
       return {
         veiculos: [],
         abastecimentos: [],
+        custos: [],
         oficinas: [],
         agendamentos: [],
         servicos: [],
@@ -1628,7 +1667,8 @@
         (data.veiculos || []).length +
         (data.agendamentos || []).length +
         (data.servicos || []).length +
-        (data.abastecimentos || []).length;
+        (data.abastecimentos || []).length +
+        (data.custos || []).length;
       return n;
     }
 
@@ -1650,6 +1690,7 @@
       DB = {
         veiculos: data.veiculos || [],
         abastecimentos: data.abastecimentos || [],
+        custos: data.custos || [],
         oficinas: data.oficinas || [],
         agendamentos: data.agendamentos || [],
         servicos: data.servicos || [],
@@ -2827,6 +2868,7 @@
         if (tela === 'veiculos') renderDonoVeiculos();
         if (tela === 'oficinas') renderDonoOficinas();
         if (tela === 'abastecimento') renderDonoAbastecimento();
+        if (tela === 'custos') renderDonoCustos();
         if (tela === 'manutencao') renderDonoManutencao();
         if (tela === 'agendar') renderDonoAgendar();
         if (tela === 'perfil') renderDonoPerfil();
@@ -3856,6 +3898,244 @@
       const chev = document.getElementById('manut-chev-' + id);
       if (body) body.classList.toggle('collapsed', !window._manutOpen[id]);
       if (chev) chev.classList.toggle('open', !!window._manutOpen[id]);
+    }
+
+
+    // ===================== CUSTOS (IPVA, seguro, etc.) =====================
+    const TIPOS_CUSTO = [
+      { id: 'ipva', nome: 'IPVA', icon: '📋' },
+      { id: 'seguro', nome: 'Seguro', icon: '🛡️' },
+      { id: 'licenciamento', nome: 'Licenciamento', icon: '📄' },
+      { id: 'multa', nome: 'Multa', icon: '⚠️' },
+      { id: 'estacionamento', nome: 'Estacionamento', icon: '🅿️' },
+      { id: 'pedagio', nome: 'Pedágio', icon: '🛣️' },
+      { id: 'lavagem', nome: 'Lavagem / estética', icon: '✨' },
+      { id: 'documento', nome: 'Documentação / despachante', icon: '📁' },
+      { id: 'acessorio', nome: 'Acessório / peça avulsa', icon: '🔧' },
+      { id: 'outro', nome: 'Outro', icon: '💳' }
+    ];
+
+    function labelTipoCusto(id) {
+      const t = TIPOS_CUSTO.find(x => x.id === id);
+      return t ? (t.icon + ' ' + t.nome) : (id || 'Outro');
+    }
+
+    function meusCustos() {
+      const ids = meusVeiculos().map(v => v.id);
+      return (DB.custos || []).filter(c => ids.includes(c.veiculoId));
+    }
+
+    function totalCustosPeriodo(lista, ano) {
+      return lista.filter(c => !ano || String(c.data || '').startsWith(String(ano)))
+        .reduce((s, c) => s + (Number(c.valor) || 0), 0);
+    }
+
+    function renderDonoCustos() {
+      const el = document.getElementById('dono-custos');
+      if (!el) return;
+      if (!DB.custos) DB.custos = [];
+      const meus = meusVeiculos();
+      if (meus.length === 0) {
+        el.innerHTML = `<div class="page-header"><div><h2>Custos do veículo</h2></div></div>
+          <div class="card empty-state"><div class="empty-icon">💰</div><p>Cadastre um veículo primeiro.</p></div>`;
+        return;
+      }
+
+      const editId = window._editandoCustoId || null;
+      const editando = editId ? (DB.custos || []).find(c => c.id === editId) : null;
+      const lista = meusCustos().slice().sort((a, b) => String(b.data).localeCompare(String(a.data)));
+      const anoAtual = new Date().getFullYear();
+      const totalAno = totalCustosPeriodo(lista, anoAtual);
+      const totalGeral = totalCustosPeriodo(lista, null);
+
+      // resumo por tipo (ano atual)
+      const porTipo = {};
+      lista.filter(c => String(c.data || '').startsWith(String(anoAtual))).forEach(c => {
+        const k = c.tipo || 'outro';
+        porTipo[k] = (porTipo[k] || 0) + (Number(c.valor) || 0);
+      });
+      const resumoTipos = Object.keys(porTipo).sort((a, b) => porTipo[b] - porTipo[a])
+        .map(k => `<span class="status ok" style="font-size:11px;margin:2px">${labelTipoCusto(k)} · ${fmtMoney(porTipo[k])}</span>`)
+        .join(' ') || '<span style="color:var(--muted);font-size:13px">Nenhum custo em ' + anoAtual + '</span>';
+
+      const optV = meus.map(v =>
+        `<option value="${v.id}" ${editando && editando.veiculoId === v.id ? 'selected' : ''}>${v.marca} ${v.modelo}${v.placa ? ' · ' + v.placa : ''}</option>`
+      ).join('');
+      const optT = TIPOS_CUSTO.map(t =>
+        `<option value="${t.id}" ${editando && editando.tipo === t.id ? 'selected' : ''}>${t.icon} ${t.nome}</option>`
+      ).join('');
+
+      let hist = '';
+      if (!lista.length) {
+        hist = `<div class="empty-state" style="padding:24px"><p>Nenhum custo lançado ainda.</p></div>`;
+      } else {
+        lista.forEach(c => {
+          const v = DB.veiculos.find(x => x.id === c.veiculoId);
+          hist += `
+            <div class="list-item" style="flex-wrap:wrap;gap:8px">
+              <div style="flex:1;min-width:140px">
+                <strong style="font-size:14px">${labelTipoCusto(c.tipo)} · ${fmtMoney(c.valor)}</strong>
+                <div style="font-size:13px;color:var(--text-secondary)">${fmtDate(c.data)} · ${v ? (v.marca + ' ' + v.modelo) : 'Veículo'}${c.referencia ? ' · ' + c.referencia : ''}</div>
+                ${c.observacoes ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${c.observacoes}</div>` : ''}
+              </div>
+              <div class="actions-row">
+                <button class="btn btn-sm btn-outline" onclick="editarCusto('${c.id}')">✏️</button>
+                <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="excluirCusto('${c.id}')">🗑️</button>
+              </div>
+            </div>`;
+        });
+      }
+
+      el.innerHTML = `
+        <div class="page-header">
+          <div>
+            <h2>Custos do veículo</h2>
+            <p>IPVA, seguro, licenciamento, multas e outros</p>
+          </div>
+        </div>
+        <div class="card" style="background:linear-gradient(135deg,#eff6ff,#f8fafc)">
+          <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between">
+            <div>
+              <div style="font-size:12px;color:var(--muted)">Total em ${anoAtual}</div>
+              <div style="font-size:22px;font-weight:700;color:var(--primary-dark)">${fmtMoney(totalAno)}</div>
+            </div>
+            <div>
+              <div style="font-size:12px;color:var(--muted)">Total geral</div>
+              <div style="font-size:18px;font-weight:600;color:var(--text-secondary)">${fmtMoney(totalGeral)}</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:4px">${resumoTipos}</div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">${editando ? 'Editar lançamento' : 'Novo lançamento'}</h3>
+          <input type="hidden" id="cu-edit-id" value="${editando ? editando.id : ''}" />
+          <div class="form-group">
+            <label>Veículo *</label>
+            <select id="cu-veiculo">${optV}</select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tipo *</label>
+              <select id="cu-tipo" onchange="onTipoCustoChange()">${optT}</select>
+            </div>
+            <div class="form-group">
+              <label>Valor (R$) *</label>
+              <input type="number" id="cu-valor" min="0" step="0.01" placeholder="0,00" value="${editando && editando.valor != null ? editando.valor : ''}" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Data *</label>
+              <input type="date" id="cu-data" value="${editando && editando.data ? editando.data : new Date().toISOString().slice(0,10)}" />
+            </div>
+            <div class="form-group">
+              <label id="cu-ref-label">Referência / exercício</label>
+              <input type="text" id="cu-ref" placeholder="Ex: IPVA 2026" value="${editando && editando.referencia ? String(editando.referencia).replace(/"/g,'&quot;') : ''}" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Forma de pagamento</label>
+            <select id="cu-pag">
+              ${['Pix','Cartão de crédito','Cartão de débito','Boleto','Débito automático','Dinheiro','Transferência','Outro'].map(f =>
+                `<option ${editando && editando.formaPagamento === f ? 'selected' : ''}>${f}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Observações</label>
+            <textarea id="cu-obs" rows="2" placeholder="Parcelas, protocolo, seguradora…">${editando && editando.observacoes ? String(editando.observacoes).replace(/</g,'&lt;') : ''}</textarea>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-block" style="flex:1" onclick="salvarCusto()">${editando ? 'Salvar alterações' : 'Lançar custo'}</button>
+            ${editando ? `<button class="btn btn-outline btn-block" style="flex:1" onclick="window._editandoCustoId=null;renderDonoCustos()">Cancelar edição</button>` : ''}
+          </div>
+        </div>
+        <div class="page-header" style="margin-top:8px"><div><h2 style="font-size:18px">Histórico</h2></div></div>
+        <div class="card">${hist}</div>
+      `;
+      onTipoCustoChange();
+    }
+
+    function onTipoCustoChange() {
+      const tipo = document.getElementById('cu-tipo')?.value;
+      const lab = document.getElementById('cu-ref-label');
+      const inp = document.getElementById('cu-ref');
+      if (!lab || !inp) return;
+      const mapa = {
+        ipva: 'Exercício (ex: 2026)',
+        seguro: 'Apólice / vigência',
+        licenciamento: 'Exercício / CRLV',
+        multa: 'Auto de infração',
+        pedagio: 'Trecho / tag',
+        outro: 'Referência'
+      };
+      lab.textContent = mapa[tipo] || 'Referência';
+      if (!inp.value && tipo === 'ipva') {
+        inp.placeholder = 'IPVA ' + new Date().getFullYear();
+      }
+    }
+
+    function salvarCusto() {
+      if (!DB.custos) DB.custos = [];
+      const veiculoId = document.getElementById('cu-veiculo')?.value;
+      const tipo = document.getElementById('cu-tipo')?.value || 'outro';
+      const valor = parseFloat(document.getElementById('cu-valor')?.value);
+      const data = document.getElementById('cu-data')?.value;
+      const referencia = (document.getElementById('cu-ref')?.value || '').trim();
+      const formaPagamento = document.getElementById('cu-pag')?.value || '';
+      const observacoes = (document.getElementById('cu-obs')?.value || '').trim();
+      const editId = (document.getElementById('cu-edit-id')?.value || '').trim();
+
+      if (!veiculoId) { toast('Selecione o veículo'); return; }
+      if (isNaN(valor) || valor < 0) { toast('Informe o valor'); return; }
+      if (!data) { toast('Informe a data'); return; }
+
+      if (editId) {
+        const c = DB.custos.find(x => x.id === editId);
+        if (!c) { toast('Lançamento não encontrado'); return; }
+        c.veiculoId = veiculoId;
+        c.tipo = tipo;
+        c.valor = valor;
+        c.data = data;
+        c.referencia = referencia;
+        c.formaPagamento = formaPagamento;
+        c.observacoes = observacoes;
+        c.editadoEm = new Date().toISOString();
+        window._editandoCustoId = null;
+        toast('Custo atualizado');
+      } else {
+        DB.custos.unshift({
+          id: uid(),
+          veiculoId,
+          tipo,
+          valor,
+          data,
+          referencia,
+          formaPagamento,
+          observacoes,
+          origem: 'dono',
+          criadoEm: new Date().toISOString()
+        });
+        toast('Custo lançado: ' + labelTipoCusto(tipo) + ' · ' + fmtMoney(valor));
+      }
+      save();
+      renderDonoCustos();
+    }
+
+    function editarCusto(id) {
+      window._editandoCustoId = id;
+      renderDonoCustos();
+      const card = document.getElementById('dono-custos');
+      if (card) card.scrollTop = 0;
+    }
+
+    function excluirCusto(id) {
+      if (!confirm('Excluir este lançamento de custo?')) return;
+      DB.custos = (DB.custos || []).filter(c => c.id !== id);
+      if (window._editandoCustoId === id) window._editandoCustoId = null;
+      save();
+      toast('Custo removido');
+      renderDonoCustos();
     }
 
     function renderDonoManutencao() {
