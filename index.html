@@ -5,33 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AutoCare</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #1e40af;
-      --primary-hover: #1e3a8a;
+      /* Marca AutoCare */
+      --primary: #2563EB;
+      --primary-hover: #1d4ed8;
       --primary-light: #dbeafe;
+      --primary-dark: #0F172A;
+      --silver: #D1D5DB;
+      --accent: #DC2626;
       --success: #059669;
       --success-bg: #d1fae5;
       --warning: #d97706;
       --warning-bg: #fef3c7;
-      --danger: #dc2626;
+      --danger: #DC2626;
       --danger-bg: #fee2e2;
-      --info: #0284c7;
-      --info-bg: #e0f2fe;
+      --info: #2563EB;
+      --info-bg: #dbeafe;
       --bg: #f8fafc;
-      --surface: #ffffff;
-      --text: #0f172a;
+      --surface: #FFFFFF;
+      --text: #0F172A;
       --text-secondary: #475569;
       --muted: #94a3b8;
-      --border: #e2e8f0;
+      --border: #E5E7EB;
       --radius: 12px;
-      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
-      --shadow-md: 0 4px 6px -1px rgba(0,0,0,.07), 0 2px 4px -2px rgba(0,0,0,.05);
+      --shadow: 0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
+      --shadow-md: 0 4px 6px -1px rgba(15,23,42,.08), 0 2px 4px -2px rgba(15,23,42,.05);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: 'Poppins', system-ui, -apple-system, sans-serif;
       background: var(--bg); color: var(--text); line-height: 1.5;
       min-height: 100vh; -webkit-font-smoothing: antialiased;
     }
@@ -45,11 +49,24 @@
       background: var(--surface); border-radius: 20px; padding: 44px 36px;
       width: 100%; max-width: 440px; box-shadow: 0 25px 50px -12px rgba(0,0,0,.35);
     }
-    .login-logo { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 6px; }
-    .login-logo .icon {
-      width: 48px; height: 48px; background: var(--primary); border-radius: 14px;
-      display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;
+    .login-logo {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 10px; margin-bottom: 8px;
     }
+    .login-logo .brand-mark {
+      width: 72px; height: 72px; border-radius: 18px; overflow: hidden;
+      box-shadow: 0 8px 24px rgba(15,23,42,.25);
+    }
+    .login-logo .brand-mark .brand-svg { width: 100%; height: 100%; display: block; }
+    .login-logo .icon, .topbar-brand .icon {
+      width: 36px; height: 36px; border-radius: 10px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .login-logo .icon .brand-svg, .topbar-brand .icon .brand-svg { width: 100%; height: 100%; display: block; }
+    .brand-word { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; color: var(--primary-dark); line-height: 1.1; }
+    .brand-word span { color: var(--primary); }
+    .brand-tag { font-size: 11px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; margin-top: 2px; }
     .login-box h1 { font-size: 26px; font-weight: 700; text-align: center; letter-spacing: -0.02em; }
     .login-box .subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 28px; font-size: 14px; }
     .form-group { margin-bottom: 16px; }
@@ -60,7 +77,7 @@
       transition: border-color .15s, box-shadow .15s;
     }
     input:focus, select:focus, textarea:focus {
-      outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30,64,175,.12);
+      outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15);
     }
     input[readonly] { background: #f1f5f9; color: var(--text-secondary); }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -73,7 +90,7 @@
       background: var(--surface);
     }
     .role-card:hover { border-color: var(--primary); background: #f8fafc; }
-    .role-card.selected { border-color: var(--primary); background: var(--primary-light); box-shadow: 0 0 0 2px rgba(30,64,175,.15); }
+    .role-card.selected { border-color: var(--primary); background: var(--primary-light); box-shadow: 0 0 0 2px rgba(37,99,235,.18); }
     .role-card .role-icon { font-size: 22px; width: 40px; text-align: center; }
     .role-card .role-title { font-weight: 600; font-size: 14px; }
     .role-card .role-desc { font-size: 12px; color: var(--muted); }
@@ -111,9 +128,10 @@
     }
     .topbar-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--primary); }
     .topbar-brand .icon {
-      width: 36px; height: 36px; background: var(--primary); border-radius: 10px;
-      display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;
+      width: 36px; height: 36px; border-radius: 10px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
+    .topbar-brand .icon .brand-svg { width: 100%; height: 100%; display: block; }
     .topbar-right { display: flex; align-items: center; gap: 12px; }
     .badge {
       display: inline-flex; align-items: center; gap: 6px;
@@ -289,9 +307,39 @@
   <!-- ========== CADASTRO / PRIMEIRO ACESSO ========== -->
   <div id="cadastro" class="login-screen" style="display:none">
     <div class="login-box" style="max-width:440px">
-      <div class="login-logo"><div class="icon">🚗</div></div>
-      <h1>Criar conta</h1>
-      <p class="subtitle">Primeiro acesso no AutoCare — escolha o perfil e preencha seus dados</p>
+      <div class="login-logo">
+        <div class="brand-mark" style="width:56px;height:56px;border-radius:14px"><svg class="brand-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="acBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0F172A"/>
+  <circle cx="32" cy="32" r="22" fill="none" stroke="url(#acBlue)" stroke-width="2.5"/>
+  <!-- car simplified -->
+  <path fill="#E5E7EB" d="M14 36c0-1.2.6-2.3 1.6-3l3.2-2.2c.7-.5 1.5-.7 2.3-.7h21.8c.8 0 1.6.3 2.2.8l3.5 2.4c.9.6 1.4 1.6 1.4 2.7v3.2c0 1.3-1 2.4-2.3 2.4h-2.1c-.3 1.9-2 3.3-4 3.3s-3.7-1.4-4-3.3H26.4c-.3 1.9-2 3.3-4 3.3s-3.7-1.4-4-3.3h-1.1C15.9 41.6 14 40 14 38V36z"/>
+  <path fill="#94A3B8" d="M22 31.2l2.4-3.6c.4-.6 1-.9 1.7-.9h12.2c.7 0 1.3.3 1.7.9l2.2 3.6H22z"/>
+  <circle cx="22.4" cy="40.5" r="2.4" fill="#0F172A"/>
+  <circle cx="41.6" cy="40.5" r="2.4" fill="#0F172A"/>
+  <!-- gear -->
+  <g transform="translate(40,18)">
+    <circle cx="8" cy="8" r="7.2" fill="#CBD5E1"/>
+    <circle cx="8" cy="8" r="3.6" fill="#0F172A"/>
+    <g fill="#CBD5E1">
+      <rect x="6.5" y="-0.5" width="3" height="3.2" rx="0.6"/>
+      <rect x="6.5" y="13.3" width="3" height="3.2" rx="0.6"/>
+      <rect x="-0.5" y="6.5" width="3.2" height="3" rx="0.6"/>
+      <rect x="13.3" y="6.5" width="3.2" height="3" rx="0.6"/>
+    </g>
+    <!-- red check -->
+    <path d="M4.8 8.2l1.8 1.8 4.2-4.4" fill="none" stroke="#DC2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg></div>
+        <div class="brand-word" style="font-size:22px">Auto<span>Care</span></div>
+      </div>
+      <h1 style="font-size:20px;margin-top:4px">Criar conta</h1>
+      <p class="subtitle">Escolha o perfil e preencha seus dados</p>
 
       <label style="display:block;font-size:13px;font-weight:500;margin-bottom:10px;color:var(--text-secondary)">Tipo de perfil *</label>
       <div class="role-grid" id="cad-role-grid">
@@ -418,9 +466,39 @@
   <!-- ========== LOGIN ========== -->
   <div id="login" class="login-screen">
     <div class="login-box">
-      <div class="login-logo"><div class="icon">🚗</div></div>
-      <h1>AutoCare</h1>
-      <p class="subtitle">Gestão de manutenção · abastecimento · oficinas</p>
+      <div class="login-logo">
+        <div class="brand-mark"><svg class="brand-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="acBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0F172A"/>
+  <circle cx="32" cy="32" r="22" fill="none" stroke="url(#acBlue)" stroke-width="2.5"/>
+  <!-- car simplified -->
+  <path fill="#E5E7EB" d="M14 36c0-1.2.6-2.3 1.6-3l3.2-2.2c.7-.5 1.5-.7 2.3-.7h21.8c.8 0 1.6.3 2.2.8l3.5 2.4c.9.6 1.4 1.6 1.4 2.7v3.2c0 1.3-1 2.4-2.3 2.4h-2.1c-.3 1.9-2 3.3-4 3.3s-3.7-1.4-4-3.3H26.4c-.3 1.9-2 3.3-4 3.3s-3.7-1.4-4-3.3h-1.1C15.9 41.6 14 40 14 38V36z"/>
+  <path fill="#94A3B8" d="M22 31.2l2.4-3.6c.4-.6 1-.9 1.7-.9h12.2c.7 0 1.3.3 1.7.9l2.2 3.6H22z"/>
+  <circle cx="22.4" cy="40.5" r="2.4" fill="#0F172A"/>
+  <circle cx="41.6" cy="40.5" r="2.4" fill="#0F172A"/>
+  <!-- gear -->
+  <g transform="translate(40,18)">
+    <circle cx="8" cy="8" r="7.2" fill="#CBD5E1"/>
+    <circle cx="8" cy="8" r="3.6" fill="#0F172A"/>
+    <g fill="#CBD5E1">
+      <rect x="6.5" y="-0.5" width="3" height="3.2" rx="0.6"/>
+      <rect x="6.5" y="13.3" width="3" height="3.2" rx="0.6"/>
+      <rect x="-0.5" y="6.5" width="3.2" height="3" rx="0.6"/>
+      <rect x="13.3" y="6.5" width="3.2" height="3" rx="0.6"/>
+    </g>
+    <!-- red check -->
+    <path d="M4.8 8.2l1.8 1.8 4.2-4.4" fill="none" stroke="#DC2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg></div>
+        <div class="brand-word">Auto<span>Care</span></div>
+        <div class="brand-tag">Gestão · Manutenção · Oficinas</div>
+      </div>
+      <p class="subtitle" style="margin-top:8px">Entre com seu PIN ou conta Google</p>
 
       <div class="form-group">
         <label>Seu nome</label>
@@ -517,7 +595,34 @@
   <!-- ========== APP DONO ========== -->
   <div id="app-dono" class="app">
     <div class="topbar">
-      <div class="topbar-brand"><div class="icon">🚗</div> AutoCare</div>
+      <div class="topbar-brand"><div class="icon"><svg class="brand-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="acBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0F172A"/>
+  <circle cx="32" cy="32" r="22" fill="none" stroke="url(#acBlue)" stroke-width="2.5"/>
+  <!-- car simplified -->
+  <path fill="#E5E7EB" d="M14 36c0-1.2.6-2.3 1.6-3l3.2-2.2c.7-.5 1.5-.7 2.3-.7h21.8c.8 0 1.6.3 2.2.8l3.5 2.4c.9.6 1.4 1.6 1.4 2.7v3.2c0 1.3-1 2.4-2.3 2.4h-2.1c-.3 1.9-2 3.3-4 3.3s-3.7-1.4-4-3.3H26.4c-.3 1.9-2 3.3-4 3.3s-3.7-1.4-4-3.3h-1.1C15.9 41.6 14 40 14 38V36z"/>
+  <path fill="#94A3B8" d="M22 31.2l2.4-3.6c.4-.6 1-.9 1.7-.9h12.2c.7 0 1.3.3 1.7.9l2.2 3.6H22z"/>
+  <circle cx="22.4" cy="40.5" r="2.4" fill="#0F172A"/>
+  <circle cx="41.6" cy="40.5" r="2.4" fill="#0F172A"/>
+  <!-- gear -->
+  <g transform="translate(40,18)">
+    <circle cx="8" cy="8" r="7.2" fill="#CBD5E1"/>
+    <circle cx="8" cy="8" r="3.6" fill="#0F172A"/>
+    <g fill="#CBD5E1">
+      <rect x="6.5" y="-0.5" width="3" height="3.2" rx="0.6"/>
+      <rect x="6.5" y="13.3" width="3" height="3.2" rx="0.6"/>
+      <rect x="-0.5" y="6.5" width="3.2" height="3" rx="0.6"/>
+      <rect x="13.3" y="6.5" width="3.2" height="3" rx="0.6"/>
+    </g>
+    <!-- red check -->
+    <path d="M4.8 8.2l1.8 1.8 4.2-4.4" fill="none" stroke="#DC2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg></div> AutoCare</div>
       <div class="topbar-right">
         <span class="user-chip" id="dono-user-name" style="cursor:pointer" title="Editar meu cadastro" onclick="mostrarTela('dono','perfil')"></span>
         <span class="badge badge-owner">👤 Proprietário</span>
@@ -547,7 +652,34 @@
   <!-- ========== APP MECÂNICA ========== -->
   <div id="app-mecanica" class="app">
     <div class="topbar">
-      <div class="topbar-brand"><div class="icon">🚗</div> AutoCare</div>
+      <div class="topbar-brand"><div class="icon"><svg class="brand-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="acBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0F172A"/>
+  <circle cx="32" cy="32" r="22" fill="none" stroke="url(#acBlue)" stroke-width="2.5"/>
+  <!-- car simplified -->
+  <path fill="#E5E7EB" d="M14 36c0-1.2.6-2.3 1.6-3l3.2-2.2c.7-.5 1.5-.7 2.3-.7h21.8c.8 0 1.6.3 2.2.8l3.5 2.4c.9.6 1.4 1.6 1.4 2.7v3.2c0 1.3-1 2.4-2.3 2.4h-2.1c-.3 1.9-2 3.3-4 3.3s-3.7-1.4-4-3.3H26.4c-.3 1.9-2 3.3-4 3.3s-3.7-1.4-4-3.3h-1.1C15.9 41.6 14 40 14 38V36z"/>
+  <path fill="#94A3B8" d="M22 31.2l2.4-3.6c.4-.6 1-.9 1.7-.9h12.2c.7 0 1.3.3 1.7.9l2.2 3.6H22z"/>
+  <circle cx="22.4" cy="40.5" r="2.4" fill="#0F172A"/>
+  <circle cx="41.6" cy="40.5" r="2.4" fill="#0F172A"/>
+  <!-- gear -->
+  <g transform="translate(40,18)">
+    <circle cx="8" cy="8" r="7.2" fill="#CBD5E1"/>
+    <circle cx="8" cy="8" r="3.6" fill="#0F172A"/>
+    <g fill="#CBD5E1">
+      <rect x="6.5" y="-0.5" width="3" height="3.2" rx="0.6"/>
+      <rect x="6.5" y="13.3" width="3" height="3.2" rx="0.6"/>
+      <rect x="-0.5" y="6.5" width="3.2" height="3" rx="0.6"/>
+      <rect x="13.3" y="6.5" width="3.2" height="3" rx="0.6"/>
+    </g>
+    <!-- red check -->
+    <path d="M4.8 8.2l1.8 1.8 4.2-4.4" fill="none" stroke="#DC2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg></div> AutoCare</div>
       <div class="topbar-right">
         <span class="user-chip" id="mec-user-name"></span>
         <span class="badge badge-shop" id="mec-oficina-badge">🔧 Oficina</span>
@@ -579,7 +711,34 @@
   <!-- ========== APP ADMIN ========== -->
   <div id="app-admin" class="app">
     <div class="topbar">
-      <div class="topbar-brand"><div class="icon">🚗</div> AutoCare</div>
+      <div class="topbar-brand"><div class="icon"><svg class="brand-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="acBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0F172A"/>
+  <circle cx="32" cy="32" r="22" fill="none" stroke="url(#acBlue)" stroke-width="2.5"/>
+  <!-- car simplified -->
+  <path fill="#E5E7EB" d="M14 36c0-1.2.6-2.3 1.6-3l3.2-2.2c.7-.5 1.5-.7 2.3-.7h21.8c.8 0 1.6.3 2.2.8l3.5 2.4c.9.6 1.4 1.6 1.4 2.7v3.2c0 1.3-1 2.4-2.3 2.4h-2.1c-.3 1.9-2 3.3-4 3.3s-3.7-1.4-4-3.3H26.4c-.3 1.9-2 3.3-4 3.3s-3.7-1.4-4-3.3h-1.1C15.9 41.6 14 40 14 38V36z"/>
+  <path fill="#94A3B8" d="M22 31.2l2.4-3.6c.4-.6 1-.9 1.7-.9h12.2c.7 0 1.3.3 1.7.9l2.2 3.6H22z"/>
+  <circle cx="22.4" cy="40.5" r="2.4" fill="#0F172A"/>
+  <circle cx="41.6" cy="40.5" r="2.4" fill="#0F172A"/>
+  <!-- gear -->
+  <g transform="translate(40,18)">
+    <circle cx="8" cy="8" r="7.2" fill="#CBD5E1"/>
+    <circle cx="8" cy="8" r="3.6" fill="#0F172A"/>
+    <g fill="#CBD5E1">
+      <rect x="6.5" y="-0.5" width="3" height="3.2" rx="0.6"/>
+      <rect x="6.5" y="13.3" width="3" height="3.2" rx="0.6"/>
+      <rect x="-0.5" y="6.5" width="3.2" height="3" rx="0.6"/>
+      <rect x="13.3" y="6.5" width="3.2" height="3" rx="0.6"/>
+    </g>
+    <!-- red check -->
+    <path d="M4.8 8.2l1.8 1.8 4.2-4.4" fill="none" stroke="#DC2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg></div> AutoCare</div>
       <div class="topbar-right">
         <span class="user-chip" id="admin-user-name"></span>
         <span class="badge badge-admin">⚙️ Administrador</span>
@@ -5633,16 +5792,12 @@
       renderMecanicaNovoServico();
     }
 
-    // Init
+    // Init — tela inicial = login; cadastro só se clicar em "Criar cadastro"
     atualizarSelectOficinasLogin();
     atualizarBotaoBiometriaLogin();
-    if (!temContasCadastradas()) {
-      mostrarCadastro();
-    } else {
-      document.getElementById('login').style.display = 'flex';
-      const cad = document.getElementById('cadastro');
-      if (cad) cad.style.display = 'none';
-    }
+    document.getElementById('login').style.display = 'flex';
+    const cad = document.getElementById('cadastro');
+    if (cad) cad.style.display = 'none';
   </script>
   <div id="modal-foto-bg" onclick="fecharFotoAmpliada()">
     <img id="modal-foto-img" alt="Foto da manutenção" />
