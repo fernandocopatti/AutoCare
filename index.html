@@ -1580,8 +1580,92 @@
 
     let DB = load();
     let SESSION = { role: null, nome: '', oficinaId: null, google: null };
+    const SESSION_KEY = 'autocare_session_v1';
+    var windowFiltroVeiculoId = null;
+
+    function salvarSessao() {
+      if (!SESSION || !SESSION.role) return;
+      try {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({
+          role: SESSION.role,
+          nome: SESSION.nome || '',
+          oficinaId: SESSION.oficinaId || null,
+          google: SESSION.google || null,
+          logadoEm: SESSION.logadoEm || new Date().toISOString()
+        }));
+      } catch (e) {}
+    }
+    function limparSessaoSalva() {
+      try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+    }
+    function carregarSessaoSalva() {
+      try {
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (!raw) return null;
+        const s = JSON.parse(raw);
+        if (!s || !s.role || !s.nome) return null;
+        return s;
+      } catch (e) { return null; }
+    }
+    function prepararDesbloqueioSessao(s) {
+      if (!s) return false;
+      document.getElementById('login').style.display = 'flex';
+      const cad = document.getElementById('cadastro');
+      if (cad) cad.style.display = 'none';
+      const nomeEl = document.getElementById('login-nome');
+      if (nomeEl) { nomeEl.value = s.nome || ''; nomeEl.readOnly = true; }
+      selectedRole = s.role;
+      document.querySelectorAll('#role-grid .role-card').forEach(c => {
+        c.classList.toggle('selected', c.dataset.role === s.role);
+      });
+      const wrap = document.getElementById('login-oficina-wrap');
+      if (s.role === 'mecanica') {
+        if (wrap) wrap.style.display = 'block';
+        if (typeof atualizarSelectOficinasLogin === 'function') atualizarSelectOficinasLogin();
+        const sel = document.getElementById('login-oficina');
+        if (sel && s.oficinaId) sel.value = s.oficinaId;
+      } else if (wrap) wrap.style.display = 'none';
+      if (s.google) SESSION.google = s.google;
+      let ban = document.getElementById('login-sessao-banner');
+      if (!ban) {
+        const box = document.querySelector('#login .login-box');
+        if (box) {
+          ban = document.createElement('div');
+          ban.id = 'login-sessao-banner';
+          ban.style.cssText = 'background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#1e40af;line-height:1.45';
+          const after = box.querySelector('.subtitle') || box.querySelector('.login-logo');
+          if (after && after.nextSibling) box.insertBefore(ban, after.nextSibling);
+          else if (after) after.insertAdjacentElement('afterend', ban);
+          else box.insertBefore(ban, box.firstChild);
+        }
+      }
+      if (ban) {
+        const perfilTxt = s.role === 'dono' ? 'Proprietário' : s.role === 'mecanica' ? 'Oficina' : 'Admin';
+        ban.innerHTML = '👋 Bem-vindo de volta, <strong>' + String(s.nome || '').replace(/</g,'') + '</strong> (' + perfilTxt + ').<br>Informe o <strong>PIN</strong> ou use a <strong>biometria</strong> para continuar.' +
+          '<div style="margin-top:8px"><button type="button" class="btn btn-ghost btn-sm" onclick="trocarContaLogin()">Trocar de conta</button></div>';
+      }
+      const pinEl = document.getElementById('login-pin');
+      if (pinEl) { pinEl.value = ''; setTimeout(() => pinEl.focus(), 200); }
+      if (typeof atualizarBotaoBiometriaLogin === 'function') atualizarBotaoBiometriaLogin();
+      return true;
+    }
+    function trocarContaLogin() {
+      limparSessaoSalva();
+      SESSION = { role: null, nome: '', oficinaId: null, google: null };
+      const nomeEl = document.getElementById('login-nome');
+      if (nomeEl) { nomeEl.value = ''; nomeEl.readOnly = false; }
+      const ban = document.getElementById('login-sessao-banner');
+      if (ban) ban.remove();
       const pinEl = document.getElementById('login-pin');
       if (pinEl) pinEl.value = '';
+      selectedRole = 'dono';
+      document.querySelectorAll('#role-grid .role-card').forEach(c => {
+        c.classList.toggle('selected', c.dataset.role === 'dono');
+      });
+      const wrap = document.getElementById('login-oficina-wrap');
+      if (wrap) wrap.style.display = 'none';
+      toast('Escolha a conta e o perfil');
+    }
 
     // ===================== UTILS =====================
     function toast(msg) {
@@ -2686,6 +2770,11 @@
       SESSION.nome = nome;
       SESSION.oficinaId = oficinaId || null;
       SESSION.logadoEm = new Date().toISOString();
+      salvarSessao();
+      const _ne = document.getElementById('login-nome');
+      if (_ne) _ne.readOnly = false;
+      const _ban = document.getElementById('login-sessao-banner');
+      if (_ban) _ban.remove();
 
       document.getElementById('login').style.display = 'none';
       document.getElementById('cadastro').style.display = 'none';
@@ -2876,9 +2965,16 @@
       document.getElementById('app-admin').classList.remove('active');
       document.getElementById('login').style.display = 'flex';
       SESSION = { role: null, nome: '', oficinaId: null, google: null };
+      limparSessaoSalva();
+      windowFiltroVeiculoId = null;
+      const nomeElS = document.getElementById('login-nome');
+      if (nomeElS) { nomeElS.value = ''; nomeElS.readOnly = false; }
+      const banS = document.getElementById('login-sessao-banner');
+      if (banS) banS.remove();
       const pinEl = document.getElementById('login-pin');
       if (pinEl) pinEl.value = '';
       atualizarSelectOficinasLogin();
+      if (typeof atualizarBotaoBiometriaLogin === 'function') atualizarBotaoBiometriaLogin();
     }
 
     function mostrarTela(perfil, tela) {
@@ -3646,6 +3742,27 @@
       return m != null ? m.toFixed(1).replace('.', ',') + ' km/L' : '—';
     }
 
+
+    function abrirLancamentosVeiculo(veiculoId, tela) {
+      windowFiltroVeiculoId = veiculoId || null;
+      if (!window._manutOpen) window._manutOpen = {};
+      if (veiculoId) window._manutOpen[veiculoId] = true;
+      mostrarTela('dono', tela || 'custos');
+    }
+    function limparFiltroVeiculo() {
+      windowFiltroVeiculoId = null;
+      const tela = document.querySelector('#nav-dono button.active');
+      mostrarTela('dono', (tela && tela.dataset.tela) || 'veiculos');
+    }
+    function bannerFiltroVeiculo() {
+      if (!windowFiltroVeiculoId) return '';
+      const v = (DB.veiculos || []).find(x => x.id === windowFiltroVeiculoId);
+      const nome = v ? (v.marca + ' ' + v.modelo) : 'veículo';
+      return '<div class="card" style="background:#eff6ff;border-color:#bfdbfe;padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">' +
+        '<span style="font-size:13px;color:#1e40af">🔍 Filtrado: <strong>' + nome + '</strong></span>' +
+        '<button type="button" class="btn btn-sm btn-outline" onclick="limparFiltroVeiculo()">Ver todos</button></div>';
+    }
+
     function renderDonoVeiculos() {
       const el = document.getElementById('dono-veiculos');
       const meus = meusVeiculos();
@@ -3698,6 +3815,11 @@
                   <div class="stat-value">${ultimoAbastTexto(v.id)}</div>
                 </div>
               </div>
+              <div class="actions-row" style="margin-top:12px;flex-wrap:wrap;gap:6px">
+                <button type="button" class="btn btn-sm btn-outline" onclick="abrirLancamentosVeiculo('${v.id}','abastecimento')">⛽ Abastecimentos</button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="abrirLancamentosVeiculo('${v.id}','custos')">💰 Custos</button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="abrirLancamentosVeiculo('${v.id}','manutencao')">🛠️ Manutenções</button>
+              </div>
             </div>`;
         });
       }
@@ -3717,10 +3839,10 @@
         return;
       }
       const options = meus.map(v =>
-        `<option value="${v.id}">${v.marca} ${v.modelo} (${fmtKm(v.km)} km)</option>`
+        `<option value="${v.id}" ${windowFiltroVeiculoId === v.id ? 'selected' : ''}>${v.marca} ${v.modelo} (${fmtKm(v.km)} km)</option>`
       ).join('');
 
-      el.innerHTML = `
+      el.innerHTML = bannerFiltroVeiculo() + `
         <div class="page-header"><div><h2>Novo Abastecimento</h2><p>Km anterior automático · média de consumo</p></div></div>
         <div class="card">
           <div class="form-group">
@@ -3854,7 +3976,7 @@
       const lista = document.getElementById('lista-abastecimentos');
       if (!lista) return;
       const meusIds = meusVeiculos().map(v => v.id);
-      const abs = DB.abastecimentos.filter(a => meusIds.includes(a.veiculoId)).slice(0, 10);
+      const abs = DB.abastecimentos.filter(a => meusIds.includes(a.veiculoId) && (!windowFiltroVeiculoId || a.veiculoId === windowFiltroVeiculoId)).slice(0, 20);
       if (abs.length === 0) {
         lista.innerHTML = '<div class="empty-state" style="padding:24px"><p>Nenhum abastecimento.</p></div>';
         return;
@@ -3992,7 +4114,7 @@
 
     function meusCustos() {
       const ids = meusVeiculos().map(v => v.id);
-      return (DB.custos || []).filter(c => ids.includes(c.veiculoId));
+      return (DB.custos || []).filter(c => ids.includes(c.veiculoId) && (!windowFiltroVeiculoId || c.veiculoId === windowFiltroVeiculoId));
     }
 
     function totalCustosPeriodo(lista, ano) {
@@ -4028,9 +4150,10 @@
         .map(k => `<span class="status ok" style="font-size:11px;margin:2px">${labelTipoCusto(k)} · ${fmtMoney(porTipo[k])}</span>`)
         .join(' ') || '<span style="color:var(--muted);font-size:13px">Nenhum custo em ' + anoAtual + '</span>';
 
-      const optV = meus.map(v =>
-        `<option value="${v.id}" ${editando && editando.veiculoId === v.id ? 'selected' : ''}>${v.marca} ${v.modelo}${v.placa ? ' · ' + v.placa : ''}</option>`
-      ).join('');
+      const optV = meus.map(v => {
+        const sel = (editando && editando.veiculoId === v.id) || (!editando && windowFiltroVeiculoId === v.id);
+        return `<option value="${v.id}" ${sel ? 'selected' : ''}>${v.marca} ${v.modelo}${v.placa ? ' · ' + v.placa : ''}</option>`;
+      }).join('');
       const optT = TIPOS_CUSTO.map(t =>
         `<option value="${t.id}" ${editando && editando.tipo === t.id ? 'selected' : ''}>${t.icon} ${t.nome}</option>`
       ).join('');
@@ -4073,7 +4196,7 @@
         });
       }
 
-      el.innerHTML = `
+      el.innerHTML = bannerFiltroVeiculo() + `
         <div class="page-header">
           <div>
             <h2>Custos do veículo</h2>
@@ -4227,9 +4350,12 @@
 
     function renderDonoManutencao() {
       const el = document.getElementById('dono-manutencao');
-      const meus = meusVeiculos();
-      const meusIds = meus.map(v => v.id);
-      let html = `
+      let meus = meusVeiculos();
+      if (windowFiltroVeiculoId) {
+        meus = meus.filter(v => v.id === windowFiltroVeiculoId);
+      }
+      const meusIds = meusVeiculos().map(v => v.id);
+      let html = bannerFiltroVeiculo() + `
         <div class="page-header">
           <div><h2>Manutenções</h2><p>Preventivas conforme manual do veículo</p></div>
           <div style="display:flex;flex-wrap:wrap;gap:8px">
@@ -4419,7 +4545,7 @@
       });
 
       html += `<div class="card"><h3 style="font-size:15px;font-weight:600;margin-bottom:12px">Histórico de serviços</h3>`;
-      const meusServicos = DB.servicos.filter(s => meusIds.includes(s.veiculoId));
+      const meusServicos = DB.servicos.filter(s => meusIds.includes(s.veiculoId) && (!windowFiltroVeiculoId || s.veiculoId === windowFiltroVeiculoId));
       if (meusServicos.length === 0) {
         html += `<div class="empty-state" style="padding:24px"><p>Nenhum serviço ainda.</p></div>`;
       } else {
@@ -6182,12 +6308,14 @@
       renderMecanicaNovoServico();
     }
 
-    // Init — tela inicial = login; cadastro só se clicar em "Criar cadastro"
+    // Init — sessão salva: só PIN/biometria (estilo Caixa Inteligente)
     atualizarSelectOficinasLogin();
     atualizarBotaoBiometriaLogin();
-    document.getElementById('login').style.display = 'flex';
     const cad = document.getElementById('cadastro');
     if (cad) cad.style.display = 'none';
+    const sessSalva = carregarSessaoSalva();
+    if (sessSalva) prepararDesbloqueioSessao(sessSalva);
+    else document.getElementById('login').style.display = 'flex';
   </script>
   <div id="modal-foto-bg" onclick="fecharFotoAmpliada()">
     <img id="modal-foto-img" alt="Foto da manutenção" />
