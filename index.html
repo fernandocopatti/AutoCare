@@ -135,13 +135,25 @@
     .login-footer { margin-top: 20px; display: flex; flex-direction: column; gap: 6px; }
     .login-footer .btn { font-size: 13px; color: var(--muted); }
     .app-credit {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 40;
       text-align: center;
       font-size: 11px;
       color: var(--muted);
-      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
       letter-spacing: 0.02em;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -4px 12px rgba(15,23,42,.04);
     }
     .app-credit strong { color: var(--text-secondary); font-weight: 600; }
+    /* espaço para o rodapé fixo não cobrir o conteúdo */
+    .app.active main {
+      padding-bottom: calc(56px + env(safe-area-inset-bottom)) !important;
+    }
     .login-credit {
       text-align: center;
       font-size: 12px;
