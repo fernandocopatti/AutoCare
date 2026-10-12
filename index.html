@@ -134,6 +134,22 @@
 
     .login-footer { margin-top: 20px; display: flex; flex-direction: column; gap: 6px; }
     .login-footer .btn { font-size: 13px; color: var(--muted); }
+    .app-credit {
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      letter-spacing: 0.02em;
+    }
+    .app-credit strong { color: var(--text-secondary); font-weight: 600; }
+    .login-credit {
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,255,255,.55);
+      margin-top: 16px;
+      letter-spacing: 0.02em;
+    }
+    .login-credit strong { color: rgba(255,255,255,.85); font-weight: 600; }
 
     /* APP */
     .app { display: none; min-height: 100vh; flex-direction: column; }
@@ -657,6 +673,7 @@
       <div class="login-footer">
         <button class="btn btn-ghost btn-block" onclick="location.reload()">🔄 Recarregar App</button>
       </div>
+      <p class="login-credit">Desenvolvido por <strong>Fernando Copatti</strong></p>
     </div>
   </div>
 
@@ -717,6 +734,7 @@
       <div id="dono-perfil" class="screen"></div>
       <div id="dono-backup" class="screen"></div>
     </main>
+    <div class="app-credit">Desenvolvido por <strong>Fernando Copatti</strong></div>
   </div>
 
   <!-- ========== APP MECÂNICA ========== -->
@@ -776,6 +794,7 @@
       <div id="mecanica-minha-oficina" class="screen"></div>
       <div id="mecanica-backup" class="screen"></div>
     </main>
+    <div class="app-credit">Desenvolvido por <strong>Fernando Copatti</strong></div>
   </div>
 
   <!-- ========== APP ADMIN ========== -->
@@ -825,6 +844,7 @@
       <div id="admin-resumo" class="screen"></div>
       <div id="admin-config" class="screen"></div>
     </main>
+    <div class="app-credit">Desenvolvido por <strong>Fernando Copatti</strong></div>
   </div>
 
   <!-- MODAL VEÍCULO -->
@@ -3984,18 +4004,22 @@
       lista.innerHTML = abs.map(a => {
         const v = DB.veiculos.find(x => x.id === a.veiculoId);
         const anteriores = DB.abastecimentos.filter(x => x.veiculoId === a.veiculoId && x.km < a.km);
-        let media = '—';
+        let mediaTxt = '—';
+        let rodadaTxt = '—';
         if (anteriores.length) {
           const ant = anteriores.sort((x, y) => y.km - x.km)[0];
           const dist = a.km - ant.km;
-          if (dist > 0 && a.litros > 0) media = (dist / a.litros).toFixed(1) + ' km/L';
+          if (dist > 0) {
+            rodadaTxt = fmtKm(dist) + ' km';
+            if (a.litros > 0) mediaTxt = (dist / a.litros).toFixed(1).replace('.', ',') + ' km/L';
+          }
         }
         return `
           <div class="list-item" style="flex-wrap:wrap;gap:8px">
             <div style="flex:1;min-width:120px">
               <strong>${fmtDate(a.data)}</strong>
               <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${fmtKm(a.km)} km · ${a.litros} L · ${fmtMoney(a.valor)}</div>
-              <div style="font-size:12px;color:var(--muted)">Média: ${media}</div>
+              <div style="font-size:12px;color:var(--muted)">Rodados: <strong style="color:var(--text)">${rodadaTxt}</strong> · Média: ${mediaTxt}</div>
             </div>
             <div class="actions-row">
               <button class="btn btn-sm btn-outline" onclick="editarAbastecimento('${a.id}')">✏️</button>
@@ -5746,6 +5770,139 @@
       renderMecanicaCatalogo();
     }
 
+
+    // ===================== ORDEM DE SERVIÇO (WhatsApp estilo oficina) =====================
+    function proximoNumeroOS(oficinaId) {
+      const lista = (DB.servicos || []).filter(s => s.oficinaId === oficinaId && s.numeroOS);
+      let max = 0;
+      lista.forEach(s => {
+        const n = parseInt(String(s.numeroOS).replace(/\D/g, ''), 10);
+        if (!isNaN(n) && n > max) max = n;
+      });
+      // também conta total da oficina para não repetir
+      const totalOf = (DB.servicos || []).filter(s => s.oficinaId === oficinaId).length;
+      return Math.max(max + 1, totalOf);
+    }
+
+    function montarTextoOrdemServico(servicoId) {
+      const s = (DB.servicos || []).find(x => x.id === servicoId);
+      if (!s) return null;
+      const of = s.oficinaId ? (DB.oficinas || []).find(o => o.id === s.oficinaId) : null;
+      const v = s.veiculoId ? (DB.veiculos || []).find(x => x.id === s.veiculoId) : null;
+      const ag = s.agendamentoId ? (DB.agendamentos || []).find(a => a.id === s.agendamentoId) : null;
+
+      if (!s.numeroOS) {
+        s.numeroOS = proximoNumeroOS(s.oficinaId || SESSION.oficinaId);
+      }
+
+      const oficinaNome = of ? of.nome : 'Oficina';
+      const cliente = s.cliente || (ag && ag.cliente) || 'Cliente';
+      const telCliente = (ag && ag.telefoneCliente) || '';
+      const statusTxt = s.recebido ? 'CONCLUÍDO / PAGO' : 'CONCLUÍDO — AGUARDANDO PAGAMENTO';
+      const itens = s.itens || [];
+      // divide itens: se tiver catalogo com valores, tenta; senão lista como serviços
+      const catalogo = s.oficinaId ? catalogoDaOficina(s.oficinaId) : [];
+      let linhasServ = [];
+      let totalServ = 0;
+      itens.forEach(nome => {
+        const c = catalogo.find(x => eqCI(x.nome, nome));
+        const unit = c ? Number(c.valor) || 0 : 0;
+        totalServ += unit;
+        linhasServ.push({
+          nome,
+          qtd: 1,
+          unit,
+          total: unit
+        });
+      });
+      // se total do serviço informado for diferente, usa valorTotal no rodapé
+      const valorTotal = Number(s.valorTotal) || totalServ || 0;
+
+      let msg = '';
+      msg += '🔧 *' + oficinaNome + '*\n';
+      msg += '*Ordem de Serviço nº ' + s.numeroOS + '*\n';
+      msg += '━━━━━━━━━━━━━━━━━━━━\n';
+      msg += '*CLIENTE:* ' + cliente + '\n';
+      if (telCliente) msg += '*CELULAR:* ' + telCliente + '\n';
+      if (of && of.telefone) msg += '*OFICINA:* ' + of.telefone + '\n';
+      msg += '*STATUS:* ' + statusTxt + '\n';
+      msg += '*DATA:* ' + fmtDate(s.data) + '\n';
+      if (s.formaPagamento) msg += '*PAGAMENTO:* ' + s.formaPagamento + '\n';
+      msg += '\n';
+      if (v) {
+        msg += '🚗 *VEÍCULO*\n';
+        if (v.placa) msg += 'Placa: *' + v.placa + '*\n';
+        msg += 'Modelo: ' + (v.marca || '') + ' ' + (v.modelo || '') + (v.versao ? ' ' + v.versao : '') + '\n';
+        if (v.ano) msg += 'Ano: ' + v.ano + '\n';
+        if (v.cor) msg += 'Cor: ' + v.cor + '\n';
+        if (v.motor) msg += 'Motor: ' + v.motor + '\n';
+        if (s.km) msg += 'Km: *' + fmtKm(s.km) + '*\n';
+        msg += '\n';
+      } else if (s.km) {
+        msg += 'Km no serviço: *' + fmtKm(s.km) + '*\n\n';
+      }
+
+      msg += '🛠️ *SERVIÇOS*\n';
+      if (linhasServ.length) {
+        linhasServ.forEach(l => {
+          msg += '• ' + l.nome;
+          if (l.unit > 0) msg += ' — ' + fmtMoney(l.unit);
+          msg += '\n';
+        });
+      } else {
+        msg += '• (conforme descrição)\n';
+      }
+      msg += '\n';
+      msg += '💰 *TOTAL: ' + fmtMoney(valorTotal) + '*\n';
+      if (s.observacoes) {
+        msg += '\n📝 *Observações:*\n' + s.observacoes + '\n';
+      }
+      msg += '\n━━━━━━━━━━━━━━━━━━━━\n';
+      msg += 'Responda *APROVO* para confirmar o recebimento do veículo / valores.\n';
+      msg += '_Enviado pelo AutoCare_';
+      return msg;
+    }
+
+    function telefoneClienteDoServico(s) {
+      if (!s) return '';
+      const ag = s.agendamentoId ? (DB.agendamentos || []).find(a => a.id === s.agendamentoId) : null;
+      if (ag && ag.telefoneCliente) return ag.telefoneCliente;
+      // tenta perfil do dono
+      if (s.donoId && DB.proprietarios) {
+        const p = Object.values(DB.proprietarios).find(x => x && (x.id === s.donoId || x.chave === s.donoId));
+        // proprietarios keyed by id
+        for (const k of Object.keys(DB.proprietarios || {})) {
+          const pr = DB.proprietarios[k];
+          if (pr && pr.telefone && (k === s.donoId || pr.nome === s.cliente)) return pr.telefone;
+        }
+      }
+      // busca por nome do cliente em proprietarios
+      for (const k of Object.keys(DB.proprietarios || {})) {
+        const pr = DB.proprietarios[k];
+        if (pr && pr.telefone && pr.nome && s.cliente && eqCI(pr.nome, s.cliente)) return pr.telefone;
+      }
+      return '';
+    }
+
+    function whatsappOrdemServico(servicoId, opts) {
+      opts = opts || {};
+      const s = (DB.servicos || []).find(x => x.id === servicoId);
+      if (!s) { toast('Serviço não encontrado'); return; }
+      const texto = montarTextoOrdemServico(servicoId);
+      if (!texto) return;
+      save(); // persiste numeroOS
+      let tel = (opts.telefone || telefoneClienteDoServico(s) || '').replace(/\D/g, '');
+      if (tel.length >= 10 && !tel.startsWith('55')) tel = '55' + tel;
+      const encoded = encodeURIComponent(texto);
+      if (tel.length >= 12) {
+        window.open('https://wa.me/' + tel + '?text=' + encoded, '_blank', 'noopener');
+        toast('WhatsApp da OS nº ' + s.numeroOS + ' aberto');
+      } else {
+        window.open('https://wa.me/?text=' + encoded, '_blank', 'noopener');
+        toast('Escolha o contato do cliente no WhatsApp · OS nº ' + s.numeroOS);
+      }
+    }
+
     function notificarDonoServico(ref, texto) {
       if (!DB.notificacoes) DB.notificacoes = [];
       const of = ref.oficinaId ? DB.oficinas.find(o => o.id === ref.oficinaId) : null;
@@ -5830,6 +5987,7 @@
           const valor = s.valorTotal != null ? fmtMoney(s.valorTotal) : '—';
           let acoes = `<div class="actions-row">
               <button class="btn btn-sm btn-outline" onclick="editarServicoOficina('${s.id}')">✏️ Editar</button>
+              <button class="btn btn-sm btn-outline" title="Enviar ordem de serviço no WhatsApp" onclick="whatsappOrdemServico('${s.id}')">💬 OS</button>
               ${!s.recebido ? `<button class="btn btn-sm btn-outline" onclick="marcarServicoRecebido('${s.id}')">💰 Marcar pago</button>` : ''}
               ${bloqueado ? `<button class="btn btn-sm btn-outline" onclick="solicitarAlteracaoServico('${s.id}')" title="Só se precisar mudar dados do veículo do dono">🔔 Avisar dono</button>` : ''}
             </div>`;
@@ -5838,7 +5996,7 @@
             <div class="list-item" style="flex-wrap:wrap;gap:8px;flex-direction:column;align-items:stretch">
               <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;width:100%">
                 <div style="flex:1;min-width:140px">
-                  <strong style="font-size:14px">${v ? v.modelo : 'Veículo'} · ${s.cliente || ''}</strong>
+                  <strong style="font-size:14px">${s.numeroOS ? 'OS ' + s.numeroOS + ' · ' : ''}${v ? v.modelo : 'Veículo'} · ${s.cliente || ''}</strong>
                   <div style="font-size:13px;color:var(--text-secondary)">${fmtDate(s.data)} · ${(s.itens||[]).join(', ')} · ${fmtKm(s.km)} km</div>
                   <div style="font-size:12px;color:var(--muted);margin-top:2px">${valor}${s.solicitacaoAlteracao ? ' · alteração solicitada' : ''}</div>
                 </div>
@@ -6169,6 +6327,10 @@
           <div class="form-group"><label>Observações</label>
             <textarea id="sv-obs" rows="3" placeholder="Observações técnicas...">${editando ? (editando.observacoes || '').replace(/</g,'&lt;') : ''}</textarea>
           </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:12px;cursor:pointer">
+            <input type="checkbox" id="sv-whatsapp-os" checked style="width:18px;height:18px" />
+            Enviar ordem de serviço no WhatsApp ao finalizar
+          </label>
           <button class="btn btn-success btn-block" onclick="finalizarServico()">${editando ? 'Salvar alterações' : 'Finalizar e registrar no financeiro'}</button>
         </div>
       `;
@@ -6294,17 +6456,24 @@
         origem: 'oficina',
         bloqueado: !!recebido
       };
+      novoServico.numeroOS = proximoNumeroOS(ag.oficinaId);
+      novoServico.telefoneCliente = ag.telefoneCliente || '';
       DB.servicos.unshift(novoServico);
       sincronizarCustoDeServico(novoServico);
       ag.status = 'concluido';
       notificarDonoServico(ag, recebido
-        ? `Serviço concluído e pago (${formaPagamento || 'pago'}): ${(checks||[]).join(', ')} · ${fmtKm(km)} km.`
-        : `Serviço concluído (a receber): ${(checks||[]).join(', ')} · ${fmtKm(km)} km.`);
+        ? `OS ${novoServico.numeroOS} concluída e paga (${formaPagamento || 'pago'}): ${(checks||[]).join(', ')} · ${fmtKm(km)} km · ${fmtMoney(valorTotal)}.`
+        : `OS ${novoServico.numeroOS} concluída (a receber): ${(checks||[]).join(', ')} · ${fmtKm(km)} km · ${fmtMoney(valorTotal)}.`);
       pendingFotosServico = [];
       save();
       toast(recebido
-        ? `Serviço registrado · ${fmtMoney(valorTotal)} (${formaPagamento})`
-        : `Serviço registrado · ${fmtMoney(valorTotal)} a receber`);
+        ? `OS ${novoServico.numeroOS} · ${fmtMoney(valorTotal)} (${formaPagamento})`
+        : `OS ${novoServico.numeroOS} · ${fmtMoney(valorTotal)} a receber`);
+      // oferta enviar OS no WhatsApp (como oficinas profissionais)
+      const querWa = document.getElementById('sv-whatsapp-os');
+      if (querWa ? querWa.checked : true) {
+        setTimeout(() => whatsappOrdemServico(novoServico.id), 200);
+      }
       renderMecanicaNovoServico();
     }
 
