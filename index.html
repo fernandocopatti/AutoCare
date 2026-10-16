@@ -4238,6 +4238,17 @@
       const totalAno = totalCustosPeriodo(lista, anoAtual);
       const totalGeral = totalCustosPeriodo(lista, null);
 
+      // Total combustível (só soma — detalhe fica em Abastecimentos)
+      const idsComb = meus.map(v => v.id).filter(id => !windowFiltroVeiculoId || id === windowFiltroVeiculoId);
+      const absComb = (DB.abastecimentos || []).filter(a => idsComb.includes(a.veiculoId));
+      const totalCombustivelGeral = absComb.reduce((s, a) => s + (Number(a.valor) || 0), 0);
+      const totalCombustivelAno = absComb
+        .filter(a => String(a.data || '').startsWith(String(anoAtual)))
+        .reduce((s, a) => s + (Number(a.valor) || 0), 0);
+      const litrosAno = absComb
+        .filter(a => String(a.data || '').startsWith(String(anoAtual)))
+        .reduce((s, a) => s + (Number(a.litros) || 0), 0);
+
       // resumo por tipo (ano atual)
       const porTipo = {};
       lista.filter(c => String(c.data || '').startsWith(String(anoAtual))).forEach(c => {
@@ -4304,15 +4315,29 @@
         <div class="card" style="background:linear-gradient(135deg,#eff6ff,#f8fafc)">
           <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between">
             <div>
-              <div style="font-size:12px;color:var(--muted)">Total em ${anoAtual}</div>
+              <div style="font-size:12px;color:var(--muted)">Custos em ${anoAtual}</div>
               <div style="font-size:22px;font-weight:700;color:var(--primary-dark)">${fmtMoney(totalAno)}</div>
             </div>
             <div>
-              <div style="font-size:12px;color:var(--muted)">Total geral</div>
+              <div style="font-size:12px;color:var(--muted)">Custos geral</div>
               <div style="font-size:18px;font-weight:600;color:var(--text-secondary)">${fmtMoney(totalGeral)}</div>
             </div>
           </div>
           <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:4px">${resumoTipos}</div>
+        </div>
+        <div class="card" style="background:linear-gradient(135deg,#fff7ed,#fffbeb);border-color:#fed7aa">
+          <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-size:12px;color:var(--muted)">⛽ Combustível em ${anoAtual}</div>
+              <div style="font-size:22px;font-weight:700;color:#c2410c">${fmtMoney(totalCombustivelAno)}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">${litrosAno > 0 ? litrosAno.toFixed(1).replace('.', ',') + ' L no ano' : 'Sem abastecimentos neste ano'}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:12px;color:var(--muted)">Combustível total</div>
+              <div style="font-size:18px;font-weight:600;color:#9a3412">${fmtMoney(totalCombustivelGeral)}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:6px">Detalhes em Abastecimentos</div>
+            </div>
+          </div>
         </div>
         <div class="card">
           <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">${editando ? 'Editar lançamento' : 'Novo lançamento'}</h3>
