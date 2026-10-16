@@ -944,6 +944,11 @@
         </div>
       </div>
       <div class="form-group">
+        <label>Capacidade do tanque (litros)</label>
+        <input type="number" id="v-tanque" step="0.1" min="20" max="150" placeholder="Ex: 60" />
+        <p style="font-size:12px;color:var(--muted);margin-top:6px">Usada para estimar autonomia (média × tanque). Compass costuma ser 60 L.</p>
+      </div>
+      <div class="form-group">
         <label>Foto do veículo (miniatura)</label>
         <div class="photo-area" style="padding:12px" onclick="document.getElementById('v-foto').click()">
           <div id="v-foto-preview" style="min-height:60px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px">📷 Toque para enviar foto</div>
@@ -3473,6 +3478,7 @@
         set('v-cor', v.cor || '');
         set('v-placa', v.placa);
         set('v-km', v.km);
+        set('v-tanque', v.capacidadeTanque != null ? v.capacidadeTanque : 60);
         window._fotoVeiculoPendente = v.foto || null;
         const prev = document.getElementById('v-foto-preview');
         if (prev) prev.innerHTML = v.foto
@@ -3489,6 +3495,7 @@
         set('v-cor', '');
         set('v-placa', '');
         set('v-km', '');
+        set('v-tanque', '60');
         window._fotoVeiculoPendente = null;
         const prev = document.getElementById('v-foto-preview');
         if (prev) prev.innerHTML = '📷 Toque para enviar foto';
@@ -3695,6 +3702,8 @@
       const cor = (document.getElementById('v-cor')?.value || '').trim();
       const placa = document.getElementById('v-placa').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
       const km = parseInt(document.getElementById('v-km').value, 10);
+      let capacidadeTanque = parseFloat(document.getElementById('v-tanque')?.value);
+      if (isNaN(capacidadeTanque) || capacidadeTanque < 20 || capacidadeTanque > 150) capacidadeTanque = 60;
 
       if (!marca) { toast('Selecione a marca'); return; }
       if (!modelo) { toast('Informe o modelo'); return; }
@@ -3707,12 +3716,12 @@
       if (id) {
         const v = DB.veiculos.find(x => x.id === id);
         if (!v) { toast('Veículo não encontrado'); return; }
-        Object.assign(v, { marca, modelo, ano, versao, motor, combustivel, cor, placa, km, foto: window._fotoVeiculoPendente || null });
+        Object.assign(v, { marca, modelo, ano, versao, motor, combustivel, cor, placa, km, capacidadeTanque, foto: window._fotoVeiculoPendente || null });
         if (!v.ultimoAbastKm || km > v.ultimoAbastKm) v.ultimoAbastKm = km;
         toast('Veículo atualizado');
       } else {
         const novo = {
-          id: uid(), marca, modelo, ano, versao, motor, combustivel, cor, placa, km,
+          id: uid(), marca, modelo, ano, versao, motor, combustivel, cor, placa, km, capacidadeTanque,
           foto: window._fotoVeiculoPendente || null,
           ultimoAbastKm: km, donoId: currentDonoId()
         };
@@ -3754,24 +3763,67 @@
     }
 
     /** Média de consumo (km/L) com base nos abastecimentos do veículo */
+    function capacidadeTanqueVeiculo(v) {
+      if (!v) return 60;
+      const c = Number(v.capacidadeTanque);
+      return (c > 0 && c < 200) ? c : 60;
+    }
+
+    /**
+     * Média geral (funciona com parciais):
+     * (km do último − km do primeiro) / soma dos litros dos abastecimentos depois do primeiro.
+     * Com vários lançamentos o erro do nível do tanque fica pequeno.
+     * Se houver ao menos 1 par tanque-cheio→tanque-cheio, prefere essa média (mais precisa).
+     */
     function mediaConsumoVeiculo(veiculoId) {
       const list = (DB.abastecimentos || [])
         .filter(a => a.veiculoId === veiculoId)
         .sort((a, b) => (a.km || 0) - (b.km || 0));
       if (list.length < 2) return null;
-      let dist = 0, litros = 0;
+
+      // 1) média só entre cheios consecutivos (quando existir)
+      let distCheio = 0, litrosCheio = 0;
       for (let i = 1; i < list.length; i++) {
+        if (!list[i].tanqueCheio || !list[i - 1].tanqueCheio) continue;
         const d = (list[i].km || 0) - (list[i - 1].km || 0);
         const L = Number(list[i].litros) || 0;
-        if (d > 0 && L > 0) { dist += d; litros += L; }
+        if (d > 0 && L > 0) { distCheio += d; litrosCheio += L; }
       }
-      if (litros <= 0) return null;
+      if (litrosCheio > 0) return distCheio / litrosCheio;
+
+      // 2) média acumulada (parciais ok no longo prazo)
+      const primeiro = list[0];
+      const ultimo = list[list.length - 1];
+      const dist = (ultimo.km || 0) - (primeiro.km || 0);
+      let litros = 0;
+      for (let i = 1; i < list.length; i++) litros += Number(list[i].litros) || 0;
+      if (dist <= 0 || litros <= 0) return null;
       return dist / litros;
     }
 
     function mediaConsumoTexto(veiculoId) {
       const m = mediaConsumoVeiculo(veiculoId);
-      return m != null ? m.toFixed(1).replace('.', ',') + ' km/L' : '—';
+      if (m == null) return '—';
+      const v = (DB.veiculos || []).find(x => x.id === veiculoId);
+      const cap = capacidadeTanqueVeiculo(v);
+      const autonomia = Math.round(m * cap);
+      return m.toFixed(1).replace('.', ',') + ' km/L · ~' + fmtKm(autonomia) + ' km/tanque';
+    }
+
+    /** Por lançamento: sempre estima km/L do trecho; indica se é confiável (2 cheios) */
+    function mediaDoAbastecimento(a) {
+      if (!a) return { rodados: null, media: null, confiavel: false, parcial: true };
+      const anteriores = (DB.abastecimentos || [])
+        .filter(x => x.veiculoId === a.veiculoId && (x.km || 0) < (a.km || 0))
+        .sort((x, y) => (y.km || 0) - (x.km || 0));
+      if (!anteriores.length) return { rodados: null, media: null, confiavel: false, parcial: !a.tanqueCheio };
+      const ant = anteriores[0];
+      const dist = (a.km || 0) - (ant.km || 0);
+      const L = Number(a.litros) || 0;
+      if (dist <= 0 || L <= 0) return { rodados: dist > 0 ? dist : null, media: null, confiavel: false, parcial: !a.tanqueCheio };
+      const media = dist / L;
+      const confiavel = !!(a.tanqueCheio && ant.tanqueCheio);
+      return { rodados: dist, media, confiavel, parcial: !a.tanqueCheio };
     }
 
 
@@ -3900,9 +3952,14 @@
             <div class="form-group"><label>Litros *</label><input type="number" id="ab-litros" step="0.01" placeholder="42.50" /></div>
             <div class="form-group"><label>Valor total (R$) *</label><input type="number" id="ab-valor" step="0.01" placeholder="268.00" /></div>
           </div>
+          <label style="display:flex;align-items:flex-start;gap:10px;font-size:14px;margin:4px 0 14px;cursor:pointer">
+            <input type="checkbox" id="ab-tanque-cheio" style="width:18px;height:18px;margin-top:2px;flex-shrink:0" />
+            <span><strong>Tanque cheio</strong><br>
+            <span style="font-size:12px;color:var(--muted)">Marque quando completar o tanque (média mais precisa). Mesmo parcial, a média geral do veículo usa todos os lançamentos.</span></span>
+          </label>
           <button class="btn btn-primary btn-block" onclick="salvarAbastecimento()">Salvar abastecimento</button>
         </div>
-        <div class="page-header" style="margin-top:32px"><div><h2 style="font-size:18px">Histórico recente</h2></div></div>
+        <div class="page-header" style="margin-top:32px"><div><h2 style="font-size:18px">Histórico recente</h2><p style="font-size:13px;color:var(--muted)">Média confiável apenas com tanque cheio</p></div></div>
         <div class="card" id="lista-abastecimentos"></div>
       `;
       atualizarKmAnterior();
@@ -3942,6 +3999,7 @@
       const km = parseInt(document.getElementById('ab-km').value, 10);
       const litros = parseFloat(document.getElementById('ab-litros').value);
       const valor = parseFloat(document.getElementById('ab-valor').value);
+      const tanqueCheio = !!(document.getElementById('ab-tanque-cheio') && document.getElementById('ab-tanque-cheio').checked);
       const v = DB.veiculos.find(x => x.id === veiculoId);
       if (!v) { toast('Selecione um veículo'); return; }
       if (isNaN(km) || km < 0) { toast('Informe o km atual'); return; }
@@ -3950,7 +4008,8 @@
       if (km < (v.ultimoAbastKm || 0)) { toast('Km atual não pode ser menor que o anterior'); return; }
 
       DB.abastecimentos.unshift({
-        id: uid(), veiculoId, data: new Date().toISOString().slice(0, 10), km, litros, valor, foto: pendingFotoOdometro
+        id: uid(), veiculoId, data: new Date().toISOString().slice(0, 10), km, litros, valor,
+        tanqueCheio, foto: pendingFotoOdometro
       });
       v.km = km;
       v.ultimoAbastKm = km;
@@ -3976,6 +4035,7 @@
       a.km = km;
       a.litros = litros;
       a.valor = valor;
+      a.tanqueCheio = confirm('Este abastecimento foi com o tanque cheio?\n\nOK = cheio · Cancelar = parcial');
       const v = DB.veiculos.find(x => x.id === a.veiculoId);
       if (v && km > v.km) v.km = km;
       // recalcula ultimoAbastKm
@@ -4015,23 +4075,25 @@
       }
       lista.innerHTML = abs.map(a => {
         const v = DB.veiculos.find(x => x.id === a.veiculoId);
-        const anteriores = DB.abastecimentos.filter(x => x.veiculoId === a.veiculoId && x.km < a.km);
+        const info = mediaDoAbastecimento(a);
+        const rodadaTxt = info.rodados != null ? fmtKm(info.rodados) + ' km' : '—';
         let mediaTxt = '—';
-        let rodadaTxt = '—';
-        if (anteriores.length) {
-          const ant = anteriores.sort((x, y) => y.km - x.km)[0];
-          const dist = a.km - ant.km;
-          if (dist > 0) {
-            rodadaTxt = fmtKm(dist) + ' km';
-            if (a.litros > 0) mediaTxt = (dist / a.litros).toFixed(1).replace('.', ',') + ' km/L';
-          }
+        let nota = '';
+        if (info.media != null) {
+          mediaTxt = info.media.toFixed(1).replace('.', ',') + ' km/L';
+          if (info.confiavel) nota = 'confiável';
+          else if (info.parcial) nota = 'estimativa (parcial)';
+          else nota = 'estimativa';
         }
+        const badgeCheio = a.tanqueCheio
+          ? '<span class="status ok" style="font-size:10px;margin-left:6px">cheio</span>'
+          : '<span class="status warn" style="font-size:10px;margin-left:6px">parcial</span>';
         return `
           <div class="list-item" style="flex-wrap:wrap;gap:8px">
             <div style="flex:1;min-width:120px">
-              <strong>${fmtDate(a.data)}</strong>
+              <strong>${fmtDate(a.data)}</strong>${badgeCheio}
               <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${fmtKm(a.km)} km · ${a.litros} L · ${fmtMoney(a.valor)}</div>
-              <div style="font-size:12px;color:var(--muted)">Rodados: <strong style="color:var(--text)">${rodadaTxt}</strong> · Média: ${mediaTxt}</div>
+              <div style="font-size:12px;color:var(--muted)">Rodados: <strong style="color:var(--text)">${rodadaTxt}</strong> · Média: ${mediaTxt}${nota ? ' · <em>' + nota + '</em>' : ''}</div>
             </div>
             <div class="actions-row">
               <button class="btn btn-sm btn-outline" onclick="editarAbastecimento('${a.id}')">✏️</button>
