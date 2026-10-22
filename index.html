@@ -3927,15 +3927,20 @@
       ).join('');
 
       el.innerHTML = bannerFiltroVeiculo() + `
-        <div class="page-header"><div><h2>Novo Abastecimento</h2><p>Km anterior automático · média de consumo</p></div></div>
+        <div class="page-header"><div><h2>Novo Abastecimento</h2><p>Informe a data · pode lançar histórico · média de consumo</p></div></div>
         <div class="card">
           <div class="form-group">
             <label>Veículo</label>
             <select id="ab-veiculo" onchange="atualizarKmAnterior()">${options}</select>
           </div>
+          <div class="form-group">
+            <label>Data do abastecimento *</label>
+            <input type="date" id="ab-data" value="${new Date().toISOString().slice(0,10)}" />
+            <p style="font-size:12px;color:var(--muted);margin-top:6px">Pode lançar abastecimentos antigos — o histórico ordena por data.</p>
+          </div>
           <div class="form-row">
-            <div class="form-group"><label>Km anterior</label><input type="number" id="ab-km-ant" readonly /></div>
-            <div class="form-group"><label>Km atual *</label><input type="number" id="ab-km" placeholder="Ex: 87620" /></div>
+            <div class="form-group"><label>Km do odômetro *</label><input type="number" id="ab-km" placeholder="Ex: 87620" /></div>
+            <div class="form-group"><label>Último km registrado</label><input type="number" id="ab-km-ant" readonly title="Maior km já lançado neste veículo" /></div>
           </div>
           <div class="form-group">
             <label>Foto do odômetro (opcional — tenta ler o km automaticamente)</label>
@@ -3959,7 +3964,7 @@
           </label>
           <button class="btn btn-primary btn-block" onclick="salvarAbastecimento()">Salvar abastecimento</button>
         </div>
-        <div class="page-header" style="margin-top:32px"><div><h2 style="font-size:18px">Histórico recente</h2><p style="font-size:13px;color:var(--muted)">Média confiável apenas com tanque cheio</p></div></div>
+        <div class="page-header" style="margin-top:32px"><div><h2 style="font-size:18px">Histórico recente</h2><p style="font-size:13px;color:var(--muted)">Ordenado por data · média confiável com tanque cheio</p></div></div>
         <div class="card" id="lista-abastecimentos"></div>
       `;
       atualizarKmAnterior();
@@ -4000,28 +4005,39 @@
       const litros = parseFloat(document.getElementById('ab-litros').value);
       const valor = parseFloat(document.getElementById('ab-valor').value);
       const tanqueCheio = !!(document.getElementById('ab-tanque-cheio') && document.getElementById('ab-tanque-cheio').checked);
+      let dataAb = (document.getElementById('ab-data')?.value || '').trim();
+      if (!dataAb) dataAb = new Date().toISOString().slice(0, 10);
       const v = DB.veiculos.find(x => x.id === veiculoId);
       if (!v) { toast('Selecione um veículo'); return; }
-      if (isNaN(km) || km < 0) { toast('Informe o km atual'); return; }
+      if (isNaN(km) || km < 0) { toast('Informe o km do odômetro'); return; }
       if (isNaN(litros) || litros <= 0) { toast('Informe os litros'); return; }
       if (isNaN(valor) || valor <= 0) { toast('Informe o valor'); return; }
-      if (km < (v.ultimoAbastKm || 0)) { toast('Km atual não pode ser menor que o anterior'); return; }
+
+      // evita duplicar mesmo km no mesmo veículo
+      const dup = (DB.abastecimentos || []).find(x => x.veiculoId === veiculoId && Number(x.km) === km);
+      if (dup) {
+        if (!confirm('Já existe abastecimento com este km. Salvar mesmo assim?')) return;
+      }
 
       DB.abastecimentos.unshift({
-        id: uid(), veiculoId, data: new Date().toISOString().slice(0, 10), km, litros, valor,
+        id: uid(), veiculoId, data: dataAb, km, litros, valor,
         tanqueCheio, foto: pendingFotoOdometro
       });
-      v.km = km;
-      v.ultimoAbastKm = km;
+      // só sobe o km do veículo se este lançamento for o mais alto
+      if (km > (v.km || 0)) v.km = km;
+      const maxKm = Math.max(0, ...DB.abastecimentos.filter(x => x.veiculoId === v.id).map(x => Number(x.km) || 0));
+      v.ultimoAbastKm = maxKm || v.km;
       pendingFotoOdometro = null;
       save();
-      toast('Abastecimento salvo');
+      toast('Abastecimento salvo · ' + fmtDate(dataAb));
       renderDonoAbastecimento();
     }
 
     function editarAbastecimento(id) {
       const a = DB.abastecimentos.find(x => x.id === id);
       if (!a) return;
+      const dataStr = prompt('Data (AAAA-MM-DD):', String(a.data || new Date().toISOString().slice(0, 10)));
+      if (dataStr == null) return;
       const kmStr = prompt('Km:', String(a.km));
       if (kmStr == null) return;
       const km = parseInt(String(kmStr).replace(/\D/g, ''), 10);
@@ -4032,6 +4048,8 @@
       if (valorStr == null) return;
       const valor = parseFloat(String(valorStr).replace(',', '.'));
       if (isNaN(km) || isNaN(litros) || isNaN(valor)) { toast('Dados inválidos'); return; }
+      const dataOk = /^\d{4}-\d{2}-\d{2}$/.test(String(dataStr).trim()) ? String(dataStr).trim() : a.data;
+      a.data = dataOk;
       a.km = km;
       a.litros = litros;
       a.valor = valor;
@@ -4068,7 +4086,16 @@
       const lista = document.getElementById('lista-abastecimentos');
       if (!lista) return;
       const meusIds = meusVeiculos().map(v => v.id);
-      const abs = DB.abastecimentos.filter(a => meusIds.includes(a.veiculoId) && (!windowFiltroVeiculoId || a.veiculoId === windowFiltroVeiculoId)).slice(0, 20);
+      const abs = DB.abastecimentos
+        .filter(a => meusIds.includes(a.veiculoId) && (!windowFiltroVeiculoId || a.veiculoId === windowFiltroVeiculoId))
+        .slice()
+        .sort((a, b) => {
+          const da = String(a.data || '');
+          const db = String(b.data || '');
+          if (da !== db) return db.localeCompare(da); // data mais recente primeiro
+          return (Number(b.km) || 0) - (Number(a.km) || 0); // empate: maior km primeiro
+        })
+        .slice(0, 40);
       if (abs.length === 0) {
         lista.innerHTML = '<div class="empty-state" style="padding:24px"><p>Nenhum abastecimento.</p></div>';
         return;
