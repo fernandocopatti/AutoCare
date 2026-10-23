@@ -101,17 +101,25 @@
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     @media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } }
 
-    .role-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
+        .role-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
     .role-card {
-      border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 16px;
-      cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all .15s;
-      background: var(--surface);
+      border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 10px;
+      cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all .15s;
+      background: var(--surface); min-height: 52px;
     }
     .role-card:hover { border-color: var(--primary); background: #f8fafc; }
     .role-card.selected { border-color: var(--primary); background: var(--primary-light); box-shadow: 0 0 0 2px rgba(37,99,235,.18); }
-    .role-card .role-icon { font-size: 22px; width: 40px; text-align: center; }
-    .role-card .role-title { font-weight: 600; font-size: 14px; }
-    .role-card .role-desc { font-size: 12px; color: var(--muted); }
+    .role-card .role-icon { font-size: 18px; width: 28px; text-align: center; flex-shrink: 0; }
+    .role-card .role-title { font-weight: 600; font-size: 12px; line-height: 1.2; }
+    .role-card .role-desc { font-size: 10px; color: var(--muted); line-height: 1.25; margin-top: 2px; }
+    @media (max-width: 360px) {
+      .role-grid { grid-template-columns: 1fr; }
+    }
 
     .btn {
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -711,33 +719,39 @@
           <div class="role-icon">👤</div>
           <div>
             <div class="role-title">Proprietário</div>
-            <div class="role-desc">Veículos, abastecimentos e agendamentos</div>
+            <div class="role-desc">Veículos e custos</div>
           </div>
         </div>
         <div class="role-card" data-role="mecanica" onclick="selectRole(this)">
           <div class="role-icon">🔧</div>
           <div>
-            <div class="role-title">Oficina / Mecânica</div>
-            <div class="role-desc">Agenda, serviços e histórico</div>
+            <div class="role-title">Mecânica</div>
+            <div class="role-desc">Agenda e OS</div>
+          </div>
+        </div>
+        <div class="role-card" data-role="lavagem" onclick="selectRole(this)">
+          <div class="role-icon">🫧</div>
+          <div>
+            <div class="role-title">Lavagem</div>
+            <div class="role-desc">Agenda e serviços</div>
           </div>
         </div>
         <div class="role-card" data-role="admin" onclick="selectRole(this)">
           <div class="role-icon">⚙️</div>
           <div>
-            <div class="role-title">Administrador</div>
-            <div class="role-desc">Aprovar oficinas e gerenciar o app</div>
+            <div class="role-title">Admin</div>
+            <div class="role-desc">Aprovar cadastros</div>
           </div>
         </div>
       </div>
 
-      <!-- Select oficina (só para perfil mecânica) -->
       <div id="login-oficina-wrap" style="display:none">
         <div class="form-group">
-          <label>Oficina aprovada</label>
+          <label id="login-oficina-label">Estabelecimento aprovado</label>
           <select id="login-oficina"></select>
         </div>
-        <button type="button" class="btn btn-outline btn-block" style="margin-bottom:14px;border-style:dashed" onclick="abrirCadastroOficinaPublico()">
-          📝 Cadastrar minha oficina (aguardará aprovação)
+        <button type="button" class="btn btn-outline btn-block" style="margin-bottom:14px;border-style:dashed" id="btn-cad-estab" onclick="abrirCadastroOficinaPublico()">
+          📝 Cadastrar meu estabelecimento (aguardará aprovação)
         </button>
       </div>
 
@@ -827,7 +841,7 @@
     </div>
     <nav class="nav" id="nav-dono">
       <button class="active" data-tela="veiculos" onclick="mostrarTela('dono','veiculos')">🚙 Veículos</button>
-      <button data-tela="oficinas" onclick="mostrarTela('dono','oficinas')">🏢 Oficinas</button>
+      <button data-tela="oficinas" onclick="mostrarTela('dono','oficinas')">🏢 Onde agendar</button>
       <button data-tela="abastecimento" onclick="mostrarTela('dono','abastecimento')">⛽ Abastecer</button>
       <button data-tela="custos" onclick="mostrarTela('dono','custos')">💰 Custos</button>
       <button data-tela="manutencao" onclick="mostrarTela('dono','manutencao')">🛠️ Manutenções</button>
@@ -1148,8 +1162,15 @@
       <input type="hidden" id="o-id" value="" />
       <input type="hidden" id="o-mode" value="admin" />
       <div class="form-group">
+        <label>Tipo *</label>
+        <select id="o-tipo">
+          <option value="mecanica">🔧 Oficina / Mecânica</option>
+          <option value="lavagem">🫧 Lavagem de carro</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label>Nome fantasia *</label>
-        <input type="text" id="o-nome" placeholder="Ex: Oficina Central" />
+        <input type="text" id="o-nome" placeholder="Ex: Oficina Central ou Lava Rápido" />
       </div>
       <div class="form-group">
         <label>Razão social</label>
@@ -1761,7 +1782,7 @@
         c.classList.toggle('selected', c.dataset.role === s.role);
       });
       const wrap = document.getElementById('login-oficina-wrap');
-      if (s.role === 'mecanica') {
+      if (s.role === 'mecanica' || s.role === 'lavagem') {
         if (wrap) wrap.style.display = 'block';
         if (typeof atualizarSelectOficinasLogin === 'function') atualizarSelectOficinasLogin();
         const sel = document.getElementById('login-oficina');
@@ -2280,7 +2301,7 @@
         else console.log('AutoCare: gist baixado', fname);
         atualizarSelectOficinasLogin();
         if (SESSION.role === 'admin') renderAdminConfig();
-        else if (SESSION.role === 'dono' || SESSION.role === 'mecanica') renderBackupUsuario();
+        else if (SESSION.role === 'dono' || SESSION.role === 'mecanica' || SESSION.role === 'lavagem') renderBackupUsuario();
       } catch (e) {
         console.error(e);
         if (!silent) toast('Gist: ' + (e.message || 'falha no download'));
@@ -2307,7 +2328,7 @@
         toast('Trazido: ' + it.device);
         atualizarSelectOficinasLogin();
         if (SESSION.role === 'admin') renderAdminConfig();
-        else if (SESSION.role === 'dono' || SESSION.role === 'mecanica') renderBackupUsuario();
+        else if (SESSION.role === 'dono' || SESSION.role === 'mecanica' || SESSION.role === 'lavagem') renderBackupUsuario();
         else await listarBackupsGist();
       } catch (e) {
         console.error(e);
@@ -2949,6 +2970,18 @@
     /** Sempre que houver correção ou feature nova, acrescente no TOPO com id único */
     const NOVIDADES = [
       {
+        id: '2026-10-23-agendar-tipos',
+        data: '2026-10-23',
+        titulo: 'Agendar: mecânica ou lavagem',
+        corpo: 'Na tela Onde agendar você filtra por Mecânica, Lavagem ou Todos e agenda no estabelecimento certo.'
+      },
+      {
+        id: '2026-10-22-lavagem',
+        data: '2026-10-22',
+        titulo: 'Perfil Lavagem de carro',
+        corpo: 'Novo tipo de acesso para lava-rápidos: agenda, serviços e cadastro com aprovação do admin — separado da mecânica.'
+      },
+      {
         id: '2026-10-22-media-cheio',
         data: '2026-10-22',
         titulo: 'Média de consumo corrigida',
@@ -3133,11 +3166,14 @@
         } else {
           mostrarTela('dono', 'veiculos');
         }
-      } else if (role === 'mecanica') {
+      } else if (role === 'mecanica' || role === 'lavagem') {
         document.getElementById('app-mecanica').classList.add('active');
         document.getElementById('mec-user-name').textContent = nome;
         const of = DB.oficinas.find(o => o.id === SESSION.oficinaId);
-        document.getElementById('mec-oficina-badge').textContent = '🔧 ' + (of ? of.nome : 'Oficina');
+        const lab = (typeof labelsEstabelecimento === 'function')
+          ? labelsEstabelecimento(role, of)
+          : { badge: '🔧 ' + (of ? of.nome : 'Oficina') };
+        document.getElementById('mec-oficina-badge').textContent = lab.badge;
         mostrarTela('mecanica', 'agenda');
       } else if (role === 'admin') {
         document.getElementById('app-admin').classList.add('active');
@@ -3153,29 +3189,60 @@
     // ===================== LOGIN / PERFIS =====================
     let selectedRole = 'dono';
 
+    function tipoEstabelecimentoDoRole(role) {
+      if (role === 'lavagem') return 'lavagem';
+      if (role === 'mecanica') return 'mecanica';
+      return null;
+    }
+
+    function labelsEstabelecimento(role, of) {
+      const isLav = role === 'lavagem' || (of && of.tipo === 'lavagem');
+      return {
+        isLav,
+        badge: isLav ? ('🫧 ' + (of ? of.nome : 'Lavagem')) : ('🔧 ' + (of ? of.nome : 'Oficina'))
+      };
+    }
+
     function selectRole(el) {
-      document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+      document.querySelectorAll('#role-grid .role-card').forEach(c => c.classList.remove('selected'));
       el.classList.add('selected');
       selectedRole = el.dataset.role;
       const wrap = document.getElementById('login-oficina-wrap');
-      if (selectedRole === 'mecanica') {
+      if (selectedRole === 'mecanica' || selectedRole === 'lavagem') {
         wrap.style.display = 'block';
+        const lab = document.getElementById('login-oficina-label');
+        const btn = document.getElementById('btn-cad-estab');
+        if (selectedRole === 'lavagem') {
+          if (lab) lab.textContent = 'Lavagem aprovada';
+          if (btn) btn.textContent = '📝 Cadastrar minha lavagem (aguardará aprovação)';
+        } else {
+          if (lab) lab.textContent = 'Oficina / mecânica aprovada';
+          if (btn) btn.textContent = '📝 Cadastrar minha oficina (aguardará aprovação)';
+        }
         atualizarSelectOficinasLogin();
       } else {
         wrap.style.display = 'none';
       }
     }
 
-    function oficinasAprovadas() {
-      return DB.oficinas.filter(o => (o.status || 'aprovada') === 'aprovada');
+    function oficinasAprovadas(tipoFiltro) {
+      return DB.oficinas.filter(o => {
+        if ((o.status || 'aprovada') !== 'aprovada') return false;
+        const t = o.tipo || 'mecanica';
+        if (tipoFiltro === 'lavagem') return t === 'lavagem';
+        if (tipoFiltro === 'mecanica') return t === 'mecanica' || !o.tipo;
+        return true;
+      });
     }
 
     function atualizarSelectOficinasLogin() {
       const sel = document.getElementById('login-oficina');
       if (!sel) return;
-      const aprovadas = oficinasAprovadas();
+      const tipo = tipoEstabelecimentoDoRole(selectedRole) || 'mecanica';
+      const aprovadas = oficinasAprovadas(tipo);
+      const nome = tipo === 'lavagem' ? 'lavagem' : 'oficina';
       if (aprovadas.length === 0) {
-        sel.innerHTML = '<option value="">Nenhuma oficina aprovada — cadastre a sua abaixo</option>';
+        sel.innerHTML = '<option value="">Nenhuma ' + nome + ' aprovada — cadastre a sua abaixo</option>';
       } else {
         sel.innerHTML = aprovadas.map(o =>
           `<option value="${o.id}">${o.nome}${o.cidade ? ' · ' + o.cidade : ''}</option>`
@@ -3197,6 +3264,7 @@
     function chaveAcessoLogin(role, nome, oficinaId) {
       if (role === 'admin') return 'admin';
       if (role === 'mecanica') return 'mec:' + (oficinaId || '');
+      if (role === 'lavagem') return 'lav:' + (oficinaId || '');
       // dono: prioriza Google
       if (SESSION.google && SESSION.google.email) return 'dono:g:' + SESSION.google.email.toLowerCase();
       return 'dono:n:' + (nome || '').trim().toLowerCase();
@@ -3267,15 +3335,25 @@
       }
 
       let oficinaId = null;
-      if (selectedRole === 'mecanica') {
+      if (selectedRole === 'mecanica' || selectedRole === 'lavagem') {
         oficinaId = document.getElementById('login-oficina').value;
+        const nomeTipo = selectedRole === 'lavagem' ? 'lavagem' : 'oficina';
         if (!oficinaId) {
-          toast('Selecione uma oficina aprovada ou cadastre a sua');
+          toast('Selecione uma ' + nomeTipo + ' aprovada ou cadastre a sua');
           return;
         }
         const of = DB.oficinas.find(o => o.id === oficinaId);
         if (!of || (of.status && of.status !== 'aprovada')) {
-          toast('Esta oficina ainda não foi aprovada pelo administrador');
+          toast('Este estabelecimento ainda não foi aprovado pelo administrador');
+          return;
+        }
+        const tipoOf = of.tipo || 'mecanica';
+        if (selectedRole === 'lavagem' && tipoOf !== 'lavagem') {
+          toast('Selecione um estabelecimento do tipo Lavagem');
+          return;
+        }
+        if (selectedRole === 'mecanica' && tipoOf === 'lavagem') {
+          toast('Selecione uma oficina/mecânica');
           return;
         }
       }
@@ -3440,6 +3518,10 @@
       const nomeLogin = (document.getElementById('login-nome').value || '').trim();
       abrirModalOficina(null, 'publico');
       if (nomeLogin) document.getElementById('o-contato').value = nomeLogin;
+      const ot = document.getElementById('o-tipo');
+      if (ot) ot.value = (selectedRole === 'lavagem') ? 'lavagem' : 'mecanica';
+      const tit = document.getElementById('modal-oficina-titulo');
+      if (tit && selectedRole === 'lavagem') tit.textContent = 'Cadastrar minha lavagem';
     }
 
     function abrirModalOficina(id = null, mode = 'admin') {
@@ -3456,7 +3538,7 @@
       notaWrap.style.display = (isPublic || isMec) ? 'none' : 'block';
       btn.textContent = isPublic ? 'Enviar para aprovação' : 'Salvar';
 
-      const fields = ['o-nome','o-razao','o-cnpj','o-email','o-contato','o-telefone','o-nota','o-endereco','o-cidade','o-uf','o-especialidades','o-lat','o-lng'];
+      const fields = ['o-nome','o-razao','o-cnpj','o-email','o-contato','o-telefone','o-nota','o-endereco','o-cidade','o-uf','o-especialidades','o-lat','o-lng','o-tipo'];
       fields.forEach(f => { const el = document.getElementById(f); if (el) el.value = ''; });
       pendingLogoOficina = null;
       limparLogoOficina();
@@ -3467,6 +3549,7 @@
         if (!o) return;
         titulo.textContent = mode === 'mecanica' ? 'Editar dados da oficina' : 'Editar Oficina';
         document.getElementById('o-nome').value = o.nome || '';
+        const ot = document.getElementById('o-tipo'); if (ot) ot.value = o.tipo || 'mecanica';
         document.getElementById('o-razao').value = o.razaoSocial || '';
         document.getElementById('o-cnpj').value = o.cnpj || '';
         document.getElementById('o-email').value = o.email || '';
@@ -3503,6 +3586,7 @@
       const latRaw = document.getElementById('o-lat').value;
       const lngRaw = document.getElementById('o-lng').value;
       return {
+        tipo: (document.getElementById('o-tipo')?.value || 'mecanica'),
         nome: document.getElementById('o-nome').value.trim(),
         razaoSocial: document.getElementById('o-razao').value.trim(),
         cnpj: document.getElementById('o-cnpj').value.trim(),
@@ -3539,7 +3623,7 @@
         const o = DB.oficinas.find(x => x.id === id);
         if (!o) { toast('Oficina não encontrada'); return; }
         Object.assign(o, {
-          nome: f.nome, razaoSocial: f.razaoSocial, cnpj: f.cnpj, email: f.email,
+          tipo: f.tipo || 'mecanica', nome: f.nome, razaoSocial: f.razaoSocial, cnpj: f.cnpj, email: f.email,
           contato: f.contato, telefone: f.telefone, nota,
           endereco: f.endereco, cidade: f.cidade, uf: f.uf, especialidades: f.especialidades,
           cor: f.cor, logo: f.logo, lat: f.lat, lng: f.lng
@@ -5339,17 +5423,19 @@
 
     function renderDonoOficinas() {
       const el = document.getElementById('dono-oficinas');
-      const lista = oficinasAprovadas();
+      if (!window._filtroTipoEstab) window._filtroTipoEstab = 'todos';
+      const filtro = window._filtroTipoEstab;
+      const tipoArg = filtro === 'todos' ? null : filtro;
+      const lista = oficinasAprovadas(tipoArg);
       const q = (document.getElementById('of-busca')?.value || '').trim();
 
       let filtradas = lista.map(o => ({ ...o, _dist: distanciaOficina(o) }));
       if (q) {
         filtradas = filtradas.filter(o => {
-          const blob = [o.nome, o.cidade, o.uf, o.especialidades, o.endereco, o.contato].join(' ');
+          const blob = [o.nome, o.cidade, o.uf, o.especialidades, o.endereco, o.contato, o.tipo].join(' ');
           return includesCI(blob, q);
         });
       }
-      // mais próximas primeiro quando há GPS
       filtradas.sort((a, b) => {
         if (a._dist == null && b._dist == null) return (a.nome || '').localeCompare(b.nome || '');
         if (a._dist == null) return 1;
@@ -5357,20 +5443,36 @@
         return a._dist - b._dist;
       });
 
+      const nMec = oficinasAprovadas('mecanica').length;
+      const nLav = oficinasAprovadas('lavagem').length;
+      const nAll = oficinasAprovadas(null).length;
+
       const geoLabel = userGeo
         ? `📍 Ordenado pela sua localização (${userGeo.lat.toFixed(3)}, ${userGeo.lng.toFixed(3)})`
-        : 'Ative a localização para ver as oficinas mais próximas';
+        : 'Ative a localização para ver os mais próximos';
+
+      const tab = (id, label, count) => {
+        const on = filtro === id;
+        return `<button type="button" class="btn btn-sm ${on ? 'btn-primary' : 'btn-outline'}"
+          style="border-radius:20px;padding:6px 12px;font-size:12px"
+          onclick="window._filtroTipoEstab='${id}';renderDonoOficinas()">${label} (${count})</button>`;
+      };
 
       let html = `
         <div class="page-header">
           <div>
-            <h2>Oficinas</h2>
-            <p>Escolha uma oficina e agende seu serviço</p>
+            <h2>Onde agendar</h2>
+            <p>Mecânicas e lavagens aprovadas · escolha e agende</p>
           </div>
           <button class="btn btn-outline btn-sm" onclick="solicitarLocalizacao(() => renderDonoOficinas())">📍 Usar minha localização</button>
         </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          ${tab('todos', 'Todos', nAll)}
+          ${tab('mecanica', '🔧 Mecânica', nMec)}
+          ${tab('lavagem', '🫧 Lavagem', nLav)}
+        </div>
         <div class="card" style="padding:14px 16px;margin-bottom:16px">
-          <input type="search" id="of-busca" placeholder="Buscar por nome, cidade ou especialidade..."
+          <input type="search" id="of-busca" placeholder="Buscar por nome, cidade ou serviço..."
             value="${q.replace(/"/g, '&quot;')}"
             oninput="renderDonoOficinas()"
             style="margin:0" />
@@ -5378,12 +5480,18 @@
         </div>`;
 
       if (filtradas.length === 0) {
+        const msgVazio = lista.length === 0
+          ? (filtro === 'lavagem' ? 'Nenhuma lavagem aprovada ainda.' :
+             filtro === 'mecanica' ? 'Nenhuma oficina/mecânica aprovada ainda.' :
+             'Nenhum estabelecimento aprovado ainda.')
+          : 'Nenhum resultado para a busca.';
         html += `<div class="card empty-state">
-          <div class="empty-icon">🏢</div>
-          <p>${lista.length === 0 ? 'Nenhuma oficina aprovada ainda.' : 'Nenhum resultado para a busca.'}</p>
+          <div class="empty-icon">${filtro === 'lavagem' ? '🫧' : '🏢'}</div>
+          <p>${msgVazio}</p>
         </div>`;
       } else {
         filtradas.forEach(o => {
+          const isLav = (o.tipo || 'mecanica') === 'lavagem';
           const pal = getPaleta(o.cor);
           const local = [o.cidade, o.uf].filter(Boolean).join('/') || o.distancia || 'Local não informado';
           const end = o.endereco || '';
@@ -5391,6 +5499,10 @@
           const distTxt = o._dist != null
             ? (o._dist < 1 ? `${Math.round(o._dist * 1000)} m` : `${o._dist.toFixed(1)} km`)
             : null;
+          const badgeTipo = isLav
+            ? '<span class="status info" style="font-size:10px">🫧 Lavagem</span>'
+            : '<span class="status ok" style="font-size:10px">🔧 Mecânica</span>';
+          const iconEsp = isLav ? '🫧' : '🔧';
           html += `
             <div class="card" style="cursor:pointer;border-left:4px solid ${pal.primary};background:linear-gradient(90deg, ${pal.light} 0%, #fff 28%)"
               onclick="abrirAgendarNaOficina('${o.id}')">
@@ -5400,11 +5512,12 @@
                   <div style="min-width:0">
                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                       <h3 style="font-size:16px;font-weight:600">${o.nome}</h3>
+                      ${badgeTipo}
                       ${nota}
                       ${distTxt ? `<span class="status info">${distTxt}</span>` : ''}
                     </div>
                     <div style="font-size:13px;color:var(--text-secondary);margin-top:4px">📍 ${local}${end ? ' · ' + end : ''}</div>
-                    ${o.especialidades ? `<div style="font-size:13px;color:var(--muted);margin-top:4px">🔧 ${o.especialidades}</div>` : ''}
+                    ${o.especialidades ? `<div style="font-size:13px;color:var(--muted);margin-top:4px">${iconEsp} ${o.especialidades}</div>` : ''}
                     ${o.telefone ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">📞 ${o.telefone}</div>` : ''}
                   </div>
                 </div>
@@ -5439,7 +5552,7 @@
             <h2>Meus agendamentos</h2>
             <p>Acompanhe solicitações e confirmações</p>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="mostrarTela('dono','oficinas')">+ Nova agenda</button>
+          <button class="btn btn-primary btn-sm" onclick="mostrarTela('dono','oficinas')">+ Agendar</button>
         </div>
         <div class="card" id="meus-agendamentos"></div>
       `;
@@ -5474,10 +5587,10 @@
       el.innerHTML = `
         <div class="page-header">
           <div>
-            <h2>Agendar serviço</h2>
+            <h2>${(of.tipo || 'mecanica') === 'lavagem' ? 'Agendar lavagem' : 'Agendar serviço'}</h2>
             <p>Você está agendando em <strong style="color:${pal.primary}">${of.nome}</strong></p>
           </div>
-          <button class="btn btn-outline btn-sm" onclick="bookingOficinaId=null;mostrarTela('dono','oficinas')">Trocar oficina</button>
+          <button class="btn btn-outline btn-sm" onclick="bookingOficinaId=null;mostrarTela('dono','oficinas')">Trocar</button>
         </div>
         <div class="card" style="border-top:4px solid ${pal.primary};background:linear-gradient(180deg, ${pal.light} 0%, #fff 40%)">
           <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
@@ -5485,6 +5598,7 @@
             <div>
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <strong style="font-size:16px;color:${pal.primary}">${of.nome}</strong>
+                <span class="status ${(of.tipo || 'mecanica') === 'lavagem' ? 'info' : 'ok'}" style="font-size:10px">${(of.tipo || 'mecanica') === 'lavagem' ? '🫧 Lavagem' : '🔧 Mecânica'}</span>
                 ${of.nota != null ? `<span class="status ok">${of.nota} ★</span>` : ''}
                 ${distTxt ? `<span class="status info">${distTxt}</span>` : ''}
               </div>
@@ -5492,7 +5606,7 @@
                 ${local || ''}${of.endereco ? ' · ' + of.endereco : ''}
               </div>
               <div style="font-size:13px;color:var(--muted);margin-top:2px">
-                ${of.especialidades || 'Serviços gerais'}
+                ${of.especialidades || ((of.tipo || 'mecanica') === 'lavagem' ? 'Lavagem e estética' : 'Serviços gerais')}
                 ${of.telefone ? ' · ' + of.telefone : ''}
               </div>
             </div>
