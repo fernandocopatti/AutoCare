@@ -1941,25 +1941,43 @@
 
     function parseGistFileContent(file) {
       if (!file) return null;
-      let raw = file.content;
-      if (raw == null && file.truncated) {
-        // arquivo grande — precisaria fetch da raw_url; tenta raw_url
-        return { needsRaw: file.raw_url };
+      // Gist trunca conteúdo grande: truncated=true → content incompleto → precisa raw_url
+      if (file.truncated || file.content == null || file.content === '') {
+        if (file.raw_url) return { needsRaw: file.raw_url };
+        return null;
       }
       try {
-        return JSON.parse(raw);
+        return JSON.parse(file.content);
       } catch (_) {
+        // content pode estar truncado mesmo sem flag em alguns casos
+        if (file.raw_url) return { needsRaw: file.raw_url };
         return null;
       }
     }
 
     async function fetchRawJson(url) {
+      if (!url) throw new Error('URL do arquivo Gist ausente');
       const cfg = loadBackupCfg();
-      const res = await fetch(url, {
-        headers: cfg.githubToken ? { Authorization: 'Bearer ' + cfg.githubToken } : {}
-      });
-      if (!res.ok) throw new Error('Falha ao ler arquivo do Gist');
-      return res.json();
+      const headers = { Accept: 'application/json' };
+      if (cfg.githubToken) headers.Authorization = 'Bearer ' + cfg.githubToken;
+      const res = await fetch(url, { headers, cache: 'no-store' });
+      if (!res.ok) throw new Error('Falha ao ler arquivo do Gist (HTTP ' + res.status + ')');
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (_) {
+        throw new Error('JSON inválido no arquivo bruto do Gist');
+      }
+    }
+
+    /** Lê um arquivo do Gist (content ou raw_url se truncado) */
+    async function lerArquivoGist(meta) {
+      if (!meta) return null;
+      let parsed = parseGistFileContent(meta);
+      if (parsed && parsed.needsRaw) {
+        parsed = await fetchRawJson(parsed.needsRaw);
+      }
+      return parsed;
     }
 
     function fmtDataHoraIso(iso) {
@@ -1999,10 +2017,8 @@
             // ainda lista se parecer backup
             if (!/backup|principal/i.test(fname)) continue;
           }
-          let parsed = parseGistFileContent(meta);
-          if (parsed && parsed.needsRaw) {
-            try { parsed = await fetchRawJson(parsed.needsRaw); } catch (_) { parsed = null; }
-          }
+          let parsed = null;
+          try { parsed = await lerArquivoGist(meta); } catch (_) { parsed = null; }
           const device = (parsed && parsed.deviceName) || fname.replace(/^AutoCare-/i, '').replace(/\.json$/i, '');
           const exportedAt = (parsed && parsed.exportedAt) || meta.filename;
           const summary = (parsed && (parsed.summary != null ? parsed.summary : contagemResumoDB(parsed.data || {}))) || 0;
@@ -2121,20 +2137,38 @@
         }
         const gist = await res.json();
         const files = gist.files || {};
-        const prefer = [
-          nomeArquivoGistDispositivo(cfg.deviceName),
-          nomeArquivoGistPrincipal(),
-          ...Object.keys(files).filter(f => /\.json$/i.test(f))
-        ];
-        let chosen = null;
+        const prefer = [];
+        const seen = new Set();
+        const add = (f) => { if (f && files[f] && !seen.has(f)) { seen.add(f); prefer.push(f); } };
+        add(nomeArquivoGistDispositivo(cfg.deviceName));
+        add(nomeArquivoGistPrincipal());
+        // demais arquivos AutoCare, mais recentes primeiro quando possível
+        Object.keys(files)
+          .filter(f => /\.json$/i.test(f) && /^AutoCare/i.test(f))
+          .forEach(add);
+        Object.keys(files).filter(f => /\.json$/i.test(f)).forEach(add);
+
+        if (!prefer.length) throw new Error('Nenhum backup AutoCare no Gist');
+
+        let parsed = null;
         let fname = null;
+        const erros = [];
         for (const f of prefer) {
-          if (files[f]) { fname = f; break; }
+          try {
+            const p = await lerArquivoGist(files[f]);
+            if (p && (p.data || p.veiculos || p.app)) {
+              parsed = p;
+              fname = f;
+              break;
+            }
+            erros.push(f + ': formato sem dados');
+          } catch (e) {
+            erros.push(f + ': ' + (e.message || 'erro'));
+          }
         }
-        if (!fname) throw new Error('Nenhum backup AutoCare no Gist');
-        let parsed = parseGistFileContent(files[fname]);
-        if (parsed && parsed.needsRaw) parsed = await fetchRawJson(parsed.needsRaw);
-        if (!parsed) throw new Error('Arquivo inválido: ' + fname);
+        if (!parsed) {
+          throw new Error('Nenhum arquivo legível no Gist. ' + (erros[0] || ''));
+        }
         const data = parsed.data || parsed;
         aplicarDadosBackup(data);
         if (!silent) toast('Restaurado de: ' + (parsed.deviceName || fname));
@@ -2157,14 +2191,13 @@
       if (!confirm('Restaurar o backup de “' + it.device + '” neste aparelho?\nOs dados locais serão substituídos.')) return;
       try {
         let parsed = it.parsed;
-        if (!parsed || !parsed.data) {
+        if (!parsed || (!parsed.data && !parsed.veiculos)) {
           const res = await gistFetch('GET');
           const gist = await res.json();
           const meta = (gist.files || {})[it.filename];
-          parsed = parseGistFileContent(meta);
-          if (parsed && parsed.needsRaw) parsed = await fetchRawJson(parsed.needsRaw);
+          parsed = await lerArquivoGist(meta);
         }
-        if (!parsed) throw new Error('Não foi possível ler o arquivo');
+        if (!parsed) throw new Error('Não foi possível ler o arquivo (truncado ou inválido)');
         aplicarDadosBackup(parsed.data || parsed);
         toast('Trazido: ' + it.device);
         atualizarSelectOficinasLogin();
@@ -3775,55 +3808,109 @@
      * Com vários lançamentos o erro do nível do tanque fica pequeno.
      * Se houver ao menos 1 par tanque-cheio→tanque-cheio, prefere essa média (mais precisa).
      */
-    function mediaConsumoVeiculo(veiculoId) {
+    /**
+     * Intervalos tanque-cheio → tanque-cheio:
+     * km = km_cheio_atual − km_cheio_anterior
+     * litros = soma de TODOS os abastecimentos DEPOIS do cheio anterior até este cheio (inclusive)
+     * (parciais no meio entram na conta; o litro do cheio anterior NÃO entra)
+     */
+    function intervalosTanqueCheio(veiculoId) {
       const list = (DB.abastecimentos || [])
         .filter(a => a.veiculoId === veiculoId)
-        .sort((a, b) => (a.km || 0) - (b.km || 0));
-      if (list.length < 2) return null;
-
-      // 1) média só entre cheios consecutivos (quando existir)
-      let distCheio = 0, litrosCheio = 0;
-      for (let i = 1; i < list.length; i++) {
-        if (!list[i].tanqueCheio || !list[i - 1].tanqueCheio) continue;
-        const d = (list[i].km || 0) - (list[i - 1].km || 0);
-        const L = Number(list[i].litros) || 0;
-        if (d > 0 && L > 0) { distCheio += d; litrosCheio += L; }
+        .sort((a, b) => (a.km || 0) - (b.km || 0) || String(a.data || '').localeCompare(String(b.data || '')));
+      const cheios = list.filter(a => a.tanqueCheio);
+      const out = [];
+      for (let i = 1; i < cheios.length; i++) {
+        const prev = cheios[i - 1];
+        const curr = cheios[i];
+        const dist = (curr.km || 0) - (prev.km || 0);
+        if (dist <= 0) continue;
+        let litros = 0;
+        let valor = 0;
+        list.forEach(a => {
+          const k = a.km || 0;
+          if (k > (prev.km || 0) && k <= (curr.km || 0)) {
+            litros += Number(a.litros) || 0;
+            valor += Number(a.valor) || 0;
+          }
+        });
+        if (litros <= 0) continue;
+        out.push({
+          de: prev,
+          ate: curr,
+          dist,
+          litros,
+          valor,
+          media: dist / litros
+        });
       }
-      if (litrosCheio > 0) return distCheio / litrosCheio;
+      return out;
+    }
 
-      // 2) média acumulada (parciais ok no longo prazo)
-      const primeiro = list[0];
-      const ultimo = list[list.length - 1];
-      const dist = (ultimo.km || 0) - (primeiro.km || 0);
-      let litros = 0;
-      for (let i = 1; i < list.length; i++) litros += Number(list[i].litros) || 0;
-      if (dist <= 0 || litros <= 0) return null;
+    function mediaConsumoVeiculo(veiculoId) {
+      const iv = intervalosTanqueCheio(veiculoId);
+      if (!iv.length) return null;
+      let dist = 0, litros = 0;
+      iv.forEach(x => { dist += x.dist; litros += x.litros; });
+      if (litros <= 0) return null;
       return dist / litros;
     }
 
     function mediaConsumoTexto(veiculoId) {
       const m = mediaConsumoVeiculo(veiculoId);
-      if (m == null) return '—';
+      if (m == null) return '— (marque tanque cheio)';
       const v = (DB.veiculos || []).find(x => x.id === veiculoId);
       const cap = capacidadeTanqueVeiculo(v);
       const autonomia = Math.round(m * cap);
       return m.toFixed(1).replace('.', ',') + ' km/L · ~' + fmtKm(autonomia) + ' km/tanque';
     }
 
-    /** Por lançamento: sempre estima km/L do trecho; indica se é confiável (2 cheios) */
+    /**
+     * Por lançamento:
+     * - sempre: km desde o abastecimento anterior (odômetro)
+     * - parcial: sem média
+     * - cheio: média só se existir cheio anterior; litros = soma dos parciais + este cheio
+     */
     function mediaDoAbastecimento(a) {
-      if (!a) return { rodados: null, media: null, confiavel: false, parcial: true };
-      const anteriores = (DB.abastecimentos || [])
-        .filter(x => x.veiculoId === a.veiculoId && (x.km || 0) < (a.km || 0))
-        .sort((x, y) => (y.km || 0) - (x.km || 0));
-      if (!anteriores.length) return { rodados: null, media: null, confiavel: false, parcial: !a.tanqueCheio };
-      const ant = anteriores[0];
-      const dist = (a.km || 0) - (ant.km || 0);
-      const L = Number(a.litros) || 0;
-      if (dist <= 0 || L <= 0) return { rodados: dist > 0 ? dist : null, media: null, confiavel: false, parcial: !a.tanqueCheio };
-      const media = dist / L;
-      const confiavel = !!(a.tanqueCheio && ant.tanqueCheio);
-      return { rodados: dist, media, confiavel, parcial: !a.tanqueCheio };
+      if (!a) return { rodados: null, media: null, confiavel: false, parcial: true, detalhe: '' };
+      const list = (DB.abastecimentos || [])
+        .filter(x => x.veiculoId === a.veiculoId)
+        .sort((x, y) => (x.km || 0) - (y.km || 0) || String(x.data || '').localeCompare(String(y.data || '')));
+      const idx = list.findIndex(x => x.id === a.id);
+      const ant = idx > 0 ? list[idx - 1] : null;
+      const rodados = ant ? ((a.km || 0) - (ant.km || 0)) : null;
+      const rodadosOk = rodados != null && rodados > 0 ? rodados : null;
+
+      if (!a.tanqueCheio) {
+        return { rodados: rodadosOk, media: null, confiavel: false, parcial: true, detalhe: '' };
+      }
+
+      // último tanque cheio antes deste
+      const prevCheio = list
+        .filter(x => x.tanqueCheio && (x.km || 0) < (a.km || 0))
+        .sort((x, y) => (y.km || 0) - (x.km || 0))[0];
+
+      if (!prevCheio) {
+        return { rodados: rodadosOk, media: null, confiavel: false, parcial: false, detalhe: '1º tanque cheio' };
+      }
+
+      const dist = (a.km || 0) - (prevCheio.km || 0);
+      if (dist <= 0) {
+        return { rodados: rodadosOk, media: null, confiavel: false, parcial: false, detalhe: '' };
+      }
+
+      let litros = 0;
+      list.forEach(x => {
+        const k = x.km || 0;
+        if (k > (prevCheio.km || 0) && k <= (a.km || 0)) litros += Number(x.litros) || 0;
+      });
+      if (litros <= 0) {
+        return { rodados: rodadosOk, media: null, confiavel: false, parcial: false, detalhe: '' };
+      }
+
+      const media = dist / litros;
+      const detalhe = fmtKm(dist) + ' km / ' + litros.toFixed(1).replace('.', ',') + ' L desde ' + fmtDate(prevCheio.data);
+      return { rodados: rodadosOk, media, confiavel: true, parcial: false, detalhe, distIntervalo: dist, litrosIntervalo: litros };
     }
 
 
@@ -3964,7 +4051,7 @@
           </label>
           <button class="btn btn-primary btn-block" onclick="salvarAbastecimento()">Salvar abastecimento</button>
         </div>
-        <div class="page-header" style="margin-top:32px"><div><h2 style="font-size:18px">Histórico recente</h2><p style="font-size:13px;color:var(--muted)">Ordenado por data · média confiável com tanque cheio</p></div></div>
+        <div class="page-header" style="margin-top:32px"><div><h2 style="font-size:18px">Histórico recente</h2><p style="font-size:13px;color:var(--muted)">Ordenado por data · média só entre tanques cheios (soma parciais no intervalo)</p></div></div>
         <div class="card" id="lista-abastecimentos"></div>
       `;
       atualizarKmAnterior();
@@ -4104,13 +4191,16 @@
         const v = DB.veiculos.find(x => x.id === a.veiculoId);
         const info = mediaDoAbastecimento(a);
         const rodadaTxt = info.rodados != null ? fmtKm(info.rodados) + ' km' : '—';
-        let mediaTxt = '—';
-        let nota = '';
-        if (info.media != null) {
-          mediaTxt = info.media.toFixed(1).replace('.', ',') + ' km/L';
-          if (info.confiavel) nota = 'confiável';
-          else if (info.parcial) nota = 'estimativa (parcial)';
-          else nota = 'estimativa';
+        let linhaMedia = '';
+        if (info.parcial) {
+          linhaMedia = 'Rodados: <strong style="color:var(--text)">' + rodadaTxt + '</strong> · Média: —';
+        } else if (info.media != null && info.confiavel) {
+          linhaMedia = 'Rodados: <strong style="color:var(--text)">' + rodadaTxt + '</strong> · Média: <strong style="color:var(--success)">' +
+            info.media.toFixed(1).replace('.', ',') + ' km/L</strong>' +
+            (info.detalhe ? '<br><span style="font-size:11px">' + info.detalhe + '</span>' : '');
+        } else {
+          linhaMedia = 'Rodados: <strong style="color:var(--text)">' + rodadaTxt + '</strong> · Média: —' +
+            (info.detalhe ? ' · <em>' + info.detalhe + '</em>' : '');
         }
         const badgeCheio = a.tanqueCheio
           ? '<span class="status ok" style="font-size:10px;margin-left:6px">cheio</span>'
@@ -4120,7 +4210,7 @@
             <div style="flex:1;min-width:120px">
               <strong>${fmtDate(a.data)}</strong>${badgeCheio}
               <div style="font-size:13px;color:var(--text-secondary)">${v ? v.modelo : ''} · ${fmtKm(a.km)} km · ${a.litros} L · ${fmtMoney(a.valor)}</div>
-              <div style="font-size:12px;color:var(--muted)">Rodados: <strong style="color:var(--text)">${rodadaTxt}</strong> · Média: ${mediaTxt}${nota ? ' · <em>' + nota + '</em>' : ''}</div>
+              <div style="font-size:12px;color:var(--muted)">${linhaMedia}</div>
             </div>
             <div class="actions-row">
               <button class="btn btn-sm btn-outline" onclick="editarAbastecimento('${a.id}')">✏️</button>
