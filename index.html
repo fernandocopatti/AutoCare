@@ -191,6 +191,54 @@
     .topbar-brand .icon .brand-svg { width: 100%; height: 100%; display: block; }
     .topbar-brand .brand-name { color: var(--primary-dark); font-weight: 700; }
     .topbar-brand .brand-name span { color: var(--primary); }
+
+    .btn-bell {
+      position: relative;
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-family: inherit;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-bell:hover { background: #f1f5f9; border-color: #cbd5e1; }
+    .btn-bell .bell-dot {
+      position: absolute; top: 6px; right: 6px;
+      min-width: 16px; height: 16px; padding: 0 4px;
+      border-radius: 8px; background: var(--danger);
+      color: #fff; font-size: 10px; font-weight: 700;
+      display: none; align-items: center; justify-content: center;
+      line-height: 1;
+    }
+    .btn-bell.has-news .bell-dot { display: flex; }
+    .news-item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .news-item:last-child { border-bottom: none; }
+    .news-item .news-date { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .news-item .news-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .news-item .news-body { font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
+    .news-item.unread .news-title { color: var(--primary-dark); }
+    .tutorial-step {
+      display: none;
+      text-align: center;
+      padding: 8px 4px 16px;
+    }
+    .tutorial-step.active { display: block; animation: fadeIn .2s ease; }
+    .tutorial-step .t-icon { font-size: 42px; margin-bottom: 12px; }
+    .tutorial-step h3 { font-size: 18px; margin-bottom: 8px; }
+    .tutorial-step p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+    .tutorial-dots { display: flex; gap: 6px; justify-content: center; margin: 12px 0; }
+    .tutorial-dots span {
+      width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1;
+    }
+    .tutorial-dots span.on { background: var(--primary); }
+
     .topbar-right {
       display: flex; align-items: center; gap: 8px;
       flex-shrink: 1; min-width: 0; justify-content: flex-end;
@@ -209,7 +257,55 @@
       .topbar { padding: env(safe-area-inset-top) 24px 0; min-height: calc(64px + env(safe-area-inset-top)); }
       .topbar-brand { font-size: 18px; gap: 10px; }
       .topbar-brand .icon { width: 36px; height: 36px; }
-      .topbar-right { gap: 12px; }
+  
+    .btn-bell {
+      position: relative;
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-family: inherit;
+      transition: background .15s, border-color .15s;
+    }
+    .btn-bell:hover { background: #f1f5f9; border-color: #cbd5e1; }
+    .btn-bell .bell-dot {
+      position: absolute; top: 6px; right: 6px;
+      min-width: 16px; height: 16px; padding: 0 4px;
+      border-radius: 8px; background: var(--danger);
+      color: #fff; font-size: 10px; font-weight: 700;
+      display: none; align-items: center; justify-content: center;
+      line-height: 1;
+    }
+    .btn-bell.has-news .bell-dot { display: flex; }
+    .news-item {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .news-item:last-child { border-bottom: none; }
+    .news-item .news-date { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .news-item .news-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .news-item .news-body { font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
+    .news-item.unread .news-title { color: var(--primary-dark); }
+    .tutorial-step {
+      display: none;
+      text-align: center;
+      padding: 8px 4px 16px;
+    }
+    .tutorial-step.active { display: block; animation: fadeIn .2s ease; }
+    .tutorial-step .t-icon { font-size: 42px; margin-bottom: 12px; }
+    .tutorial-step h3 { font-size: 18px; margin-bottom: 8px; }
+    .tutorial-step p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+    .tutorial-dots { display: flex; gap: 6px; justify-content: center; margin: 12px 0; }
+    .tutorial-dots span {
+      width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1;
+    }
+    .tutorial-dots span.on { background: var(--primary); }
+
+    .topbar-right { gap: 12px; }
       .topbar .user-chip { max-width: 140px; font-size: 13px; }
     }
     .badge {
@@ -721,6 +817,9 @@
   </g>
 </svg></div> <span class="brand-name">Auto<span>Care</span></span></div>
       <div class="topbar-right">
+        <button type="button" class="btn-bell" id="bell-dono" onclick="abrirPainelNovidades()" title="Novidades e tutorial">
+          🔔<span class="bell-dot" id="bell-dot-dono">0</span>
+        </button>
         <span class="user-chip" id="dono-user-name" style="cursor:pointer" title="Editar meu cadastro" onclick="mostrarTela('dono','perfil')"></span>
         <span class="badge badge-owner">👤 <span class="badge-text">Proprietário</span></span>
         <button class="btn btn-sm btn-outline" onclick="sair()">Sair</button>
@@ -781,8 +880,11 @@
   </g>
 </svg></div> <span class="brand-name">Auto<span>Care</span></span></div>
       <div class="topbar-right">
+        <button type="button" class="btn-bell" id="bell-mec" onclick="abrirPainelNovidades()" title="Novidades e tutorial">
+          🔔<span class="bell-dot" id="bell-dot-mec">0</span>
+        </button>
         <span class="user-chip" id="mec-user-name"></span>
-        <span class="badge badge-shop" id="mec-oficina-badge" class="badge badge-shop">🔧 Oficina</span>
+        <span class="badge badge-shop" id="mec-oficina-badge">🔧 Oficina</span>
         <button class="btn btn-sm btn-outline" onclick="sair()">Sair</button>
       </div>
     </div>
@@ -841,6 +943,9 @@
   </g>
 </svg></div> <span class="brand-name">Auto<span>Care</span></span></div>
       <div class="topbar-right">
+        <button type="button" class="btn-bell" id="bell-admin" onclick="abrirPainelNovidades()" title="Novidades e tutorial">
+          🔔<span class="bell-dot" id="bell-dot-admin">0</span>
+        </button>
         <span class="user-chip" id="admin-user-name"></span>
         <span class="badge badge-admin">⚙️ Administrador</span>
         <button class="btn btn-sm btn-outline" onclick="sair()">Sair</button>
@@ -2835,6 +2940,172 @@
     }
 
     /** Entrada após PIN ou biometria validados */
+
+    // ===================== NOVIDADES + TUTORIAL =====================
+    const APP_VERSION = '1.4.0';
+    const NOVIDADES_KEY = 'autocare_novidades_lidas';
+    const TUTORIAL_KEY = 'autocare_tutorial_feito';
+
+    /** Sempre que houver correção ou feature nova, acrescente no TOPO com id único */
+    const NOVIDADES = [
+      {
+        id: '2026-10-22-media-cheio',
+        data: '2026-10-22',
+        titulo: 'Média de consumo corrigida',
+        corpo: 'A média km/L agora só calcula entre dois tanques cheios, somando os litros dos parciais no intervalo. Nos parciais aparece só o km rodado.'
+      },
+      {
+        id: '2026-10-22-data-abast',
+        data: '2026-10-22',
+        titulo: 'Data nos abastecimentos',
+        corpo: 'Você pode lançar abastecimentos antigos escolhendo a data. O histórico fica em ordem cronológica.'
+      },
+      {
+        id: '2026-10-16-combustivel-custos',
+        data: '2026-10-16',
+        titulo: 'Total de combustível em Custos',
+        corpo: 'Na tela de custos aparece o total gasto com combustível no ano e no geral, sem listar cada abastecimento.'
+      },
+      {
+        id: '2026-10-15-tanque-cheio',
+        data: '2026-10-15',
+        titulo: 'Marcar tanque cheio',
+        corpo: 'No abastecimento há a opção Tanque cheio e a capacidade do tanque no cadastro do veículo (ex.: 60 L) para estimar autonomia.'
+      },
+      {
+        id: '2026-10-02-novidades',
+        data: '2026-10-02',
+        titulo: 'Sino de novidades e tutorial',
+        corpo: 'Use o 🔔 no topo para ver o que mudou no app e repetir o tutorial rápido.'
+      }
+    ];
+
+    const TUTORIAL_PASSOS = [
+      { icon: '👋', titulo: 'Bem-vindo ao AutoCare', texto: 'Gerencie veículos, abastecimentos, custos, manutenções e oficinas em um só lugar.' },
+      { icon: '🚙', titulo: 'Cadastre seu veículo', texto: 'Em Veículos, informe marca, modelo, ano, placa, km e capacidade do tanque. Você pode buscar imagem do modelo.' },
+      { icon: '⛽', titulo: 'Abastecimentos', texto: 'Lance litros, valor e km. Marque Tanque cheio quando completar — a média fica mais precisa. Pode registrar datas passadas.' },
+      { icon: '💰', titulo: 'Custos', texto: 'IPVA, seguro e outros gastos. O total de combustível é calculado automaticamente a partir dos abastecimentos.' },
+      { icon: '🛠️', titulo: 'Manutenções e oficinas', texto: 'Acompanhe preventivas, agende em oficinas e receba histórico com fotos quando a mecânica finalizar o serviço.' },
+      { icon: '☁️', titulo: 'Backup', texto: 'Configure GitHub Gist para sincronizar entre celular e computador. Cada aparelho tem seu arquivo de backup.' }
+    ];
+
+    let _tutIdx = 0;
+
+    function novidadesLidasIds() {
+      try {
+        const arr = JSON.parse(localStorage.getItem(NOVIDADES_KEY) || '[]');
+        return Array.isArray(arr) ? arr : [];
+      } catch (e) { return []; }
+    }
+
+    function salvarNovidadesLidas(ids) {
+      try { localStorage.setItem(NOVIDADES_KEY, JSON.stringify(ids)); } catch (e) {}
+    }
+
+    function novidadesNaoLidas() {
+      const lidas = new Set(novidadesLidasIds());
+      return NOVIDADES.filter(n => !lidas.has(n.id));
+    }
+
+    function atualizarBadgeSino() {
+      const n = novidadesNaoLidas().length;
+      ['dono', 'mec', 'admin'].forEach(id => {
+        const btn = document.getElementById('bell-' + id);
+        const dot = document.getElementById('bell-dot-' + id);
+        if (!btn || !dot) return;
+        if (n > 0) {
+          btn.classList.add('has-news');
+          dot.textContent = n > 9 ? '9+' : String(n);
+        } else {
+          btn.classList.remove('has-news');
+          dot.textContent = '0';
+        }
+      });
+    }
+
+    function abrirPainelNovidades() {
+      const box = document.getElementById('lista-novidades');
+      if (!box) return;
+      const lidas = new Set(novidadesLidasIds());
+      box.innerHTML = NOVIDADES.map(n => {
+        const unread = !lidas.has(n.id);
+        return `<div class="news-item${unread ? ' unread' : ''}">
+          <div class="news-date">${fmtDate(n.data)}${unread ? ' · nova' : ''}</div>
+          <div class="news-title">${n.titulo}</div>
+          <div class="news-body">${n.corpo}</div>
+        </div>`;
+      }).join('');
+      document.getElementById('modal-novidades').classList.add('show');
+    }
+
+    function marcarNovidadesLidas() {
+      salvarNovidadesLidas(NOVIDADES.map(n => n.id));
+      atualizarBadgeSino();
+    }
+
+    function tutorialFeito() {
+      try { return localStorage.getItem(TUTORIAL_KEY) === '1'; } catch (e) { return false; }
+    }
+
+    function marcarTutorialFeito() {
+      try { localStorage.setItem(TUTORIAL_KEY, '1'); } catch (e) {}
+    }
+
+    function iniciarTutorial() {
+      _tutIdx = 0;
+      renderTutorialStep();
+      document.getElementById('modal-tutorial').classList.add('show');
+    }
+
+    function renderTutorialStep() {
+      const host = document.getElementById('tutorial-steps');
+      const dots = document.getElementById('tutorial-dots');
+      if (!host) return;
+      const p = TUTORIAL_PASSOS[_tutIdx];
+      host.innerHTML = `<div class="tutorial-step active">
+        <div class="t-icon">${p.icon}</div>
+        <h3>${p.titulo}</h3>
+        <p>${p.texto}</p>
+      </div>`;
+      if (dots) {
+        dots.innerHTML = TUTORIAL_PASSOS.map((_, i) =>
+          `<span class="${i === _tutIdx ? 'on' : ''}"></span>`
+        ).join('');
+      }
+      const prev = document.getElementById('tut-prev');
+      const next = document.getElementById('tut-next');
+      if (prev) prev.style.visibility = _tutIdx === 0 ? 'hidden' : 'visible';
+      if (next) next.textContent = _tutIdx >= TUTORIAL_PASSOS.length - 1 ? 'Concluir' : 'Próximo';
+    }
+
+    function tutorialAnterior() {
+      if (_tutIdx > 0) { _tutIdx--; renderTutorialStep(); }
+    }
+
+    function tutorialProximo() {
+      if (_tutIdx >= TUTORIAL_PASSOS.length - 1) {
+        marcarTutorialFeito();
+        fecharModal('modal-tutorial');
+        toast('Tutorial concluído');
+        return;
+      }
+      _tutIdx++;
+      renderTutorialStep();
+    }
+
+    function aposLoginNovidadesETutorial() {
+      atualizarBadgeSino();
+      const pendentes = novidadesNaoLidas();
+      const precisaTut = !tutorialFeito();
+      setTimeout(() => {
+        if (pendentes.length) {
+          abrirPainelNovidades();
+        } else if (precisaTut) {
+          iniciarTutorial();
+        }
+      }, 500);
+    }
+
     function entrarAposAuth(nome, role, oficinaId) {
       SESSION.role = role;
       SESSION.nome = nome;
@@ -2876,6 +3147,7 @@
 
       if (typeof tentarSyncAoLogar === 'function') tentarSyncAoLogar();
       else if (typeof agendarSyncGithub === 'function') agendarSyncGithub();
+      if (typeof aposLoginNovidadesETutorial === 'function') aposLoginNovidadesETutorial();
     }
 
     // ===================== LOGIN / PERFIS =====================
@@ -6702,6 +6974,32 @@
     if (sessSalva) prepararDesbloqueioSessao(sessSalva);
     else document.getElementById('login').style.display = 'flex';
   </script>
+
+  <!-- NOVIDADES -->
+  <div id="modal-novidades" class="modal-bg" onclick="if(event.target===this)fecharModal('modal-novidades')">
+    <div class="modal" style="max-width:440px">
+      <h2>🔔 Novidades do AutoCare</h2>
+      <p style="font-size:13px;color:var(--text-secondary);margin:-8px 0 12px">Atualizações e correções recentes</p>
+      <div id="lista-novidades" style="max-height:50vh;overflow:auto;margin-bottom:12px"></div>
+      <div class="modal-actions" style="flex-direction:column;gap:8px">
+        <button class="btn btn-primary btn-block" onclick="marcarNovidadesLidas();fecharModal('modal-novidades')">Entendi</button>
+        <button class="btn btn-outline btn-block" onclick="fecharModal('modal-novidades');iniciarTutorial()">▶️ Ver tutorial</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TUTORIAL -->
+  <div id="modal-tutorial" class="modal-bg" onclick="if(event.target===this)fecharModal('modal-tutorial')">
+    <div class="modal" style="max-width:400px">
+      <div id="tutorial-steps"></div>
+      <div class="tutorial-dots" id="tutorial-dots"></div>
+      <div class="modal-actions" style="display:flex;gap:8px">
+        <button class="btn btn-outline" style="flex:1" onclick="tutorialAnterior()" id="tut-prev">Voltar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="tutorialProximo()" id="tut-next">Próximo</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-foto-bg" onclick="fecharFotoAmpliada()">
     <img id="modal-foto-img" alt="Foto da manutenção" />
   </div>
