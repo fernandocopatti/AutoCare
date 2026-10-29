@@ -1144,6 +1144,16 @@
           <button type="button" class="btn btn-ghost btn-sm" onclick="limparFotosPreventiva()">Remover fotos</button>
         </div>
       </div>
+      <div class="form-group">
+        <label>NF-e / documento (opcional)</label>
+        <div class="photo-area" id="pf-nfe-preview" style="cursor:default;min-height:48px;padding:12px;font-size:13px;color:var(--muted)">📄 Nenhum arquivo ainda</div>
+        <input type="file" id="pf-nfe-file" accept="image/*,application/pdf,.pdf" style="display:none" onchange="previewNfePreventiva(this)" />
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('pf-nfe-file').click()">📎 Anexar NF-e (PDF ou imagem)</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="limparNfePreventiva()">Remover anexo</button>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-top:6px">PDF ou foto da nota. Limite ~2,5 MB para não sobrecarregar o backup.</p>
+      </div>
       <p id="pf-dica" style="font-size:12px;color:var(--muted);margin:0 0 12px"></p>
       <div class="modal-actions">
         <button class="btn btn-outline btn-block" onclick="fecharModal('modal-preventiva')">Cancelar</button>
@@ -2969,6 +2979,12 @@
 
     /** Sempre que houver correção ou feature nova, acrescente no TOPO com id único */
     const NOVIDADES = [
+      {
+        id: '2026-10-29-nfe',
+        data: '2026-10-29',
+        titulo: 'Anexo de NF-e nas manutenções',
+        corpo: 'No lançamento você pode anexar PDF ou foto da nota fiscal. Nos serviços da oficina, o proprietário também pode anexar a NF-e pelo histórico.'
+      },
       {
         id: '2026-10-23-agendar-tipos',
         data: '2026-10-23',
@@ -5152,14 +5168,29 @@
           const origemTxt = doDono ? 'Você lançou' : (of ? of.nome : 'Oficina');
           let acoes = '';
           if (doDono) {
-            acoes = `<div class="actions-row">
+            acoes = `<div class="actions-row" style="flex-wrap:wrap">
               <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();editarServicoDono('${s.id}')">✏️ Editar</button>
               <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="event.stopPropagation();excluirServicoDono('${s.id}')">🗑️</button>
             </div>`;
           } else {
-            acoes = `<span class="status ok" style="font-size:11px">oficina</span>`;
+            acoes = `<div class="actions-row" style="flex-wrap:wrap">
+              <span class="status ok" style="font-size:11px">oficina</span>
+              <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();anexarNfeServicoDono('${s.id}')" title="Anexar NF-e ou documento">📎 NF-e</button>
+            </div>`;
           }
           const galeria = htmlFotosServico(s.fotos, s.id);
+          let nfeHtml = '';
+          if (s.nfe && s.nfe.dataUrl) {
+            const nfeNome = (s.nfe.nome || 'NF-e').replace(/</g, '');
+            nfeHtml = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;background:#f8fafc;border-radius:10px;border:1px solid var(--border)">
+              <span>📄</span>
+              <span style="font-size:12px;flex:1;min-width:100px"><strong>NF-e</strong> · ${nfeNome}</span>
+              <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();abrirAnexoNfe(DB.servicos.find(x=>x.id==='${s.id}')?.nfe)">Abrir</button>
+              <button class="btn btn-sm btn-ghost" style="color:var(--danger)" onclick="event.stopPropagation();removerNfeServicoDono('${s.id}')">Remover</button>
+            </div>`;
+          } else if (doDono) {
+            nfeHtml = `<button class="btn btn-sm btn-outline" style="align-self:flex-start" onclick="event.stopPropagation();anexarNfeServicoDono('${s.id}')">📎 Anexar NF-e</button>`;
+          }
           html += `
             <div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px">
               <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;width:100%">
@@ -5171,6 +5202,7 @@
                 ${acoes}
               </div>
               ${galeria}
+              ${nfeHtml}
             </div>`;
         });
       }
@@ -5201,6 +5233,8 @@
           ? '<div class="photo-thumbs">' + pendingFotosPreventiva.map(src => `<img src="${src}" alt="foto">`).join('') + '</div>'
           : '📷 Nenhuma foto ainda';
       }
+      pendingNfePreventiva = s.nfe ? { ...s.nfe } : null;
+      renderPfNfePreview();
       if (s.itens && s.itens[0]) {
         const sel = document.getElementById('pf-item');
         const opt = [...sel.options].find(o => o.value === s.itens[0]);
@@ -5252,6 +5286,144 @@
       if (prev) prev.innerHTML = '📷 Nenhuma foto ainda';
     }
 
+    let pendingNfePreventiva = null; // { nome, tipo, dataUrl }
+
+    function htmlPreviewNfe(nfe) {
+      if (!nfe || !nfe.dataUrl) return '📄 Nenhum arquivo ainda';
+      const nome = nfe.nome || 'NF-e';
+      if ((nfe.tipo || '').includes('pdf') || /\.pdf$/i.test(nome)) {
+        return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:28px">📄</span>
+          <div>
+            <strong style="font-size:13px;color:var(--text)">${nome}</strong>
+            <div style="font-size:11px;color:var(--muted)">PDF anexado</div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline" onclick="event.stopPropagation();abrirAnexoNfe(pendingNfePreventiva || window._nfeView)">Abrir</button>
+        </div>`;
+      }
+      return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <img src="${nfe.dataUrl}" alt="NF-e" style="max-height:72px;border-radius:8px;border:1px solid var(--border)" />
+        <div>
+          <strong style="font-size:13px;color:var(--text)">${nome}</strong>
+          <div style="font-size:11px;color:var(--muted)">Imagem da nota</div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline" onclick="event.stopPropagation();abrirAnexoNfe(pendingNfePreventiva || window._nfeView)">Abrir</button>
+      </div>`;
+    }
+
+    function renderPfNfePreview() {
+      const prev = document.getElementById('pf-nfe-preview');
+      if (!prev) return;
+      prev.innerHTML = htmlPreviewNfe(pendingNfePreventiva);
+    }
+
+    async function previewNfePreventiva(input) {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const maxBytes = 2.5 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        toast('Arquivo muito grande (máx. 2,5 MB). Comprima o PDF ou use foto menor.');
+        input.value = '';
+        return;
+      }
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+      const isImg = (file.type || '').startsWith('image/');
+      if (!isPdf && !isImg) {
+        toast('Use PDF ou imagem (JPG/PNG)');
+        input.value = '';
+        return;
+      }
+      try {
+        let dataUrl;
+        if (isImg) {
+          dataUrl = await compressImageFile(file, 1200);
+        } else {
+          dataUrl = await new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.onload = () => resolve(r.result);
+            r.onerror = reject;
+            r.readAsDataURL(file);
+          });
+        }
+        pendingNfePreventiva = { nome: file.name, tipo: file.type || (isPdf ? 'application/pdf' : 'image/jpeg'), dataUrl };
+        renderPfNfePreview();
+        toast('NF-e anexada');
+      } catch (e) {
+        console.error(e);
+        toast('Falha ao ler o arquivo');
+      }
+      input.value = '';
+    }
+
+    function limparNfePreventiva() {
+      pendingNfePreventiva = null;
+      renderPfNfePreview();
+    }
+
+    function abrirAnexoNfe(nfe) {
+      if (!nfe || !nfe.dataUrl) { toast('Nenhum anexo'); return; }
+      const w = window.open('');
+      if (!w) { toast('Permita pop-ups para abrir o anexo'); return; }
+      const isPdf = (nfe.tipo || '').includes('pdf') || /\.pdf$/i.test(nfe.nome || '');
+      if (isPdf) {
+        w.document.write('<title>' + (nfe.nome || 'NF-e') + '</title><embed src="' + nfe.dataUrl + '" type="application/pdf" width="100%" height="100%" style="position:fixed;inset:0;border:0" />');
+      } else {
+        w.document.write('<title>' + (nfe.nome || 'NF-e') + '</title><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="' + nfe.dataUrl + '" style="max-width:100%;max-height:100vh" /></body>');
+      }
+      w.document.close();
+    }
+
+    /** Anexar NF-e a um lançamento já existente (inclusive da oficina) — só o dono */
+    async function anexarNfeServicoDono(servicoId) {
+      const s = (DB.servicos || []).find(x => x.id === servicoId);
+      if (!s) return;
+      const meus = meusVeiculos().map(v => v.id);
+      if (!meus.includes(s.veiculoId)) { toast('Só o dono do veículo pode anexar'); return; }
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*,application/pdf,.pdf';
+      input.onchange = async () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        if (file.size > 2.5 * 1024 * 1024) { toast('Arquivo muito grande (máx. 2,5 MB)'); return; }
+        const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+        const isImg = (file.type || '').startsWith('image/');
+        if (!isPdf && !isImg) { toast('Use PDF ou imagem'); return; }
+        try {
+          let dataUrl;
+          if (isImg) dataUrl = await compressImageFile(file, 1200);
+          else {
+            dataUrl = await new Promise((resolve, reject) => {
+              const r = new FileReader();
+              r.onload = () => resolve(r.result);
+              r.onerror = reject;
+              r.readAsDataURL(file);
+            });
+          }
+          s.nfe = { nome: file.name, tipo: file.type || (isPdf ? 'application/pdf' : 'image/jpeg'), dataUrl };
+          s.nfeAnexadoEm = new Date().toISOString();
+          save();
+          toast('NF-e anexada ao lançamento');
+          renderDonoManutencao();
+        } catch (e) {
+          console.error(e);
+          toast('Falha ao anexar');
+        }
+      };
+      input.click();
+    }
+
+    function removerNfeServicoDono(servicoId) {
+      const s = (DB.servicos || []).find(x => x.id === servicoId);
+      if (!s || !s.nfe) return;
+      if (!confirm('Remover a NF-e / documento anexado?')) return;
+      delete s.nfe;
+      delete s.nfeAnexadoEm;
+      save();
+      toast('Anexo removido');
+      renderDonoManutencao();
+    }
+
     function abrirModalPreventivaFeita(veiculoId, nomeItem) {
       const meus = meusVeiculos();
       if (meus.length === 0) { toast('Cadastre um veículo primeiro'); return; }
@@ -5269,6 +5441,9 @@
       document.getElementById('pf-outro').value = '';
       document.getElementById('pf-outro-wrap').style.display = 'none';
       document.getElementById('pf-edit-id').value = '';
+      pendingNfePreventiva = null;
+      renderPfNfePreview();
+      limparFotosPreventiva();
 
       const titulo = document.getElementById('pf-titulo');
       const sub = document.getElementById('pf-subtitulo');
@@ -5370,6 +5545,7 @@
           s.itens = [nome];
           s.observacoes = obs;
           s.fotos = (pendingFotosPreventiva || []).slice();
+          s.nfe = pendingNfePreventiva ? { ...pendingNfePreventiva } : null;
           s.valorTotal = valorTotal;
           s.editadoEm = new Date().toISOString();
           servicoRef = s;
@@ -5386,6 +5562,7 @@
           km,
           itens: [nome],
           fotos: (pendingFotosPreventiva || []).slice(),
+          nfe: pendingNfePreventiva ? { ...pendingNfePreventiva } : null,
           observacoes: obs,
           cliente: SESSION.nome || '',
           valorTotal,
@@ -5399,6 +5576,7 @@
       if (servicoRef) sincronizarCustoDeServico(servicoRef);
 
       pendingFotosPreventiva = [];
+      pendingNfePreventiva = null;
       save();
       fecharModal('modal-preventiva');
       renderDonoManutencao();
